@@ -2,7 +2,6 @@
 // Copyright (C) 2025-2026 InstallerX Revived contributors
 package com.rosan.installer.ui.page.main.settings.preferred.theme
 
-import android.os.Build
 import androidx.compose.ui.graphics.Color
 import com.rosan.installer.domain.settings.model.preferences.PredictiveBackAnimation
 import com.rosan.installer.domain.settings.model.preferences.PredictiveBackExitDirection
@@ -14,7 +13,19 @@ import com.rosan.installer.domain.settings.model.preferences.theme.ThemeMode
 
 data class ThemeSettingsState(
     val showMiuixUI: Boolean = false,
-    val useBlur: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU,
+    // Blur is off by default. When enabled, every settings subpage that
+    // passes useBlur=true gets a `LayerBackdrop` re-rendering the
+    // surface every frame (miuix `textureBlur` + `installerMaterial3BlurEffect`),
+    // and `AnimatedFluidBackground` (shown on the home status card while
+    // the app is the active installer) runs 4 color animations plus
+    // a `withFrameNanos` loop that recomposes the Canvas every frame
+    // to redraw ~13 radial gradients. The combined cost was enough to
+    // cause a sustained >40% GPU load on a mid-range Android 13+ device
+    // when just *opening* the settings page. Users who want the glass
+    // effect can opt in from 主题 → 模糊. The flag itself is a
+    // user-controlled preference; this only changes the *initial* value
+    // before the user has made an explicit choice.
+    val useBlur: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val paletteStyle: PaletteStyle = PaletteStyle.TonalSpot,
     val colorSpec: ThemeColorSpec = ThemeColorSpec.SPEC_2025,
