@@ -9,7 +9,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,9 +18,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -30,12 +27,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
 import com.rosan.installer.core.env.DeviceConfig
-import com.rosan.installer.core.device.model.Manufacturer
 import com.rosan.installer.domain.engine.model.packageinfo.AppEntity
 import com.rosan.installer.domain.engine.model.source.DataType
 import com.rosan.installer.domain.engine.model.packageinfo.sortedBest
 import com.rosan.installer.domain.engine.usecase.AnalyzeInstallStateUseCase
-import com.rosan.installer.ui.icons.AppIcons
 import com.rosan.installer.ui.page.main.installer.InstallerViewAction
 import com.rosan.installer.ui.page.main.installer.InstallerViewModel
 import com.rosan.installer.ui.page.main.installer.components.WarningTextBlock
@@ -47,7 +42,6 @@ import com.rosan.installer.ui.page.main.installer.dialog.DialogParamsType
 import com.rosan.installer.ui.page.main.installer.dialog.dialogButtons
 import com.rosan.installer.ui.page.main.installer.mapper.InstallNoticeResources
 import com.rosan.installer.ui.page.main.installer.mapper.InstallStateUiMapper
-import com.rosan.installer.ui.page.main.widget.chip.Chip
 import com.rosan.installer.ui.page.main.widget.chip.InstallInfoChipGroup
 import org.koin.compose.koinInject
 
@@ -155,11 +149,9 @@ fun installPrepareDialog(
 
     val isSplitUpdateMode = (isBundleSplitUpdate || isPureSplit) && preInstallAppInfo != null
 
-    var showChips by remember { mutableStateOf(false) }
     // Call InstallInfoDialog for base structure
     val baseParams = installInfoDialog(
-        viewModel = viewModel,
-        onTitleExtraClick = { showChips = !showChips }
+        viewModel = viewModel
     )
 
     val primaryColor = MaterialTheme.colorScheme.primary
@@ -348,56 +340,6 @@ fun installPrepareDialog(
                         }
                     }
                 }
-                item {
-                    AnimatedVisibility(
-                        visible = showChips,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically()
-                    ) {
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Chip(
-                                selected = config.autoDelete, // Read directly from config
-                                onClick = {
-                                    // Update via ViewModel
-                                    viewModel.updateConfig { it.copy(autoDelete = !it.autoDelete) }
-                                },
-                                label = stringResource(id = R.string.config_auto_delete),
-                                icon = AppIcons.Delete
-                            )
-                            Chip(
-                                selected = config.displaySdk, // Read directly from config
-                                onClick = {
-                                    // Update via ViewModel
-                                    viewModel.updateConfig { it.copy(displaySdk = !it.displaySdk) }
-                                },
-                                label = stringResource(id = R.string.config_display_sdk_version),
-                                icon = AppIcons.Info
-                            )
-                            Chip(
-                                selected = config.displaySize, // Read directly from config
-                                onClick = {
-                                    // Update via ViewModel
-                                    viewModel.updateConfig { it.copy(displaySize = !it.displaySize) }
-                                },
-                                label = stringResource(id = R.string.config_display_size),
-                                icon = AppIcons.ShowSize
-                            )
-                            if (DeviceConfig.currentManufacturer == Manufacturer.OPPO || DeviceConfig.currentManufacturer == Manufacturer.ONEPLUS)
-                                Chip(
-                                    selected = settings.showOPPOSpecial, // From viewSettings
-                                    onClick = {
-                                        val newValue = !settings.showOPPOSpecial
-                                        viewModel.dispatch(InstallerViewAction.SetTempShowOPPOSpecial(newValue))
-                                    },
-                                    label = stringResource(id = R.string.installer_show_oem_special),
-                                    icon = AppIcons.OEMSpecial
-                                )
-                        }
-                    }
-                }
-
                 val isInvalidSplitInstall = currentPackage.installedAppInfo == null &&
                         entityToInstall == null &&
                         selectedEntities.any { it is AppEntity.SplitEntity }

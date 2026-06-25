@@ -3,8 +3,6 @@
 package com.rosan.installer.ui.page.main.installer.dialog.inner
 
 import android.content.Intent
-import android.net.Uri
-import android.provider.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -60,17 +58,7 @@ fun installSuccessDialog(
     val hasPrivilege = config.isPrivileged(deviceCapabilityProvider)
 
     val baseParams = installInfoDialog(
-        viewModel = viewModel,
-        onTitleExtraClick = {
-            if (packageName.isNotEmpty()) {
-                context.startActivity(
-                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                        .setData(Uri.fromParts("package", packageName, null))
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                )
-            }
-            viewModel.dispatch(InstallerViewAction.Background)
-        }
+        viewModel = viewModel
     )
 
     return baseParams.copy(

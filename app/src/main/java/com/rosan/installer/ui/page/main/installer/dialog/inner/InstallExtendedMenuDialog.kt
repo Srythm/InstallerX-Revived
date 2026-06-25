@@ -48,15 +48,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
+import com.rosan.installer.core.env.DeviceConfig
+import com.rosan.installer.core.device.model.Manufacturer
 import com.rosan.installer.domain.engine.model.packageinfo.AppEntity
 import com.rosan.installer.domain.engine.model.source.DataType
 import com.rosan.installer.domain.engine.model.packageinfo.sortedBest
 import com.rosan.installer.domain.settings.model.config.Authorizer
+import com.rosan.installer.domain.settings.model.config.ConfigModel
 import com.rosan.installer.domain.settings.model.config.InstallerMode
 import com.rosan.installer.domain.settings.model.app.NamedPackage
 import com.rosan.installer.ui.icons.AppIcons
 import com.rosan.installer.ui.page.main.installer.InstallerViewAction
 import com.rosan.installer.ui.page.main.installer.InstallerViewModel
+import com.rosan.installer.ui.page.main.installer.InstallerViewSettings
 import com.rosan.installer.ui.page.main.installer.components.permissionIcon
 import com.rosan.installer.ui.page.main.installer.components.rememberInstallOptions
 import com.rosan.installer.ui.page.main.installer.dialog.DialogButton
@@ -83,6 +87,8 @@ fun installExtendedMenuDialog(
     val selectedUserId = uiState.config.targetUserId
     val customizeUserEnabled = uiState.config.enableCustomizeUser
     val authorizer = uiState.config.authorizer
+    val config = uiState.config
+    val settings = uiState.viewSettings
 
     val containerType =
         uiState.analysisResults.find { it.packageName == currentPackageName }?.appEntities?.first()?.app?.sourceType
@@ -108,7 +114,9 @@ fun installExtendedMenuDialog(
         customizeUserEnabled,
         selectedUserId,
         uiState.availableUsers,
-        authorizer
+        authorizer,
+        config,
+        settings
     ) {
         buildList {
             // Permission List
@@ -171,6 +179,50 @@ fun installExtendedMenuDialog(
                     )
                 }
             }
+
+            // Display/config toggles (available to all users)
+            add(
+                ExtendedMenuEntity(
+                    action = InstallExtendedMenuAction.ConfigToggle,
+                    menuItem = ExtendedMenuItemEntity(
+                        nameResourceId = R.string.config_auto_delete,
+                        icon = AppIcons.Delete,
+                        action = null
+                    )
+                )
+            )
+            add(
+                ExtendedMenuEntity(
+                    action = InstallExtendedMenuAction.ConfigToggle,
+                    menuItem = ExtendedMenuItemEntity(
+                        nameResourceId = R.string.config_display_sdk_version,
+                        icon = AppIcons.Info,
+                        action = null
+                    )
+                )
+            )
+            add(
+                ExtendedMenuEntity(
+                    action = InstallExtendedMenuAction.ConfigToggle,
+                    menuItem = ExtendedMenuItemEntity(
+                        nameResourceId = R.string.config_display_size,
+                        icon = AppIcons.ShowSize,
+                        action = null
+                    )
+                )
+            )
+            // OPPO special info (only for OPPO/OnePlus devices)
+            if (DeviceConfig.currentManufacturer == Manufacturer.OPPO || DeviceConfig.currentManufacturer == Manufacturer.ONEPLUS)
+                add(
+                    ExtendedMenuEntity(
+                        action = InstallExtendedMenuAction.ViewSettingsToggle,
+                        menuItem = ExtendedMenuItemEntity(
+                            nameResourceId = R.string.installer_show_oem_special,
+                            icon = AppIcons.OEMSpecial,
+                            action = null
+                        )
+                    )
+                )
         }.toMutableStateList()
     }
 
@@ -193,16 +245,23 @@ fun installExtendedMenuDialog(
                 selectedInstallerPackageName = selectedInstallerPackageName,
                 managedPackages = managedPackages,
                 availableUsers = uiState.availableUsers,
-                defaultInstallerFromSettings = uiState.defaultInstallerFromSettings
+                defaultInstallerFromSettings = uiState.defaultInstallerFromSettings,
+                config = config,
+                settings = settings
             )
         },
         buttons = dialogButtons(
             DialogParamsType.InstallExtendedMenu.id
         ) {
-            listOf(DialogButton(stringResource(R.string.next)) {
+            // FullScreen mode: the menu is a view-only screen, so the only
+            // way to leave it is to go back to InstallPrepare (via this
+            // single "Back" button or via the system back gesture handled
+            // by performBack in DialogPage). Dialog mode shares the same
+            // button set, so the user always has an explicit way back to
+            // the install confirmation; closing the whole flow has to
+            // happen from InstallPrepare.
+            listOf(DialogButton(stringResource(R.string.back)) {
                 viewModel.dispatch(InstallerViewAction.InstallPrepare)
-            }, DialogButton(stringResource(R.string.cancel)) {
-                viewModel.dispatch(InstallerViewAction.Close)
             })
         })
 }
@@ -217,7 +276,9 @@ fun MenuItemWidget(
     selectedInstallerPackageName: String?,
     managedPackages: List<NamedPackage>,
     availableUsers: Map<Int, String>,
-    defaultInstallerFromSettings: String?
+    defaultInstallerFromSettings: String?,
+    config: ConfigModel,
+    settings: InstallerViewSettings
 ) {
     val haptic = LocalHapticFeedback.current
 
@@ -435,17 +496,33 @@ fun MenuItemWidget(
                     }
                 }
 
-                else -> { // Logic for other card types (PermissionList, InstallOption)
+                else -> { // Logic for other card types (PermissionList, InstallOption, ConfigToggle, ViewSettingsToggle)
                     val option = when (item.action) {
                         is InstallExtendedMenuAction.InstallOption -> item.menuItem.action
                         else -> null
                     }
 
-                    // Check if selected, valid only for install options
-                    val isSelected = option?.let { (installFlags and it.value) != 0 } ?: false
+                    // Check if selected for all toggle types
+                    val isSelected = when (item.action) {
+                        is InstallExtendedMenuAction.InstallOption -> option?.let { (installFlags and it.value) != 0 } ?: false
+                        is InstallExtendedMenuAction.ConfigToggle -> when (item.menuItem.nameResourceId) {
+                            R.string.config_auto_delete -> config.autoDelete
+                            R.string.config_display_sdk_version -> config.displaySdk
+                            R.string.config_display_size -> config.displaySize
+                            else -> false
+                        }
+                        is InstallExtendedMenuAction.ViewSettingsToggle -> when (item.menuItem.nameResourceId) {
+                            R.string.installer_show_oem_special -> settings.showOPPOSpecial
+                            else -> false
+                        }
+                        else -> false
+                    }
+
+                    val isToggleAction = item.action is InstallExtendedMenuAction.ConfigToggle ||
+                            item.action is InstallExtendedMenuAction.ViewSettingsToggle
 
                     // Determine background container color
-                    val containerColor = if (option != null && isSelected)
+                    val containerColor = if ((option != null || isToggleAction) && isSelected)
                         MaterialTheme.colorScheme.primaryContainer
                     else
                         MaterialTheme.colorScheme.surfaceContainer
@@ -474,6 +551,22 @@ fun MenuItemWidget(
                                     haptic.performHapticFeedback(HapticFeedbackType.ToggleOn)
                                     option?.let { opt ->
                                         viewmodel.toggleInstallFlag(opt.value, !isSelected)
+                                    }
+                                }
+
+                                is InstallExtendedMenuAction.ConfigToggle -> {
+                                    haptic.performHapticFeedback(HapticFeedbackType.ToggleOn)
+                                    when (item.menuItem.nameResourceId) {
+                                        R.string.config_auto_delete -> viewmodel.updateConfig { it.copy(autoDelete = !it.autoDelete) }
+                                        R.string.config_display_sdk_version -> viewmodel.updateConfig { it.copy(displaySdk = !it.displaySdk) }
+                                        R.string.config_display_size -> viewmodel.updateConfig { it.copy(displaySize = !it.displaySize) }
+                                    }
+                                }
+
+                                is InstallExtendedMenuAction.ViewSettingsToggle -> {
+                                    haptic.performHapticFeedback(HapticFeedbackType.ToggleOn)
+                                    when (item.menuItem.nameResourceId) {
+                                        R.string.installer_show_oem_special -> viewmodel.dispatch(InstallerViewAction.SetTempShowOPPOSpecial(!settings.showOPPOSpecial))
                                     }
                                 }
 

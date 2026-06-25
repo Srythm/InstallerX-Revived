@@ -12,8 +12,6 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -31,12 +29,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -84,8 +78,7 @@ import kotlin.math.abs
  */
 @Composable
 fun installInfoDialog(
-    viewModel: InstallerViewModel,
-    onTitleExtraClick: () -> Unit = {}
+    viewModel: InstallerViewModel
 ): DialogParams {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val settings = uiState.viewSettings
@@ -109,8 +102,6 @@ fun installInfoDialog(
         ?: selectedApps.filterIsInstance<AppEntity.ModuleEntity>().firstOrNull()
         ?: selectedApps.sortedBest().firstOrNull()
         ?: return DialogParams()
-    val isModule = entityToInstall is AppEntity.ModuleEntity
-
     val uniqueContentKey = "${DialogParamsType.InstallerInfo.id}_${entityToInstall.packageName}"
 
     val displayLabel: String =
@@ -167,8 +158,7 @@ fun installInfoDialog(
             // This will automatically center its visible children as a group.
             Row(
                 horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.animateContentSize()
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = displayLabel,
@@ -189,43 +179,6 @@ fun installInfoDialog(
                             )
                         }
                 )
-                // Use AnimatedVisibility to show the button with an animation.
-                // When it becomes invisible, it will not take up any space,
-                // and the Row will re-center the Text automatically.
-                AnimatedVisibility(
-                    visible = stage == InstallerStage.InstallPrepare || stage == InstallerStage.InstallSuccess,
-                    enter = fadeIn() + slideInHorizontally { it }, // Slide in from the right
-                    exit = fadeOut() + slideOutHorizontally { it }  // Slide out to the right
-                ) {
-                    // This inner Row groups the spacer and button so they animate as one unit.
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        IconButton(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer)
-                                .size(24.dp),
-                            colors = IconButtonDefaults.iconButtonColors(
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                            ),
-                            onClick = onTitleExtraClick
-                        ) {
-                            if (isModule)
-                                Icon(
-                                    imageVector = AppIcons.Xposed,
-                                    contentDescription = null,
-                                    modifier = Modifier.padding(4.dp)
-                                )
-                            else
-                                Icon(
-                                    imageVector = AppIcons.Android,
-                                    contentDescription = null,
-                                    modifier = Modifier.padding(4.dp)
-                                )
-                        }
-                    }
-                }
             }
         },
         subtitle = DialogInnerParams(uniqueContentKey) {

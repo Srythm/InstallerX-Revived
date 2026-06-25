@@ -10,6 +10,8 @@ sealed interface InstallExtendedMenuAction {
     data object CustomizeUser : InstallExtendedMenuAction
     data object InstallOption : InstallExtendedMenuAction
     data object TextField : InstallExtendedMenuAction
+    data object ConfigToggle : InstallExtendedMenuAction
+    data object ViewSettingsToggle : InstallExtendedMenuAction
 }
 
 sealed class InstallExtendedSubMenuId(val id: String) {

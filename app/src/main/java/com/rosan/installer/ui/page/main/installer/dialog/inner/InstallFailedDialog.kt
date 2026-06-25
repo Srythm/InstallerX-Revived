@@ -46,8 +46,7 @@ fun installFailedDialog(
 
     // Call InstallInfoDialog for base structure
     val baseParams = installInfoDialog(
-        viewModel = viewModel,
-        onTitleExtraClick = {}
+        viewModel = viewModel
     )
 
     // Override text and buttons

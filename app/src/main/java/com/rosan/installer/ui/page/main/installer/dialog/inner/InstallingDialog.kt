@@ -41,8 +41,7 @@ fun installingDialog(
 
     // Call InstallInfoDialog for base structure (icon, title, subtitle with new version)
     val baseParams = installInfoDialog(
-        viewModel = viewModel,
-        onTitleExtraClick = {}
+        viewModel = viewModel
     )
 
     // Override text and buttons
