@@ -177,6 +177,7 @@ fun MiuixDataInstallModeWidget(state: EditViewState, dispatch: (EditViewAction) 
         InstallMode.AutoDialog to stringResource(R.string.config_install_mode_auto_dialog),
         InstallMode.Notification to stringResource(R.string.config_install_mode_notification),
         InstallMode.AutoNotification to stringResource(R.string.config_install_mode_auto_notification),
+        InstallMode.FullScreen to stringResource(R.string.config_install_mode_full_screen),
         InstallMode.Ignore to stringResource(R.string.config_install_mode_ignore),
     )
 

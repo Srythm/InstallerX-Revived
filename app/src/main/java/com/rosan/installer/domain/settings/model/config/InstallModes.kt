@@ -23,6 +23,7 @@ enum class InstallMode(val value: String) {
     AutoDialog("auto_dialog"),
     Notification("notification"),
     AutoNotification("auto_notification"),
+    FullScreen("full_screen"),
     Ignore("ignore");
 }
 

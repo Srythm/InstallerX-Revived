@@ -338,6 +338,21 @@ class InstallerActivity : ComponentActivity(), KoinComponent {
         super.onDestroy()
     }
 
+    /**
+     * Override [finish] to disable the system activity exit transition. The
+     * fullscreen install flow already runs its own alpha + blur fade-out via
+     * [com.rosan.installer.ui.page.main.installer.components.PositionFullScreen];
+     * the OS-default fade on top of that is what produced the visible
+     * "two-stage fade / flicker" on exit. The dialog flow already dismisses
+     * the dialog instantly, so losing the activity fade-out is not
+     * noticeable there.
+     */
+    @Suppress("DEPRECATION")
+    override fun finish() {
+        overridePendingTransition(0, 0)
+        super.finish()
+    }
+
     private fun restoreInstaller(savedInstanceState: Bundle? = null) {
         val sessionId =
             if (savedInstanceState == null) intent?.getStringExtra(KEY_INSTALLER_ID) else savedInstanceState.getString(KEY_INSTALLER_ID)

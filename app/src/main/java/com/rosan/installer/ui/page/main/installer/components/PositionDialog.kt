@@ -214,7 +214,7 @@ fun PositionDialog(
 }
 
 @Composable
-private fun PositionChildWidget(
+internal fun PositionChildWidget(
     left: @Composable (() -> Unit)? = null,
     center: @Composable (() -> Unit)? = null,
     right: @Composable (() -> Unit)? = null,

@@ -328,6 +328,7 @@
     <string name="config_install_mode_notification">通知栏</string>
     <string name="config_install_mode_auto_notification">通知栏自动</string>
     <string name="config_install_mode_ignore">忽略</string>
+    <string name="config_install_mode_full_screen">全屏</string>
     <string name="config_auto_approve_session">自动批准安装会话</string>
     <string name="config_auto_approve_session_desc">静默批准目标应用的会话安装请求</string>
     <string name="config_auto_approve_session_disabled_desc">遵守平台政策启用时不可用</string>

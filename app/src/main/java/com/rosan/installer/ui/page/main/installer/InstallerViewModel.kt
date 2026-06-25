@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
@@ -164,7 +165,30 @@ class InstallerViewModel(
     fun dispatch(action: InstallerViewAction) {
         when (action) {
             is InstallerViewAction.CollectSession -> collectRepo(action.session)
-            is InstallerViewAction.Close -> close()
+            is InstallerViewAction.Close -> {
+                // In fullscreen InstallMode the install UI must fade out
+                // before the activity is torn down — see the long KDoc on
+                // [requestFullscreenClose]. The user expects this fade
+                // for *every* close path in fullscreen mode, not just the
+                // system-back gesture: tapping "完成" on a successful
+                // install, "取消" mid-install, "关闭" on a failure, and the
+                // various "done"/"ok" buttons in the uninstall flow all
+                // dispatch Close and must look symmetric with the back
+                // press. Routing them all through [requestFullscreenClose]
+                // is what gives that consistency.
+                //
+                // In dialog InstallMode the surrounding Material 3
+                // [androidx.compose.material3.Dialog] runs its own
+                // dismiss animation, so we keep the synchronous [close]
+                // path — there is no PositionFullScreen layer to fade and
+                // introducing the delay here would just add a 220ms
+                // "stuck" frame before the dialog disappears.
+                if (_localState.value.config.installMode == InstallMode.FullScreen) {
+                    requestFullscreenClose()
+                } else {
+                    close()
+                }
+            }
             is InstallerViewAction.Cancel -> cancel()
             is InstallerViewAction.Analyse -> analyse()
             is InstallerViewAction.InstallChoice -> {
@@ -605,7 +629,64 @@ class InstallerViewModel(
         iconJobs.values.forEach { it.cancel() }
         iconJobs.clear()
         session.close()
+        // Reset the fullscreen close signal so the next time the user
+        // triggers an install in fullscreen mode the layer enters via
+        // its normal fade-in (instead of starting from the dismissed
+        // state). Without this, [_isClosingFullscreen] would stay `true`
+        // across the activity boundary (the ViewModel is tied to the
+        // activity, not to the install session) and the very first
+        // composition of [PositionFullScreen] on the next install would
+        // see `isClosing = true` and fade out immediately.
+        _isClosingFullscreen.value = false
         _localState.update { it.copy(currentPackageName = null, uiUninstallInfo = null, stage = InstallerStage.Ready) }
+    }
+
+    // ---------------------------------------------------------------------
+    // Fullscreen close orchestration
+    // ---------------------------------------------------------------------
+    //
+    // In fullscreen InstallMode, the install UI has a "real app" feel: the
+    // user presses back and the whole install layer fades out before the
+    // activity disappears. The fade-out is driven by [PositionFullScreen]
+    // (which animates a layer alpha from 1f to 0f), but the *final* teardown
+    // — closing the session and resetting [stage] to [InstallerStage.Ready]
+    // so the [PositionFullScreen] composable leaves composition — must
+    // happen only AFTER the fade-out completes.
+    //
+    // If we closed the session synchronously, the stage would flip to
+    // [InstallerStage.Ready] immediately, [PositionFullScreen] would leave
+    // composition at t=0, and any fade-out coroutine launched from a
+    // composition-bound scope would be cancelled before it had a chance to
+    // run — the user would see the install UI "snap" away.
+    //
+    // [requestFullscreenClose] therefore:
+    //   1. flips [_isClosingFullscreen] to true (drives the fade-out in
+    //      [PositionFullScreen] via [isClosingFullscreen] state),
+    //   2. waits [FullscreenCloseFadeOutMs] on [viewModelScope] (which is
+    //      tied to the ViewModel's lifetime, not the composition's, so it
+    //      survives any composition churn in the meantime),
+    //   3. then calls [close] which performs the synchronous teardown.
+    //
+    // The delay is intentionally a wall-clock wait, not coupled to the
+    // animation, so a small drift between the two clocks does not leave a
+    // visible "transparent UI with a not-yet-disposed session" frame.
+
+    private val _isClosingFullscreen = MutableStateFlow(false)
+    val isClosingFullscreen: StateFlow<Boolean> = _isClosingFullscreen.asStateFlow()
+
+    /**
+     * Begin the fullscreen exit sequence: drive the install UI's fade-out
+     * animation, then close the session once the fade has had time to play.
+     * Idempotent — repeated calls while a fade-out is already in progress
+     * are ignored.
+     */
+    fun requestFullscreenClose() {
+        if (_isClosingFullscreen.value) return
+        _isClosingFullscreen.value = true
+        viewModelScope.launch {
+            delay(FullscreenCloseFadeOutMs)
+            close()
+        }
     }
 
     private fun cancel() {
@@ -813,5 +894,20 @@ class InstallerViewModel(
             val label = getAppLabel(packageName)
             _localState.update { it.copy(initiatorAppLabel = label) }
         }
+    }
+
+    companion object {
+        /**
+         * Wall-clock delay (ms) between setting [isClosingFullscreen] = true
+         * and the synchronous [close] teardown. Kept in sync with the
+         * fade-out animation duration in
+         * [com.rosan.installer.ui.page.main.installer.components.PositionFullScreen].
+         * The value here is intentionally the lower bound: the composable
+         * fade-out takes 220ms, the delay matches that, and a tiny drift
+         * means the composable finishes its animation at alpha=0 a hair
+         * before the session is torn down — which is invisible (the layer
+         * is already fully transparent at that point).
+         */
+        const val FullscreenCloseFadeOutMs = 220L
     }
 }

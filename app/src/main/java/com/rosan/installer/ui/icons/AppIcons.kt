@@ -50,6 +50,7 @@ import androidx.compose.material.icons.twotone.Favorite
 import androidx.compose.material.icons.twotone.FavoriteBorder
 import androidx.compose.material.icons.twotone.FindInPage
 import androidx.compose.material.icons.twotone.Flare
+import androidx.compose.material.icons.twotone.Fullscreen
 import androidx.compose.material.icons.twotone.GppBad
 import androidx.compose.material.icons.twotone.GppMaybe
 import androidx.compose.material.icons.twotone.Healing
@@ -165,6 +166,7 @@ object AppIcons {
     val LSPosed = Icons.TwoTone.Healing
     val DisableAdbVerify = Icons.TwoTone.Security
     val InstallMode = Icons.TwoTone.Downloading
+    val FullScreen = Icons.TwoTone.Fullscreen
     val BatteryOptimization = Icons.TwoTone.BatterySaver
     val AutoLockDefault = Icons.TwoTone.TaskAlt
     val LockDefault = Icons.TwoTone.Favorite

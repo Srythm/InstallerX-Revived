@@ -9,18 +9,29 @@ import androidx.activity.compose.LocalActivity
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.DialogWindowProvider
 import java.util.function.Consumer
+import kotlinx.coroutines.flow.collect
 
 /**
  * Applies a window-level blur-behind effect (Android 12+).
  * Correctly handles Activity and Dialog windows, and respects system settings.
+ *
+ * The [blurRadius] can change continuously (e.g. driven by an [androidx.compose.animation.core.Animatable]):
+ * each new value is applied to the window's attributes via [Window.setAttributes], so callers
+ * can fade the blur in and out smoothly. The previous version used [blurRadius] as a
+ * [DisposableEffect] key, which restarted the effect (and called [Window.clearBlur]) on every
+ * change — that produced a flicker when the radius was animated frame-by-frame. Here the
+ * radius is tracked via [snapshotFlow] and applied without tearing the effect down.
  */
 @Composable
 fun WindowBlurEffect(useBlur: Boolean, blurRadius: Int = 30) {
@@ -29,17 +40,38 @@ fun WindowBlurEffect(useBlur: Boolean, blurRadius: Int = 30) {
 
     val window = findCurrentWindow() ?: return
     val blurEnabledBySystem = isCrossWindowBlurEnabled()
+    val currentBlurRadius = rememberUpdatedState(blurRadius)
 
-    // Trigger effect when any parameter or system state changes.
-    DisposableEffect(window, useBlur, blurRadius, blurEnabledBySystem) {
+    // Drive the window attributes from useBlur + blurRadius. The key only restarts the
+    // coroutine when the underlying window / useBlur / system-toggle changes, so a
+    // continuously-animated blurRadius does NOT restart the effect each frame.
+    LaunchedEffect(window, useBlur, blurEnabledBySystem) {
         if (useBlur && blurEnabledBySystem) {
-            window.applyBlur(blurRadius)
+            // When the animated radius drops to 0 we proactively call clearBlur
+            // (which removes FLAG_BLUR_BEHIND) during the exit animation, not
+            // at dispose time. Otherwise the teardown path produces a one-frame
+            // visual: window still has FLAG_BLUR_BEHIND but the install UI is
+            // already gone, so the user briefly sees the background blur with
+            // no UI in front of it. Removing the flag while the user is still
+            // watching the fade-out (visually identical to "flag set, radius 0")
+            // keeps the dispose step a no-op.
+            snapshotFlow { currentBlurRadius.value }.collect { radius ->
+                if (radius > 0) {
+                    window.applyBlur(radius)
+                } else {
+                    window.clearBlur()
+                }
+            }
         } else {
             window.clearBlur()
         }
+    }
 
+    // Always clear the blur when the composable leaves the tree. This is independent
+    // of the LaunchedEffect above so it fires even if the useBlur path is active when
+    // the composable is disposed.
+    DisposableEffect(window) {
         onDispose {
-            // Ensure blur is removed when the composable leaves the tree.
             window.clearBlur()
         }
     }
