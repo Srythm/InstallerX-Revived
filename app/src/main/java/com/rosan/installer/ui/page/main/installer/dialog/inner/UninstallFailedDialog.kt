@@ -29,11 +29,14 @@ fun uninstallFailedDialog(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val currentError = uiState.error
     // Use the shared uninstallInfoDialog to get the base layout.
-    // Provide a click handler to open the app's system settings page,
-    // which is useful for debugging a failed uninstall.
+    // The "magic wand" extra-button is intentionally hidden: on an
+    // uninstall failure the user typically wants to retry or close, not
+    // to "open app settings" — and the previous empty onClick was a dead
+    // affordance that did nothing on tap.
     val baseParams = uninstallInfoDialog(
         viewModel = viewModel,
-        onTitleExtraClick = {}
+        onTitleExtraClick = {},
+        showTitleExtra = false
     )
 
     // Override the text and buttons sections to display the error and provide relevant actions.

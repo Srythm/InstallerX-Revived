@@ -26,10 +26,16 @@ import com.rosan.installer.ui.page.main.installer.dialog.dialogButtons
 fun uninstallingDialog(
     viewModel: InstallerViewModel
 ): DialogParams {
-    // Call uninstallInfoDialog for base structure (icon, title, subtitle with new version)
+    // Call uninstallInfoDialog for base structure (icon, title, subtitle with new version).
+    // The "magic wand" extra-button is hidden here: this dialog is the
+    // in-progress uninstall screen, not a screen where the user is making
+    // a choice, so a title-extra affordance is meaningless (and would be
+    // visually inconsistent with the post-uninstall Success/Failed
+    // dialogs, which now also hide it).
     val baseParams = uninstallInfoDialog(
         viewModel = viewModel,
-        onTitleExtraClick = {}
+        onTitleExtraClick = {},
+        showTitleExtra = false
     )
 
     // Override text and buttons
