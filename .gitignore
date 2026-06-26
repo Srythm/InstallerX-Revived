@@ -10,9 +10,16 @@ build/
 # Local configuration & Keystore files
 local.properties
 keystore.properties
+keystore.properties.*
+*.keystore.properties
+signing.properties
+key.properties
 keystore/
+**/keystore/
 *.jks
 *.keystore
+*.p12
+*.pfx
 
 # IntelliJ / Android Studio
 .idea/*
