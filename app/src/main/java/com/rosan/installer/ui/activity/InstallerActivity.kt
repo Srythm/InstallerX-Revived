@@ -114,6 +114,21 @@ class InstallerActivity : ComponentActivity(), KoinComponent {
         super.onCreate(savedInstanceState)
         Timber.d("onCreate. SavedInstanceState is ${if (savedInstanceState == null) "null" else "not null"}")
 
+        // Suppress the system default activity enter / previous-activity exit
+        // animation. The InstallerActivity uses Theme.Installer.Translucent
+        // (transparent window background, windowIsTranslucent=true), so the
+        // default activity animation would briefly show the underlying app
+        // peeking through the transparent window before the inner dialog /
+        // Miuix sheet has a chance to draw its scrim. Combined with the
+        // dialog's own enter animation, this produced a visible "background
+        // flicker" when the user tapped a notification to wake the dialog
+        // (especially noticeable for ZIP / multi-package installs, which go
+        // through the InstallChoice stage). The dialog / sheet is in charge
+        // of its own enter animation, so we can safely disable the outer
+        // activity transition here. This mirrors the override already in
+        // [finish], which disables the matching exit animation.
+        overridePendingTransition(0, 0)
+
         when {
             savedInstanceState != null -> {
                 returnInstallResultRequested = savedInstanceState.getBoolean(KEY_RETURN_INSTALL_RESULT_REQUESTED)
