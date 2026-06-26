@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -174,7 +175,18 @@ private fun ChoiceContent(
     errorMessage: String?,
     totalModuleCount: Int
 ) {
-    Column {
+    Column(
+        // Fill the entire body area and centre the choice options
+        // vertically. The fullscreen layout reserves the footer for the
+        // action buttons and leaves the body Box filling the rest; the
+        // old top-aligned Column made the two NavigationItemWidgets and
+        // the bounded LazyColumn sit right under the title, which read as
+        // "options are crammed against the header". Centring inside the
+        // body Box keeps the visual balance with the title above and the
+        // buttons below, regardless of how many options there are.
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center
+    ) {
         AnimatedVisibility(visible = errorMessage != null) {
             InfoTipCard(
                 text = errorMessage ?: "",

@@ -241,7 +241,27 @@ fun DialogPage(
                     }
                 }
 
-                if (installMode == InstallMode.FullScreen) {
+                // Determine whether the current stage should render in the
+                // fullscreen layout. The base rule is "user chose fullscreen",
+                // but we also force-fullscreen the InstallChoice stage when
+                // the user picked a notification-driven install mode:
+                //   * In Notification / AutoNotification mode the dialog is
+                //     only woken by tapping a notification, and on Android 12+
+                //     the system runs a "stretch-from-notification-card"
+                //     animation that briefly puts the inner dialog's blur at
+                //     a heavier intensity before snapping it back, which
+                //     reads as a flicker.
+                //   * Routing the choice stage through PositionFullScreen
+                //     sidesteps that animation entirely (the activity stays
+                //     laid out from the previous frame, the new content just
+                //     cross-fades in).
+                // Other stages (Ready, Resolving, Installing, etc.) keep the
+                // existing dialog layout in notification mode so the
+                // silent-install flow continues to work without a UI takeover.
+                val isInstallChoice = stage is InstallerStage.InstallChoice
+                val useFullScreen = installMode == InstallMode.FullScreen ||
+                    (isInstallChoice && installMode.isNotification)
+                if (useFullScreen) {
                     // Fullscreen keeps the package header (icon, title, subtitle)
                     // constant across the whole install flow, while the body
                     // content and the bottom buttons animate when the stage

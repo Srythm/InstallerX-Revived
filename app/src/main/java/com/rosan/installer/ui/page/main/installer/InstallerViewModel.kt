@@ -166,24 +166,35 @@ class InstallerViewModel(
         when (action) {
             is InstallerViewAction.CollectSession -> collectRepo(action.session)
             is InstallerViewAction.Close -> {
-                // In fullscreen InstallMode the install UI must fade out
-                // before the activity is torn down — see the long KDoc on
-                // [requestFullscreenClose]. The user expects this fade
-                // for *every* close path in fullscreen mode, not just the
-                // system-back gesture: tapping "完成" on a successful
-                // install, "取消" mid-install, "关闭" on a failure, and the
-                // various "done"/"ok" buttons in the uninstall flow all
-                // dispatch Close and must look symmetric with the back
-                // press. Routing them all through [requestFullscreenClose]
-                // is what gives that consistency.
+                // The install UI must fade out before the activity is torn
+                // down whenever the *current render* is the fullscreen
+                // layout — see the long KDoc on [requestFullscreenClose].
+                // That covers two cases today:
+                //   1. installMode == FullScreen (always fullscreen).
+                //   2. installMode is Notification / AutoNotification and
+                //      the current stage is InstallChoice. DialogPage routes
+                //      that combination through PositionFullScreen to dodge
+                //      the "stretch-from-notification-card" animation
+                //      flicker, so cancelling the choice must take the same
+                //      fade-out path or the user gets an instant snap.
+                // The user expects this fade for *every* close path in
+                // fullscreen mode, not just the system-back gesture: the
+                // back button, the "完成" button on success, the "取消"
+                // mid-install, the "关闭" button on failure, and the
+                // various "done" / "ok" buttons in the uninstall flow all
+                // dispatch Close and must look symmetric.
                 //
-                // In dialog InstallMode the surrounding Material 3
-                // [androidx.compose.material3.Dialog] runs its own
-                // dismiss animation, so we keep the synchronous [close]
-                // path — there is no PositionFullScreen layer to fade and
-                // introducing the delay here would just add a 220ms
-                // "stuck" frame before the dialog disappears.
-                if (_localState.value.config.installMode == InstallMode.FullScreen) {
+                // In pure dialog InstallMode the surrounding Material 3
+                // [androidx.compose.material3.Dialog] runs its own dismiss
+                // animation, so we keep the synchronous [close] path —
+                // there is no PositionFullScreen layer to fade and the
+                // delay would just add a 220ms "stuck" frame before the
+                // dialog disappears.
+                val currentState = _localState.value
+                val currentInstallMode = currentState.config.installMode
+                val isFullscreenUI = currentInstallMode == InstallMode.FullScreen ||
+                    (currentState.stage is InstallerStage.InstallChoice && currentInstallMode.isNotification)
+                if (isFullscreenUI) {
                     requestFullscreenClose()
                 } else {
                     close()
