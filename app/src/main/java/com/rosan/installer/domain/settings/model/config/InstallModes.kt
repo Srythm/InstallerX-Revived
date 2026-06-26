@@ -25,6 +25,18 @@ enum class InstallMode(val value: String) {
     AutoNotification("auto_notification"),
     FullScreen("full_screen"),
     Ignore("ignore");
+
+    /**
+     * True for install modes that drive a background install and surface
+     * progress through a system notification rather than the inner dialog
+     * UI. Both `Notification` (user-driven) and `AutoNotification`
+     * (auto-launched / tasker) qualify. Used by resolve-time logic that
+     * needs to downgrade silent flows, and by the dialog page to decide
+     * when to swap the M3 `Dialog` layout for the fullscreen layout to
+     * avoid the "stretch-from-notification-card" animation flicker.
+     */
+    val isNotification: Boolean
+        get() = this == Notification || this == AutoNotification
 }
 
 /**

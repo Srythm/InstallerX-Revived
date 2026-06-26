@@ -309,10 +309,21 @@ class ActionHandler(
         Timber.d("[id=$sessionId] resolve: Data resolved successfully (${session.data.size} items).")
 
         // Post-Resolution Logic
-        val forceDialog = session.data.size > 1 || session.data.any { it.sourcePath()?.endsWith(".zip", true) == true }
-        if (forceDialog) {
-            Timber.d("[id=$sessionId] resolve: Batch share or module file detected. Forcing install mode to Dialog.")
-            session.config = session.config.copy(installMode = InstallMode.Dialog)
+        // Batch shares and ZIP / module files always need an explicit user
+        // choice (the InstallChoice stage). Historically this method would
+        // force `installMode = Dialog` for any session containing such
+        // data, so the user was guaranteed a UI to make the choice. That
+        // is no longer the right place to enforce it: the dialog page
+        // (DialogPage.kt) now routes every InstallChoice stage to
+        // `PositionFullScreen` when the user picked a notification-driven
+        // mode (Notification / AutoNotification), and preserves the
+        // user's chosen layout otherwise. So whatever install mode the
+        // user picked is the one we want for the rest of the flow —
+        // Notification mode stays Notification, FullScreen stays
+        // FullScreen, Dialog stays Dialog.
+        val needsChoice = session.data.size > 1 || session.data.any { it.sourcePath()?.endsWith(".zip", true) == true }
+        if (needsChoice) {
+            Timber.d("[id=$sessionId] resolve: Batch share or module file detected. installMode=$session.config.installMode kept as-is; InstallChoice UI will be provided by the dialog page.")
         }
 
         Timber.d("[id=$sessionId] resolve: Requesting AutoLockManager check.")
@@ -820,5 +831,7 @@ class ActionHandler(
             referrerUri = session.referrerUri
         )
 
-    private val InstallMode.isNotification get() = this == InstallMode.Notification || this == InstallMode.AutoNotification
+    // `InstallMode.isNotification` is defined on the enum itself in
+    // `domain.settings.model.config.InstallModes.kt`; keep it there so
+    // other call sites (e.g. the dialog page) can use it.
 }
