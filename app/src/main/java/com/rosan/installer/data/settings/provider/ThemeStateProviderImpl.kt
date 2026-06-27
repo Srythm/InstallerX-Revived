@@ -43,12 +43,10 @@ class ThemeStateProviderImpl(
 
         ThemeState(
             isLoaded = true,
-            useMiuix = prefs.showMiuixUI,
             themeMode = prefs.themeMode,
             paletteStyle = prefs.paletteStyle,
             colorSpec = prefs.colorSpec,
             useDynamicColor = prefs.useDynamicColor,
-            useMiuixMonet = prefs.useMiuixMonet,
             useAppleFloatingBar = prefs.useAppleFloatingBar,
             seedColor = effectiveSeedColor,
             useBlur = prefs.useBlur,
