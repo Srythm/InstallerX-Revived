@@ -44,7 +44,6 @@ import com.rosan.installer.domain.settings.model.config.InstallerMode
 import com.rosan.installer.framework.privileged.util.requireDhizukuPermissionGranted
 import com.rosan.installer.util.pm.isFreshInstallCandidate
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import android.os.Process as AndroidProcess
@@ -53,13 +52,12 @@ abstract class IBinderAppInstallerRepoImpl(
     protected val context: Context,
     protected val reflect: ReflectionProvider,
     protected val capabilityProvider: DeviceCapabilityProvider,
-    protected val postInstallTaskProvider: PostInstallTaskProvider
+    protected val postInstallTaskProvider: PostInstallTaskProvider,
+    protected val taskScope: CoroutineScope
 ) : AppInstallerRepository {
     private companion object {
         const val INSTALL_FLAGS_TAG = "InstallFlags"
     }
-
-    private val taskScope = CoroutineScope(Dispatchers.IO)
 
     protected abstract suspend fun iBinderWrapper(iBinder: IBinder): IBinder
 
@@ -385,15 +383,16 @@ abstract class IBinderAppInstallerRepoImpl(
         if (sizeBytes == 0L || sizeBytes < AssetFileDescriptor.UNKNOWN_LENGTH) {
             throw IllegalStateException("Invalid data size: $sizeBytes.")
         }
-        session.openWrite(
-            entity.name,
-            0,
-            sizeBytes
-        ).use { outputStream ->
-            inputStream.copyTo(outputStream)
-            session.fsync(outputStream)
+        inputStream.use { source ->
+            session.openWrite(
+                entity.name,
+                0,
+                sizeBytes
+            ).use { outputStream ->
+                source.copyTo(outputStream)
+                session.fsync(outputStream)
+            }
         }
-        inputStream.close()
     }
 
     @SuppressLint("RequestInstallPackagesPolicy")

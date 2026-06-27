@@ -44,6 +44,7 @@ import timber.log.Timber
 import java.io.File
 import java.io.IOException
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.TimeUnit
 import android.os.Process as AndroidProcess
 
 @SuppressLint("PrivateApi")
@@ -55,6 +56,9 @@ class DefaultPrivilegedService private constructor(
 
         private const val SHELL_COMMAND_TRANSACTION = 0x5f434d44 // '_CMD'
         private const val SYSTEM_UID = 1000
+
+        private const val PROCESS_TIMEOUT_SECONDS = 30L
+        private const val READER_JOIN_TIMEOUT_MILLIS = 5000L
 
         fun system() = DefaultPrivilegedService(PrivilegedRuntime.SystemApp)
 
@@ -288,16 +292,25 @@ class DefaultPrivilegedService private constructor(
             stdoutThread.start()
             stderrThread.start()
 
-            // Wait for the process to complete
-            val exitCode = process.waitFor()
-            process.destroy()
+            // Wait for the process to complete with a timeout so a stuck su does not
+            // permanently block the installation thread.
+            val processFinished = process.waitFor(PROCESS_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            if (!processFinished) {
+                Timber.tag(TAG).w("Shell command timed out after ${PROCESS_TIMEOUT_SECONDS}s; destroying forcibly.")
+                process.destroyForcibly()
+            }
 
-            // Wait for reader threads to finish to ensure all output is captured
-            stdoutThread.join()
-            stderrThread.join()
+            // Wait for reader threads to finish draining output.
+            stdoutThread.join(READER_JOIN_TIMEOUT_MILLIS)
+            stderrThread.join(READER_JOIN_TIMEOUT_MILLIS)
+            if (stdoutThread.isAlive || stderrThread.isAlive) {
+                Timber.tag(TAG).w("Reader threads did not finish in time; interrupting them.")
+                stdoutThread.interrupt()
+                stderrThread.interrupt()
+            }
 
             // Notify client that the process is complete
-            listener.onComplete(exitCode)
+            listener.onComplete(if (processFinished) process.exitValue() else -1)
 
         } catch (e: Exception) {
             // If process creation itself fails

@@ -16,6 +16,7 @@ import com.rosan.installer.domain.session.repository.InstallerSessionRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -77,11 +78,17 @@ class BroadcastHandler(
 
     override suspend fun onFinish() {
         Timber.d("[id=${session.id}] onFinish: Unregistering receiver.")
+        receiver.cancelScope()
         context.unregisterReceiver(receiver)
     }
 
     private inner class Receiver : BroadcastReceiver() {
         private val receiverScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+        fun cancelScope() {
+            receiverScope.cancel()
+        }
+
         override fun onReceive(context: Context?, intent: Intent?) {
             intent ?: return
             if (intent.action != ACTION) return

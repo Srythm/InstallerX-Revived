@@ -21,6 +21,7 @@ import com.rosan.installer.domain.settings.model.config.Authorizer
 import com.rosan.installer.domain.settings.model.config.ConfigModel
 import com.rosan.installer.domain.settings.repository.AppSettingsRepository
 import com.rosan.installer.domain.settings.repository.BooleanSetting
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
 
@@ -30,7 +31,8 @@ class AppInstallerRepositoryImpl(
     private val deviceCapabilityProvider: DeviceCapabilityProvider,
     private val appSettingsRepo: AppSettingsRepository,
     private val postInstallTaskProvider: PostInstallTaskProvider,
-    private val platformInstallPolicyChecker: PlatformInstallPolicyChecker
+    private val platformInstallPolicyChecker: PlatformInstallPolicyChecker,
+    private val taskScope: CoroutineScope
 ) : AppInstallerRepository {
     override suspend fun resolveInstallerPackageName(config: ConfigModel): String? =
         executeWithRepo(config) { repo ->
@@ -146,17 +148,17 @@ class AppInstallerRepositoryImpl(
      */
     private fun resolveRepo(config: ConfigModel): AppInstallerRepository {
         return when (config.authorizer) {
-            Authorizer.Shizuku -> ShizukuAppInstallerRepoImpl(context, reflect, deviceCapabilityProvider, postInstallTaskProvider)
-            Authorizer.Dhizuku -> DhizukuAppInstallerRepoImpl(context, reflect, deviceCapabilityProvider, postInstallTaskProvider)
+            Authorizer.Shizuku -> ShizukuAppInstallerRepoImpl(context, reflect, deviceCapabilityProvider, postInstallTaskProvider, taskScope)
+            Authorizer.Dhizuku -> DhizukuAppInstallerRepoImpl(context, reflect, deviceCapabilityProvider, postInstallTaskProvider, taskScope)
             Authorizer.None -> {
                 if (deviceCapabilityProvider.isSystemApp) {
-                    SystemAppInstallerRepoImpl(context, reflect, deviceCapabilityProvider, postInstallTaskProvider)
+                    SystemAppInstallerRepoImpl(context, reflect, deviceCapabilityProvider, postInstallTaskProvider, taskScope)
                 } else {
-                    NoneAppInstallerRepoImpl(context, reflect, postInstallTaskProvider)
+                    NoneAppInstallerRepoImpl(context, reflect, postInstallTaskProvider, taskScope)
                 }
             }
 
-            else -> ProcessAppInstallerRepoImpl(context, reflect, deviceCapabilityProvider, postInstallTaskProvider)
+            else -> ProcessAppInstallerRepoImpl(context, reflect, deviceCapabilityProvider, postInstallTaskProvider, taskScope)
         }
     }
 }

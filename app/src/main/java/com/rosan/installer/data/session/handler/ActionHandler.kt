@@ -45,7 +45,6 @@ import com.rosan.installer.domain.settings.model.config.InstallMode
 import com.rosan.installer.domain.settings.model.config.ToastMode
 import com.rosan.installer.domain.settings.repository.AppSettingsRepository
 import com.rosan.installer.domain.settings.repository.BooleanSetting
-import com.rosan.installer.domain.settings.repository.StringSetting
 import com.rosan.installer.framework.auth.safeBiometricAuthOrThrow
 import com.rosan.installer.framework.service.AutoLockService
 import com.rosan.installer.util.getErrorMessage
@@ -349,10 +348,11 @@ class ActionHandler(
         Timber.d("[id=$sessionId] analyse: Starting. Emitting ProgressEntity.InstallAnalysing.")
         session.progress.emit(ProgressEntity.InstallAnalysing)
 
-        val isModuleEnabled = appSettingsRepo.getBoolean(BooleanSetting.LabEnableModuleFlash, false).first()
+        val prefs = appSettingsRepo.snapshot()
+        val isModuleEnabled = prefs.labRootEnableModuleFlash
         Timber.d("[id=$sessionId] Module flashing enabled: $isModuleEnabled")
 
-        val checkAppSignature = appSettingsRepo.getBoolean(BooleanSetting.CheckAppSignature, true).first()
+        val checkAppSignature = prefs.checkAppSignature
         Timber.d("[id=$sessionId] App signature checks enabled: $checkAppSignature")
 
         val extra = AnalyseExtraEntity(
@@ -395,19 +395,15 @@ class ActionHandler(
     private suspend fun requestUserBiometricAuthentication(
         isInstall: Boolean
     ) {
+        val prefs = appSettingsRepo.snapshot()
         val requireBiometricAuth = if (isInstall) {
-            val globalMode = appSettingsRepo.getString(
-                StringSetting.InstallerBiometricAuthMode,
-                BiometricAuthMode.FollowConfig.value
-            ).first().let { BiometricAuthMode.fromValueOrDefault(it) }
-
-            when (globalMode) {
+            when (prefs.installerRequireBiometricAuth) {
                 BiometricAuthMode.Disable -> false
                 BiometricAuthMode.Enable -> true
                 BiometricAuthMode.FollowConfig -> session.config.requireBiometricAuth
             }
         } else {
-            appSettingsRepo.getBoolean(BooleanSetting.UninstallerRequireBiometricAuth, false).first()
+            prefs.uninstallerRequireBiometricAuth
         }
 
         if (!requireBiometricAuth) return
@@ -745,7 +741,7 @@ class ActionHandler(
     private suspend fun handleReboot(reason: String) {
         Timber.d("[id=$sessionId] handleReboot: Starting cleanup before reboot.")
         val systemUseRoot =
-            deviceCapabilityProvider.isSystemApp && appSettingsRepo.getBoolean(BooleanSetting.AlwaysUseRootInSystem, false).first()
+            deviceCapabilityProvider.isSystemApp && appSettingsRepo.snapshot().alwaysUseRootInSystem
         if (systemUseRoot) session.config = session.config.copy(authorizer = Authorizer.Root)
         // Execute cleanup immediately
         // Call clearCache() explicitly to ensure temporary files are removed

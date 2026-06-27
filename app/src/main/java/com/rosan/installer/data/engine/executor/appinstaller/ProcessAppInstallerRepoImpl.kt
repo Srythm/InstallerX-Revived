@@ -14,6 +14,7 @@ import com.rosan.installer.domain.settings.model.config.ConfigModel
 import com.rosan.installer.framework.privileged.recycler.ProcessHookRecycler
 import com.rosan.installer.framework.privileged.util.SHELL_ROOT
 import com.rosan.installer.framework.privileged.util.SHELL_SH
+import kotlinx.coroutines.CoroutineScope
 import org.koin.core.context.GlobalContext
 import org.koin.core.parameter.parametersOf
 
@@ -22,7 +23,8 @@ class ProcessAppInstallerRepoImpl(
     reflect: ReflectionProvider,
     capabilityProvider: DeviceCapabilityProvider,
     postInstallTaskProvider: PostInstallTaskProvider,
-) : IBinderAppInstallerRepoImpl(context, reflect, capabilityProvider, postInstallTaskProvider) {
+    taskScope: CoroutineScope
+) : IBinderAppInstallerRepoImpl(context, reflect, capabilityProvider, postInstallTaskProvider, taskScope) {
     private var localService: ProcessHookRecycler.HookedUserService? = null
 
     override suspend fun doInstallWork(
