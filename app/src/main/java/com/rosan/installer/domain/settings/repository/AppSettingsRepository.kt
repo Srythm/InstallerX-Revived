@@ -6,6 +6,7 @@ import com.rosan.installer.domain.settings.model.preferences.AppPreferences
 import com.rosan.installer.domain.settings.model.app.NamedPackage
 import com.rosan.installer.domain.settings.model.app.SharedUid
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 
 enum class StringSetting {
     ThemeMode,
@@ -35,8 +36,6 @@ enum class IntSetting {
 enum class BooleanSetting {
     UiUseBlur,
     ThemeUseDynamicColor,
-    UiUseMiuix,
-    UiUseMiuixMonet,
     UiUseAppleFloatingBar,
     UiDynColorFollowPkgIcon,
     LiveActivityDynColorFollowPkgIcon,
@@ -94,6 +93,13 @@ enum class SharedUidListSetting {
 
 interface AppSettingsRepository {
     val preferencesFlow: Flow<AppPreferences>
+
+    /**
+     * Returns the current aggregated preferences snapshot without creating a new collector.
+     * Equivalent to [preferencesFlow.first()] but makes the intent explicit for callers that
+     * only need a single point-in-time value.
+     */
+    suspend fun snapshot(): AppPreferences = preferencesFlow.first()
 
     suspend fun putString(setting: StringSetting, value: String)
     fun getString(setting: StringSetting, default: String = ""): Flow<String>

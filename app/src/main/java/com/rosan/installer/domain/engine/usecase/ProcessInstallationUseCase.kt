@@ -34,14 +34,8 @@ import com.rosan.installer.domain.session.model.SelectInstallEntity
 import com.rosan.installer.domain.settings.model.config.Authorizer
 import com.rosan.installer.domain.settings.model.config.ConfigModel
 import com.rosan.installer.domain.settings.model.preferences.RootMode
-import com.rosan.installer.domain.settings.model.preferences.SmartAuthorizerPreferences
 import com.rosan.installer.domain.settings.repository.AppSettingsRepository
-import com.rosan.installer.domain.settings.repository.BooleanSetting
-import com.rosan.installer.domain.settings.repository.NamedPackageListSetting
-import com.rosan.installer.domain.settings.repository.SharedUidListSetting
-import com.rosan.installer.domain.settings.repository.StringSetting
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import timber.log.Timber
 
@@ -59,6 +53,9 @@ class ProcessInstallationUseCase(
     private val recordOperationHistory: RecordOperationHistoryUseCase
 ) {
     companion object {
+        private const val MODULE_LOG_BATCH_SIZE = 50
+        private const val MODULE_LOG_BATCH_INTERVAL_MS = 200L
+
         private const val MODULE_INSTALL_BANNER = """
               ___           _        _ _         __  __ 
              |_ _|_ __  ___| |_ __ _| | | ___ _ _\ \/ / 
@@ -129,7 +126,8 @@ class ProcessInstallationUseCase(
     ): Flow<ProgressEntity> = flow {
         Timber.d("installModule: Starting module installation for ${module.name}")
         val output = mutableListOf<String>()
-        val showArt = appSettingsRepo.getBoolean(BooleanSetting.LabModuleFlashShowArt, true).first()
+        val prefs = appSettingsRepo.snapshot()
+        val showArt = prefs.labRootShowModuleArt
 
         if (showArt) {
             output.addAll(MODULE_INSTALL_BANNER.trimIndent().lines())
@@ -140,11 +138,11 @@ class ProcessInstallationUseCase(
         // Emit initial state
         emit(ProgressEntity.InstallingModule(output.toList()))
 
-        val rootImpl = RootMode.fromString(
-            appSettingsRepo.getString(StringSetting.LabRootImplementation).first()
-        )
-        val systemUseRoot = capabilityProvider.isSystemApp &&
-                appSettingsRepo.getBoolean(BooleanSetting.AlwaysUseRootInSystem, false).first()
+        val rootImpl = prefs.labRootMode
+        val systemUseRoot = capabilityProvider.isSystemApp && prefs.alwaysUseRootInSystem
+
+        var lastEmittedCount = output.size
+        var lastEmitTime = System.currentTimeMillis()
 
         moduleInstaller.doInstallWork(
             config = config,
@@ -153,7 +151,18 @@ class ProcessInstallationUseCase(
             rootMode = rootImpl
         ).collect { line ->
             output.add(line)
-            // Continually emit updated logs
+            val now = System.currentTimeMillis()
+            if (output.size - lastEmittedCount >= MODULE_LOG_BATCH_SIZE ||
+                now - lastEmitTime >= MODULE_LOG_BATCH_INTERVAL_MS
+            ) {
+                emit(ProgressEntity.InstallingModule(output.toList()))
+                lastEmittedCount = output.size
+                lastEmitTime = now
+            }
+        }
+
+        // Emit any trailing lines that did not reach the batch threshold.
+        if (lastEmittedCount < output.size) {
             emit(ProgressEntity.InstallingModule(output.toList()))
         }
 
@@ -167,7 +176,7 @@ class ProcessInstallationUseCase(
      */
     private suspend fun checkBlockedByProfile(config: ConfigModel, results: List<PackageAnalysisResult>) {
         if (config.bypassProfileRestriction) return
-        if (!appSettingsRepo.getBoolean(BooleanSetting.CheckAppSignature, true).first()) return
+        if (!appSettingsRepo.snapshot().checkAppSignature) return
 
         val selectedResults = results.filter { result -> result.appEntities.any { it.selected } }
 
@@ -243,14 +252,12 @@ class ProcessInstallationUseCase(
         selectedEntities: List<SelectInstallEntity>,
         metadata: InstallMetadata
     ) {
-        val blacklist = appSettingsRepo.getNamedPackageList(NamedPackageListSetting.ManagedBlacklistPackages)
-            .first().map { it.packageName }
+        val prefs = appSettingsRepo.snapshot()
+        val blacklist = prefs.managedBlacklistPackages.map { it.packageName }
 
-        val sharedUidBlacklist = appSettingsRepo.getSharedUidList(SharedUidListSetting.ManagedSharedUserIdBlacklist)
-            .first().map { it.uidName }
+        val sharedUidBlacklist = prefs.managedSharedUserIdBlacklist.map { it.uidName }
 
-        val sharedUidWhitelist = appSettingsRepo.getNamedPackageList(NamedPackageListSetting.ManagedSharedUserIdExemptedPackages)
-            .first().map { it.packageName }
+        val sharedUidWhitelist = prefs.managedSharedUserIdExemptedPackages.map { it.packageName }
 
         val installEntities = selectedEntities.map {
             InstallEntity(
@@ -288,9 +295,7 @@ class ProcessInstallationUseCase(
         sharedUidBlacklist: List<String>,
         sharedUidWhitelist: List<String>
     ): ConfigModel {
-        val tryMultipleAuthorizers = appSettingsRepo
-            .getBoolean(BooleanSetting.TryMultipleAuthorizersOnInstall, false)
-            .first()
+        val tryMultipleAuthorizers = appSettingsRepo.snapshot().tryMultipleAuthorizersOnInstall
 
         if (!tryMultipleAuthorizers) {
             submitInstall(config, installEntities, metadata, blacklist, sharedUidBlacklist, sharedUidWhitelist)
@@ -342,12 +347,7 @@ class ProcessInstallationUseCase(
     }
 
     private suspend fun buildAuthorizerCandidates(config: ConfigModel): List<Authorizer> {
-        val fallbackAuthorizers = SmartAuthorizerPreferences.decode(
-            value = appSettingsRepo
-                .getString(StringSetting.SmartAuthorizerCandidates)
-                .first(),
-            isSystemApp = capabilityProvider.isSystemApp
-        )
+        val fallbackAuthorizers = appSettingsRepo.snapshot().smartAuthorizerCandidates
             .filter { it.enabled }
             .map { it.authorizer }
 

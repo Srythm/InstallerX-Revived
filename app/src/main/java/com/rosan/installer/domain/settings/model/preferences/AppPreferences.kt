@@ -41,7 +41,6 @@ data class AppPreferences(
     val longClickBackgroundInstall: Boolean,
     val tryMultipleAuthorizersOnInstall: Boolean,
     val smartAuthorizerCandidates: List<SmartAuthorizerCandidate>,
-    val showMiuixUI: Boolean,
     val preferSystemIcon: Boolean,
     val showLauncherIcon: Boolean,
     val userSetLSPosedActive: Boolean,
@@ -72,7 +71,6 @@ data class AppPreferences(
     val paletteStyle: PaletteStyle,
     val colorSpec: ThemeColorSpec,
     val useDynamicColor: Boolean,
-    val useMiuixMonet: Boolean,
     val useAppleFloatingBar: Boolean,
     val seedColorInt: Int, // Stored as raw Int from DataStore
     val useDynColorFollowPkgIcon: Boolean,

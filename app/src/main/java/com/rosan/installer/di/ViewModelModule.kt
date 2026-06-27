@@ -19,16 +19,16 @@ import com.rosan.installer.ui.page.main.settings.preferred.installer.notificatio
 import com.rosan.installer.ui.page.main.settings.preferred.lab.LabSettingsViewModel
 import com.rosan.installer.ui.page.main.settings.preferred.theme.ThemeSettingsViewModel
 import com.rosan.installer.ui.page.main.settings.preferred.uninstaller.UninstallerSettingsViewModel
+import kotlinx.coroutines.CoroutineDispatcher
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 val viewModelModule = module {
     viewModelOf(::SettingsSharedViewModel)
     viewModelOf(::HomePageViewModel)
-    viewModelOf(::AllViewModel)
     viewModelOf(::HistoryViewModel)
-    viewModelOf(::PreferredViewModel)
     viewModelOf(::ThemeSettingsViewModel)
     viewModelOf(::InstallerSettingsViewModel)
     viewModelOf(::AuthorizerCustViewModel)
@@ -37,6 +37,30 @@ val viewModelModule = module {
     viewModelOf(::UninstallerSettingsViewModel)
     viewModelOf(::LabSettingsViewModel)
     viewModelOf(::AboutViewModel)
+
+    viewModel {
+        AllViewModel(
+            repo = get(),
+            deleteConfigWithScopes = get(),
+            restoreDeletedConfigSnapshot = get(),
+            appSettingsRepo = get(),
+            ioDispatcher = get(named("IoDispatcher"))
+        )
+    }
+
+    viewModel {
+        PreferredViewModel(
+            appSettingsRepo = get(),
+            updateRepo = get(),
+            systemEnvProvider = get(),
+            privilegedProvider = get(),
+            updateSetting = get(),
+            exportBackup = get(),
+            prepareBackupRestore = get(),
+            restoreBackup = get(),
+            ioDispatcher = get(named("IoDispatcher"))
+        )
+    }
 
     viewModel { (session: InstallerSessionRepository) ->
         InstallerViewModel(
@@ -53,24 +77,27 @@ val viewModelModule = module {
     viewModel { (id: Long) ->
         ApplyViewModel(
             id = id,
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get()
+            appSettingsRepo = get(),
+            appRepo = get(),
+            systemAppProvider = get(),
+            toggleAppTargetConfig = get(),
+            updateSetting = get(),
+            getAppIcon = get(),
+            clearAppIconCache = get(),
+            defaultDispatcher = get(named("DefaultDispatcher")),
+            ioDispatcher = get(named("IoDispatcher"))
         )
     }
 
     viewModel { (id: Long?) ->
         EditViewModel(
             id = id,
-            get(),
-            get(),
-            get(),
-            get(),
-            get()
+            appSettingsRepo = get(),
+            getConfigDraft = get(),
+            saveConfig = get(),
+            getAvailableUsers = get(),
+            getPackageUid = get(),
+            ioDispatcher = get(named("IoDispatcher"))
         )
     }
 }

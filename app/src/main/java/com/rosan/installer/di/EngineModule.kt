@@ -43,9 +43,11 @@ import com.rosan.installer.domain.engine.usecase.GetSessionConfirmationDetailsUs
 import com.rosan.installer.domain.engine.usecase.ProcessInstallationUseCase
 import com.rosan.installer.domain.engine.usecase.ProcessUninstallUseCase
 import com.rosan.installer.domain.engine.usecase.SelectOptimalSplitsUseCase
+import kotlinx.coroutines.CoroutineScope
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 val engineModule = module {
@@ -78,7 +80,16 @@ val engineModule = module {
     // Repositories
     singleOf(::AppIconRepositoryImpl) { bind<AppIconRepository>() }
     singleOf(::AnalyserRepositoryImpl) { bind<AnalyserRepository>() }
-    singleOf(::AppInstallerRepositoryImpl) { bind<AppInstallerRepository>() }
+    single<AppInstallerRepository> {
+        AppInstallerRepositoryImpl(
+            context = get(),
+            reflect = get(),
+            deviceCapabilityProvider = get(),
+            appSettingsRepo = get(),
+            postInstallTaskProvider = get(),
+            taskScope = get(named("AppScope"))
+        )
+    }
     singleOf(::ModuleInstallerRepositoryImpl) { bind<ModuleInstallerRepository>() }
 
     // UseCases
