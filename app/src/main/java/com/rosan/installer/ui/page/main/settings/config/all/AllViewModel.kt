@@ -12,7 +12,7 @@ import com.rosan.installer.domain.settings.repository.ConfigRepository
 import com.rosan.installer.domain.settings.usecase.config.DeleteConfigWithScopesUseCase
 import com.rosan.installer.domain.settings.usecase.config.RestoreDeletedConfigSnapshotUseCase
 import com.rosan.installer.domain.settings.util.ConfigOrder
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,7 +28,8 @@ class AllViewModel(
     private val repo: ConfigRepository,
     private val deleteConfigWithScopes: DeleteConfigWithScopesUseCase,
     private val restoreDeletedConfigSnapshot: RestoreDeletedConfigSnapshotUseCase,
-    private val appSettingsRepo: AppSettingsRepository
+    private val appSettingsRepo: AppSettingsRepository,
+    private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel(), KoinComponent {
 
     private val _uiState = MutableStateFlow(AllViewState())
@@ -72,7 +73,7 @@ class AllViewModel(
         }
 
         // Start listening to the config DB
-        loadDataJob = viewModelScope.launch(Dispatchers.IO) {
+        loadDataJob = viewModelScope.launch(ioDispatcher) {
             // Collect the flow from DB based on the current order
             repo.flowAll(_uiState.value.data.configOrder).collect { newConfigs ->
                 _uiState.update { currentState ->
@@ -111,13 +112,13 @@ class AllViewModel(
     }
 
     private fun deleteDataConfig(configModel: ConfigModel) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             _eventFlow.emit(AllViewEvent.DeletedConfig(deleteConfigWithScopes(configModel)))
         }
     }
 
     private fun restoreDataConfig(snapshot: DeletedConfigSnapshot) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             restoreDeletedConfigSnapshot(snapshot)
         }
     }

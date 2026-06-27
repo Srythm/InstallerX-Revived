@@ -7,15 +7,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.domain.session.repository.InstallerSessionRepository
 import com.rosan.installer.domain.settings.model.preferences.ThemeState
 import com.rosan.installer.domain.settings.provider.ThemeStateProvider
 import com.rosan.installer.ui.page.main.installer.InstallerPage
-import com.rosan.installer.ui.page.miuix.installer.MiuixInstallerPage
 import com.rosan.installer.ui.theme.InstallerTheme
 import com.rosan.installer.ui.theme.isPhoneDevice
 import com.rosan.installer.ui.util.requestPortraitOrientationOnPhoneSafely
@@ -26,7 +25,7 @@ fun InstallerActivityContent(
     session: InstallerSessionRepository,
     themeStateProvider: ThemeStateProvider = koinInject()
 ) {
-    val uiState by themeStateProvider.themeStateFlow.collectAsState(initial = ThemeState())
+    val uiState by themeStateProvider.themeStateFlow.collectAsStateWithLifecycle(initialValue = ThemeState())
     if (!uiState.isLoaded) return
 
     val context = LocalContext.current
@@ -36,20 +35,14 @@ fun InstallerActivityContent(
     }
 
     InstallerTheme(
-        useMiuix = uiState.useMiuix,
         themeMode = uiState.themeMode,
         paletteStyle = uiState.paletteStyle,
         colorSpec = uiState.colorSpec,
         useDynamicColor = uiState.useDynamicColor,
-        useMiuixMonet = uiState.useMiuixMonet,
         seedColor = androidx.compose.ui.graphics.Color(uiState.seedColor)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            if (uiState.useMiuix) {
-                MiuixInstallerPage(session)
-            } else {
-                InstallerPage(session)
-            }
+            InstallerPage(session)
         }
     }
 }

@@ -243,13 +243,16 @@ private fun ShowDataWidget(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         state = listState,
     ) {
-        // Insert the tip card as a list item to match MIUIX behavior
+        // Insert the tip card as a list item to match previous compact behavior
         if (!uiState.userReadScopeTips)
             item {
                 ScopeTipCard(viewModel = viewModel)
             }
 
-        items(configs) { entity ->
+        items(
+            items = configs,
+            key = { it.id }
+        ) { entity ->
             DataItemWidget(
                 viewModel = viewModel,
                 entity = entity,

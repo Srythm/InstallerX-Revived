@@ -55,13 +55,11 @@ class ThemeSettingsViewModel(
             } else PresetColors
 
         ThemeSettingsState(
-            showMiuixUI = prefs.showMiuixUI,
             useBlur = prefs.useBlur,
             themeMode = prefs.themeMode,
             paletteStyle = prefs.paletteStyle,
             colorSpec = prefs.colorSpec,
             useDynamicColor = prefs.useDynamicColor,
-            useMiuixMonet = prefs.useMiuixMonet,
             useAppleFloatingBar = prefs.useAppleFloatingBar,
             seedColor = effectiveSeedColor,
             availableColors = availableColors,
@@ -74,13 +72,12 @@ class ThemeSettingsViewModel(
         )
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.Eagerly,
+        started = SharingStarted.WhileSubscribed(5000),
         initialValue = ThemeSettingsState()
     )
 
     fun dispatch(action: ThemeSettingsAction) {
         when (action) {
-            is ThemeSettingsAction.ChangeUseMiuix -> viewModelScope.launch { updateSetting(BooleanSetting.UiUseMiuix, action.useMiuix) }
             is ThemeSettingsAction.SetUseBlur -> viewModelScope.launch { updateSetting(BooleanSetting.UiUseBlur, action.enable) }
             is ThemeSettingsAction.SetThemeMode -> viewModelScope.launch { updateSetting(StringSetting.ThemeMode, action.mode.name) }
             is ThemeSettingsAction.SetPaletteStyle -> viewModelScope.launch { updateSetting(StringSetting.ThemePaletteStyle, action.style.name) }
@@ -91,7 +88,6 @@ class ThemeSettingsViewModel(
                 updateSetting(IntSetting.ThemeSeedColor, Int.MIN_VALUE)
             }
 
-            is ThemeSettingsAction.SetUseMiuixMonet -> viewModelScope.launch { updateSetting(BooleanSetting.UiUseMiuixMonet, action.use) }
             is ThemeSettingsAction.SetUseAppleFloatingBar -> viewModelScope.launch {
                 updateSetting(
                     BooleanSetting.UiUseAppleFloatingBar,

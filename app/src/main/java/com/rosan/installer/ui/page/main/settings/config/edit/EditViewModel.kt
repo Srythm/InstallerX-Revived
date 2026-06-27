@@ -21,7 +21,7 @@ import com.rosan.installer.domain.settings.usecase.config.GetConfigDraftUseCase
 import com.rosan.installer.domain.settings.usecase.config.SaveConfigUseCase
 import com.rosan.installer.domain.settings.usecase.settings.GetPackageUidUseCase
 import com.rosan.installer.ui.util.isDhizukuActive
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -42,7 +42,8 @@ class EditViewModel(
     private val getConfigDraft: GetConfigDraftUseCase,
     private val saveConfig: SaveConfigUseCase,
     private val getAvailableUsers: GetAvailableUsersUseCase,
-    private val getPackageUid: GetPackageUidUseCase
+    private val getPackageUid: GetPackageUidUseCase,
+    private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
     // Separate mutable states for editable data to combine later
@@ -74,7 +75,7 @@ class EditViewModel(
         )
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.Eagerly,
+        started = SharingStarted.WhileSubscribed(5000),
         initialValue = EditViewState()
     )
 
@@ -342,7 +343,7 @@ class EditViewModel(
 
     private fun loadData() {
         loadDataJob?.cancel()
-        loadDataJob = viewModelScope.launch(Dispatchers.IO) {
+        loadDataJob = viewModelScope.launch(ioDispatcher) {
             val prefs = appSettingsRepo.preferencesFlow.first()
             val configModel = getConfigDraft(id, prefs.authorizer)
 
@@ -364,7 +365,7 @@ class EditViewModel(
 
     private fun saveData() {
         saveDataJob?.cancel()
-        saveDataJob = viewModelScope.launch(Dispatchers.IO) {
+        saveDataJob = viewModelScope.launch(ioDispatcher) {
             val currentData = _data.value
             var model = currentData.toConfigModel()
             if (id != null) model = model.copy(id = id)

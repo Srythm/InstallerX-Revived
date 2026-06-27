@@ -138,7 +138,7 @@ class AOSPCrossActivityAnimation(
         this
             .graphicsLayer {
                 // Block AOSP manual predictive back transforms during an interrupted enter.
-                // Let the Miuix default transition seamlessly handle the gesture reversal.
+                // Let the default transition seamlessly handle the gesture reversal.
                 if (transitionState is InProgress && !inPredictiveBackAnimation && exitingPageKey == null) {
                     return@graphicsLayer
                 }

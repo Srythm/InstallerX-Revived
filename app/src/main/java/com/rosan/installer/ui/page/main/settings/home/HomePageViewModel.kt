@@ -115,7 +115,7 @@ class HomePageViewModel(
         )
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.Eagerly,
+        started = SharingStarted.WhileSubscribed(5000),
         initialValue = HomePageViewState()
     )
 

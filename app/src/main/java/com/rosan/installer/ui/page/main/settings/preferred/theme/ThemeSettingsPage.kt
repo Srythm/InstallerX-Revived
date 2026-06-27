@@ -190,39 +190,7 @@ fun ThemeSettingsPage(
                 SegmentedColumn(
                     title = stringResource(R.string.theme_settings_ui_style)
                 ) {
-                    // Option 1: Google UI
-                    item {
-                        val selected = !uiState.showMiuixUI
-                        val onClick = {
-                            if (uiState.showMiuixUI) {
-                                viewModel.dispatch(ThemeSettingsAction.ChangeUseMiuix(false))
-                            }
-                        }
-                        RadioButtonWidget(
-                            title = stringResource(R.string.theme_settings_google_ui),
-                            description = stringResource(R.string.theme_settings_google_ui_desc),
-                            iconPlaceholder = false,
-                            selected = selected,
-                            onClick = onClick
-                        )
-                    }
-                    // Option 2: MIUIX UI
-                    item {
-                        val selected = uiState.showMiuixUI
-                        val onClick = {
-                            if (!uiState.showMiuixUI) {
-                                viewModel.dispatch(ThemeSettingsAction.ChangeUseMiuix(true))
-                            }
-                        }
-                        RadioButtonWidget(
-                            title = stringResource(R.string.theme_settings_miuix_ui),
-                            description = stringResource(R.string.theme_settings_miuix_ui_desc),
-                            iconPlaceholder = false,
-                            selected = selected,
-                            onClick = onClick
-                        )
-                    }
-                    // Option 3: Floating Bottom Bar
+                    // Floating Bottom Bar
                     item {
                         SwitchWidget(
                             iconPlaceholder = false,
@@ -237,7 +205,7 @@ fun ThemeSettingsPage(
                 }
             }
 
-            // --- Group 2: Google UI Options ---
+            // --- Group 2: Theme Options ---
             item {
                 SegmentedColumn(
                     title = stringResource(R.string.theme_settings_google_ui)
@@ -468,7 +436,6 @@ fun PredictiveBackAnimationDialog(
                     val animationText = when (animation) {
                         PredictiveBackAnimation.None -> stringResource(R.string.theme_settings_predictive_back_animation_none)
                         PredictiveBackAnimation.AOSP -> stringResource(R.string.theme_settings_predictive_back_animation_aosp)
-                        PredictiveBackAnimation.MIUIX -> stringResource(R.string.theme_settings_predictive_back_animation_miuix)
                         PredictiveBackAnimation.Scale -> stringResource(R.string.theme_settings_predictive_back_animation_scale)
                         PredictiveBackAnimation.Classic -> stringResource(R.string.theme_settings_predictive_back_animation_ksu_classic)
                     }

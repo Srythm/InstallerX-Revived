@@ -503,7 +503,7 @@ private fun List<SmartAuthorizerCandidate>.toggle(
 
 /**
  * Widget for selecting the Root Implementation (Magisk/KernelSU/APatch).
- * Mimics the logic from MiuixRootImplementationDialog but uses DropDownMenuWidget.
+ * Replicates the prior root-implementation dialog logic using DropDownMenuWidget.
  */
 @Composable
 private fun LabRootImplementationWidget(viewModel: LabSettingsViewModel) {

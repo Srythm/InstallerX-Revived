@@ -11,6 +11,7 @@ import com.rosan.installer.R
 import com.rosan.installer.core.bitmask.addFlag
 import com.rosan.installer.core.bitmask.hasFlag
 import com.rosan.installer.core.bitmask.removeFlag
+import com.rosan.installer.domain.engine.model.install.MmzSelectionMode
 import com.rosan.installer.domain.engine.model.install.SessionMode
 import com.rosan.installer.domain.engine.model.install.UninstallFlags
 import com.rosan.installer.domain.engine.model.install.sourcePath
@@ -114,12 +115,15 @@ class InstallerViewModel(
         )
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.Eagerly,
+        started = SharingStarted.WhileSubscribed(5000),
         initialValue = _localState.value
     )
 
     val isInstallingModule: Boolean
-        get() = _localState.value.analysisResults.any { result ->
+        get() = _localState.value.isInstallingModule
+
+    private fun List<PackageAnalysisResult>.hasSelectedModule(): Boolean =
+        any { result ->
             result.appEntities.any { entity -> entity.selected && entity.app is AppEntity.ModuleEntity }
         }
 
@@ -206,6 +210,7 @@ class InstallerViewModel(
                 _localState.update { it.copy(navigatedFromPrepareToChoice = uiState.value.stage is InstallerStage.InstallPrepare) }
                 installChoice()
             }
+            is InstallerViewAction.SetMmzSelectionMode -> setMmzSelectionMode(action.mode)
 
             is InstallerViewAction.InstallPrepare -> installPrepare()
             is InstallerViewAction.InstallExtendedMenu -> installExtendedMenu()
@@ -219,11 +224,6 @@ class InstallerViewModel(
             is InstallerViewAction.Uninstall -> session.uninstallInfo.value?.packageName?.let { session.uninstall(it) }
             is InstallerViewAction.StartUnarchive -> session.startUnarchive()
             is InstallerViewAction.OpenUnarchiveErrorAction -> session.openUnarchiveErrorAction()
-
-            is InstallerViewAction.ShowMiuixSheetRightActionSettings -> _localState.update { it.copy(showMiuixSheetRightActionSettings = true) }
-            is InstallerViewAction.HideMiuixSheetRightActionSettings -> _localState.update { it.copy(showMiuixSheetRightActionSettings = false) }
-            is InstallerViewAction.ShowMiuixPermissionList -> _localState.update { it.copy(showMiuixPermissionList = true) }
-            is InstallerViewAction.HideMiuixPermissionList -> _localState.update { it.copy(showMiuixPermissionList = false) }
 
             is InstallerViewAction.SetTempShowOPPOSpecial -> _localState.update { it.copy(tempShowOPPOSpecial = action.show) }
             is InstallerViewAction.SetTempLabShowFilePath -> _localState.update { it.copy(tempLabShowFilePath = action.show) }
@@ -351,6 +351,7 @@ class InstallerViewModel(
                 currentPackageName = null,
                 initiatorAppLabel = null,  // Reset label on new session
                 analysisResults = session.analysisResults,
+                isInstallingModule = session.analysisResults.hasSelectedModule(),
                 displayIcons = it.displayIcons.filterKeys { key -> key in validPackages } + analysedIcons,
                 error = session.error
             )
@@ -399,6 +400,7 @@ class InstallerViewModel(
                     _localState.update {
                         it.copy(
                             analysisResults = session.analysisResults,
+                            isInstallingModule = session.analysisResults.hasSelectedModule(),
                             displayIcons = it.displayIcons + analysedIcons
                         )
                     }
@@ -650,7 +652,14 @@ class InstallerViewModel(
         // composition of [PositionFullScreen] on the next install would
         // see `isClosing = true` and fade out immediately.
         _isClosingFullscreen.value = false
-        _localState.update { it.copy(currentPackageName = null, uiUninstallInfo = null, stage = InstallerStage.Ready) }
+        _localState.update {
+            it.copy(
+                currentPackageName = null,
+                uiUninstallInfo = null,
+                stage = InstallerStage.Ready,
+                mmzSelectionMode = MmzSelectionMode.INITIAL_CHOICE
+            )
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -709,6 +718,10 @@ class InstallerViewModel(
 
     private fun analyse() = session.analyse()
 
+    private fun setMmzSelectionMode(mode: MmzSelectionMode) {
+        _localState.update { it.copy(mmzSelectionMode = mode) }
+    }
+
     private fun installChoice() {
         autoInstallJob?.cancel()
 
@@ -741,25 +754,29 @@ class InstallerViewModel(
             it.copy(
                 currentPackageName = null,
                 stage = InstallerStage.InstallChoice,
-                analysisResults = currentResults // Ensure the UI receives the latest list
+                analysisResults = currentResults,
+                isInstallingModule = currentResults.hasSelectedModule(),
+                mmzSelectionMode = MmzSelectionMode.INITIAL_CHOICE
             )
         }
     }
 
     private fun installPrepare() {
         // Read from _localState instead of session
-        val selectedEntities = _localState.value.analysisResults.flatMap { it.appEntities }.filter { it.selected }
+        val currentState = _localState.value
+        val selectedEntities = currentState.analysisResults.flatMap { it.appEntities }.filter { it.selected }
         val uniquePackages = selectedEntities.groupBy { it.app.packageName }
 
         if (uniquePackages.size == 1) {
             val targetPackageName = selectedEntities.first().app.packageName
+            val seedColor = if (currentState.viewSettings.useDynColorFollowPkgIcon)
+                currentState.analysisResults.find { res -> res.packageName == targetPackageName }?.seedColor?.let { c -> Color(c) }
+            else null
             _localState.update {
                 it.copy(
                     currentPackageName = targetPackageName,
                     stage = InstallerStage.InstallPrepare,
-                    seedColor = if (it.viewSettings.useDynColorFollowPkgIcon)
-                        _localState.value.analysisResults.find { res -> res.packageName == targetPackageName }?.seedColor?.let { c -> Color(c) }
-                    else null
+                    seedColor = seedColor
                 )
             }
         } else {
@@ -831,7 +848,12 @@ class InstallerViewModel(
             session.analysisResults = currentResults
 
             // Correctly update the StateFlow with new data, Compose will recompose automatically
-            _localState.update { it.copy(analysisResults = currentResults.toList()) }
+            _localState.update {
+                it.copy(
+                    analysisResults = currentResults.toList(),
+                    isInstallingModule = currentResults.hasSelectedModule()
+                )
+            }
         }
     }
 

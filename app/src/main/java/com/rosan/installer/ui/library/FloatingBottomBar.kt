@@ -79,15 +79,14 @@ import top.yukonga.miuix.kmp.blur.highlight.LightSource
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.blur.sensor.rememberDeviceTilt
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sign
 import kotlin.math.sin
 import kotlin.math.sqrt
-import androidx.compose.material3.LocalContentColor as M3LocalContentColor
-import top.yukonga.miuix.kmp.theme.LocalContentColor as MiuixLocalContentColor
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
 
 val LocalFloatingBottomBarContentColor = staticCompositionLocalOf { Color.Unspecified }
 val LocalFloatingBottomBarTabScale = staticCompositionLocalOf { { 1f } }
@@ -105,9 +104,9 @@ class FloatingBottomBarColors(
 object FloatingBottomBarDefaults {
     @Composable
     fun colors(
-        containerColor: Color = MiuixTheme.colorScheme.surfaceContainer,
-        indicatorColor: Color = MiuixTheme.colorScheme.primary,
-        contentColor: Color = MiuixTheme.colorScheme.onSurface,
+        containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+        indicatorColor: Color = MaterialTheme.colorScheme.primary,
+        contentColor: Color = MaterialTheme.colorScheme.onSurface,
         activeContentColor: Color = indicatorColor
     ): FloatingBottomBarColors = FloatingBottomBarColors(
         containerColor = containerColor,
@@ -214,10 +213,9 @@ fun RowScope.FloatingBottomBarItem(
         verticalArrangement = Arrangement.spacedBy(1.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Provide the color to Miuix components seamlessly
+        // Provide the color to nested components seamlessly
         CompositionLocalProvider(
-            MiuixLocalContentColor provides contentColor,
-            M3LocalContentColor provides contentColor
+            LocalContentColor provides contentColor
         ) {
             content()
         }

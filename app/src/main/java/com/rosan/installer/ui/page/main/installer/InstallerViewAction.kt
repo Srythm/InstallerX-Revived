@@ -3,6 +3,7 @@
 package com.rosan.installer.ui.page.main.installer
 
 import androidx.annotation.StringRes
+import com.rosan.installer.domain.engine.model.install.MmzSelectionMode
 import com.rosan.installer.domain.engine.model.packageinfo.AppEntity
 import com.rosan.installer.domain.session.model.SelectInstallEntity
 import com.rosan.installer.domain.session.repository.InstallerSessionRepository
@@ -15,6 +16,12 @@ sealed interface InstallerViewAction {
     data object InstallChoice : InstallerViewAction
     data object InstallExtendedMenu : InstallerViewAction
     data object InstallExtendedSubMenu : InstallerViewAction
+
+    /**
+     * Sets the Mixed Module Zip selection mode.
+     * @param mode The [MmzSelectionMode] to set.
+     */
+    data class SetMmzSelectionMode(val mode: MmzSelectionMode) : InstallerViewAction
 
     /**
      * Install multiple module/apk
@@ -42,11 +49,6 @@ sealed interface InstallerViewAction {
     data object Uninstall : InstallerViewAction
     data object StartUnarchive : InstallerViewAction
     data object OpenUnarchiveErrorAction : InstallerViewAction
-
-    data object ShowMiuixSheetRightActionSettings : InstallerViewAction
-    data object HideMiuixSheetRightActionSettings : InstallerViewAction
-    data object ShowMiuixPermissionList : InstallerViewAction
-    data object HideMiuixPermissionList : InstallerViewAction
 
     data class SetTempShowOPPOSpecial(val show: Boolean) : InstallerViewAction
     data class SetTempLabShowFilePath(val show: Boolean) : InstallerViewAction

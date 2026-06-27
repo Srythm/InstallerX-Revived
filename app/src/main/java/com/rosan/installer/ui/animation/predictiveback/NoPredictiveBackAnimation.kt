@@ -56,10 +56,10 @@ class NoPredictiveBackAnimation : PredictiveBackAnimationHandler {
     )
 
     override fun AnimatedContentTransitionScope<Scene<NavKey>>.onPopTransitionSpec(): ContentTransform =
-        // Sync with the default pop transition used in Miuix implementation
+        // Sync with the default pop transition used in the previous implementation
         defaultPopTransitionSpec<NavKey>().invoke(this)
 
     override fun AnimatedContentTransitionScope<Scene<NavKey>>.onTransitionSpec(): ContentTransform =
-        // Sync with the default push transition used in Miuix implementation
+        // Sync with the default push transition used in the previous implementation
         defaultTransitionSpec<NavKey>().invoke(this)
 }

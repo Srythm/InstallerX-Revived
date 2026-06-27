@@ -82,7 +82,7 @@ fun installChoiceDialog(
     val isMultiApk = currentSessionMode == SessionMode.Batch
     val isModuleApk = sourceType == DataType.MIXED_MODULE_APK
     val isMixedModuleZip = sourceType == DataType.MIXED_MODULE_ZIP
-    var selectionMode by remember(sourceType) { mutableStateOf(MmzSelectionMode.INITIAL_CHOICE) }
+    val selectionMode = uiState.mmzSelectionMode
     val apkChooseAll = config.apkChooseAll
 
     val allSelectedEntities = analysisResults.flatMap { it.appEntities }.filter { it.selected }
@@ -125,7 +125,7 @@ fun installChoiceDialog(
                         )
                     )
                 }
-            selectionMode = MmzSelectionMode.INITIAL_CHOICE
+            viewModel.dispatch(InstallerViewAction.SetMmzSelectionMode(MmzSelectionMode.INITIAL_CHOICE))
         } else {
             viewModel.dispatch(InstallerViewAction.Close)
         }
@@ -145,7 +145,7 @@ fun installChoiceDialog(
                 isMixedModuleZip = isMixedModuleZip,
                 apkChooseAll = apkChooseAll,
                 selectionMode = selectionMode,
-                onSetSelectionMode = { selectionMode = it },
+                onSetSelectionMode = { viewModel.dispatch(InstallerViewAction.SetMmzSelectionMode(it)) },
                 errorMessage = errorMessage,
                 totalModuleCount = totalModuleCount
             )
@@ -440,7 +440,7 @@ private fun MultiApkGroupCard(
     }
     val isSingleItemInGroup = baseEntities.size <= 1
 
-    var isExpanded by remember { mutableStateOf(itemsInGroup.any { it.selected }) }
+    var isExpanded by remember(itemsInGroup) { mutableStateOf(itemsInGroup.any { it.selected }) }
 
     val baseInfo = remember(itemsInGroup) { itemsInGroup.firstNotNullOfOrNull { it.app as? AppEntity.BaseEntity } }
     val moduleInfo = remember(itemsInGroup) { itemsInGroup.firstNotNullOfOrNull { it.app as? AppEntity.ModuleEntity } }

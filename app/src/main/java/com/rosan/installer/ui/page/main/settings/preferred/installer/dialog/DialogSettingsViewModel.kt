@@ -33,7 +33,7 @@ class DialogSettingsViewModel(
         )
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.Eagerly,
+        started = SharingStarted.WhileSubscribed(5000),
         initialValue = DialogSettingsState()
     )
 

@@ -17,7 +17,7 @@ import com.rosan.installer.domain.settings.repository.BooleanSetting
 import com.rosan.installer.domain.settings.repository.StringSetting
 import com.rosan.installer.domain.settings.usecase.config.ToggleAppTargetConfigUseCase
 import com.rosan.installer.domain.settings.usecase.settings.UpdateSettingUseCase
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,7 +39,9 @@ class ApplyViewModel(
     private val toggleAppTargetConfig: ToggleAppTargetConfigUseCase,
     private val updateSetting: UpdateSettingUseCase,
     private val getAppIcon: GetAppIconUseCase,
-    private val clearAppIconCache: ClearAppIconCacheUseCase
+    private val clearAppIconCache: ClearAppIconCacheUseCase,
+    private val defaultDispatcher: CoroutineDispatcher,
+    private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel(), KoinComponent {
 
     // Internal mutable flows for data that are not saved in the settings repository
@@ -127,7 +129,7 @@ class ApplyViewModel(
         }
 
         filtered.sortedWith(finalComparator)
-    }.flowOn(Dispatchers.Default)
+    }.flowOn(defaultDispatcher)
 
     // Intermediate state to avoid exceeding combine's argument limit
     private data class UiStateData(
@@ -168,7 +170,7 @@ class ApplyViewModel(
         )
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.Eagerly,
+        started = SharingStarted.WhileSubscribed(5000),
         initialValue = ApplyViewState()
     )
 
@@ -196,7 +198,7 @@ class ApplyViewModel(
 
     private fun loadApps() {
         loadAppsJob?.cancel()
-        loadAppsJob = viewModelScope.launch(Dispatchers.IO) {
+        loadAppsJob = viewModelScope.launch(ioDispatcher) {
             _apps.value = _apps.value.copy(progress = ViewContent.Progress.Loading)
             clearAppIconCache(sessionId = SETTINGS_APP_LIST)
             if (_apps.value.data.isNotEmpty()) delay(1.5.seconds)
@@ -209,7 +211,7 @@ class ApplyViewModel(
 
     private fun collectAppEntities() {
         collectAppEntitiesJob?.cancel()
-        collectAppEntitiesJob = viewModelScope.launch(Dispatchers.IO) {
+        collectAppEntitiesJob = viewModelScope.launch(ioDispatcher) {
             _appEntities.value = _appEntities.value.copy(progress = ViewContent.Progress.Loading)
             appRepo.flowAll().collect { models ->
                 _appEntities.value = _appEntities.value.copy(
@@ -222,7 +224,7 @@ class ApplyViewModel(
 
     private fun applyPackageName(packageName: String?, applied: Boolean) {
         if (packageName == null) return
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             toggleAppTargetConfig(packageName, id, applied)
         }
     }
@@ -233,7 +235,7 @@ class ApplyViewModel(
         // Set initial state to null to indicate loading
         _displayIcons.update { it + (packageName to null) }
 
-        iconJobs[packageName] = viewModelScope.launch(Dispatchers.IO) {
+        iconJobs[packageName] = viewModelScope.launch(ioDispatcher) {
             val iconBitmap = getAppIcon(
                 sessionId = SETTINGS_APP_LIST,
                 packageName = packageName,

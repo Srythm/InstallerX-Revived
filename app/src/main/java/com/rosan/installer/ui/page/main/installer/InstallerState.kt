@@ -4,6 +4,7 @@ package com.rosan.installer.ui.page.main.installer
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import com.rosan.installer.domain.engine.model.install.MmzSelectionMode
 import com.rosan.installer.domain.engine.model.packageinfo.PackageAnalysisResult
 import com.rosan.installer.domain.session.model.UninstallInfo
 import com.rosan.installer.domain.settings.model.app.NamedPackage
@@ -19,8 +20,6 @@ data class InstallerState(
 
     // UI specific toggles and settings
     val viewSettings: InstallerViewSettings = InstallerViewSettings(),
-    val showMiuixSheetRightActionSettings: Boolean = false,
-    val showMiuixPermissionList: Boolean = false,
     val navigatedFromPrepareToChoice: Boolean = false,
     // Used to temporarily override the persistent setting during this session
     val tempShowOPPOSpecial: Boolean? = null,
@@ -34,6 +33,8 @@ data class InstallerState(
     val seedColor: Color? = null,
 
     val analysisResults: List<PackageAnalysisResult> = emptyList(),
+    val isInstallingModule: Boolean = false,
+    val mmzSelectionMode: MmzSelectionMode = MmzSelectionMode.INITIAL_CHOICE,
     val config: ConfigModel = ConfigModel.generateOptimalDefault(),
 
     val defaultInstallerFromSettings: String? = null,
@@ -62,7 +63,7 @@ data class InstallerState(
             is InstallerStage.Unarchiving -> false
 
             is InstallerStage.InstallingModule -> stage.isFinished
-            is InstallerStage.InstallPrepare -> !(showMiuixSheetRightActionSettings || showMiuixPermissionList)
+            is InstallerStage.InstallPrepare -> true
             is InstallerStage.Preparing,
             is InstallerStage.InstallWaitingUnknownSource,
             is InstallerStage.Installing -> !viewSettings.disableNotificationOnDismiss

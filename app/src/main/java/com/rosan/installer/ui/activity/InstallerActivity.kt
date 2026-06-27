@@ -14,10 +14,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import com.rosan.installer.R
@@ -118,7 +118,7 @@ class InstallerActivity : ComponentActivity(), KoinComponent {
         // (transparent window background, windowIsTranslucent=true), so the
         // default activity animation would briefly show the underlying app
         // peeking through the transparent window before the inner dialog /
-        // Miuix sheet has a chance to draw its scrim. Combined with the
+        // sheet has a chance to draw its scrim. Combined with the
         // dialog's own enter animation, this produced a visible "background
         // flicker" when the user tapped a notification to wake the dialog
         // (especially noticeable for ZIP / multi-package installs, which go
@@ -658,8 +658,8 @@ class InstallerActivity : ComponentActivity(), KoinComponent {
     private fun showContent() {
         setContent {
             val session = session ?: return@setContent
-            val background by session.background.collectAsState(false)
-            val progress by session.progress.collectAsState(ProgressEntity.Ready)
+            val background by session.background.collectAsStateWithLifecycle(initialValue = false)
+            val progress by session.progress.collectAsStateWithLifecycle(initialValue = ProgressEntity.Ready)
 
             if (background || progress is ProgressEntity.Ready || progress is ProgressEntity.InstallResolving || progress is ProgressEntity.Finish)
                 return@setContent

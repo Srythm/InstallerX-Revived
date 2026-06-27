@@ -183,7 +183,10 @@ fun OpenSourceLicensePage(useBlur: Boolean) {
                             )
                         }
 
-                        items(library.licenses.toList()) { license ->
+                        items(
+                            items = library.licenses.toList(),
+                            key = { it.name }
+                        ) { license ->
                             OutlinedCard(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(16.dp),

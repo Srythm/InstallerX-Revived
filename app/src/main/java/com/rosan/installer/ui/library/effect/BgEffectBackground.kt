@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -20,7 +21,6 @@ import com.rosan.installer.ui.theme.LocalWindowLayoutInfo
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.floor
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
@@ -43,7 +43,7 @@ fun BgEffectBackground(
     Box(
         modifier = modifier,
     ) {
-        val surface = MiuixTheme.colorScheme.surface
+        val surface = MaterialTheme.colorScheme.surface
 
         val windowLayoutInfo = LocalWindowLayoutInfo.current
         val deviceType = if (windowLayoutInfo.showNavigationRail) DeviceType.PAD else DeviceType.PHONE

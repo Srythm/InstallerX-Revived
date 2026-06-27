@@ -72,8 +72,8 @@ object BlendTokenConfig {
 
     /**
      * 定义深色主题下的混合模式。
-     * 注意：这里的 BlendMode 可能也需要根据 Miuix KMP 的 API 进行调整。
-     * 例如，如果 Miuix 使用的是枚举而非 Int，这里应相应改变。
+     * 注意：这里的 BlendMode 可能需要根据底层 blur 库的 API 进行调整。
+     * 例如，如果库使用的是枚举而非 Int，这里应相应改变。
      */
     object DarkModes {
         val DEFAULT = listOf(BlurBlendMode.ColorDodge, BlurBlendMode.LinearLight, BlurBlendMode.LinearLight)

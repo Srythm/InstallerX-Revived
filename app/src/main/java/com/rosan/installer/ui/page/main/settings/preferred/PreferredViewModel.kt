@@ -18,7 +18,7 @@ import com.rosan.installer.domain.settings.usecase.backup.RestoreBackupUseCase
 import com.rosan.installer.domain.settings.usecase.settings.SetLauncherIconUseCase
 import com.rosan.installer.domain.settings.usecase.settings.UpdateSettingUseCase
 import com.rosan.installer.domain.updater.repository.UpdateRepository
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,7 +42,8 @@ class PreferredViewModel(
     private val setLauncherIcon: SetLauncherIconUseCase,
     private val exportBackup: ExportBackupUseCase,
     private val prepareBackupRestore: PrepareBackupRestoreUseCase,
-    private val restoreBackup: RestoreBackupUseCase
+    private val restoreBackup: RestoreBackupUseCase,
+    private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
     private val _uiEvents = MutableSharedFlow<PreferredViewEvent>(
@@ -79,7 +80,7 @@ class PreferredViewModel(
         )
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.Eagerly,
+        started = SharingStarted.WhileSubscribed(5000),
         initialValue = PreferredViewState()
     )
 
@@ -141,7 +142,7 @@ class PreferredViewModel(
         }
     }
 
-    private fun checkUpdate() = viewModelScope.launch(Dispatchers.IO) {
+    private fun checkUpdate() = viewModelScope.launch(ioDispatcher) {
         updateRepo.checkUpdate()
     }
 
@@ -158,7 +159,7 @@ class PreferredViewModel(
         }
     }
 
-    private fun requestExportBackup() = viewModelScope.launch(Dispatchers.IO) {
+    private fun requestExportBackup() = viewModelScope.launch(ioDispatcher) {
         if (backupBusyFlow.value) return@launch
         backupBusyFlow.value = true
         try {
@@ -178,7 +179,7 @@ class PreferredViewModel(
         }
     }
 
-    private fun prepareRestoreBackup(rawJson: String) = viewModelScope.launch(Dispatchers.IO) {
+    private fun prepareRestoreBackup(rawJson: String) = viewModelScope.launch(ioDispatcher) {
         if (backupBusyFlow.value) return@launch
         backupBusyFlow.value = true
         try {
@@ -201,7 +202,7 @@ class PreferredViewModel(
         }
     }
 
-    private fun confirmRestoreBackup() = viewModelScope.launch(Dispatchers.IO) {
+    private fun confirmRestoreBackup() = viewModelScope.launch(ioDispatcher) {
         if (backupBusyFlow.value) return@launch
         val preview = pendingRestorePreview ?: return@launch
         backupBusyFlow.value = true

@@ -22,7 +22,6 @@ import androidx.navigation3.scene.SceneInfo
 import androidx.navigation3.scene.SinglePaneSceneStrategy
 import androidx.navigation3.scene.rememberSceneState
 import androidx.navigation3.ui.NavDisplay
-import androidx.navigation3.ui.NavDisplayTransitionEffects
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.NavigationEventState
 import androidx.navigationevent.compose.rememberNavigationEventState
@@ -30,7 +29,6 @@ import com.rosan.installer.domain.settings.model.preferences.PredictiveBackAnima
 import com.rosan.installer.domain.settings.model.preferences.ThemeState
 import com.rosan.installer.ui.animation.predictiveback.AOSPCrossActivityAnimation
 import com.rosan.installer.ui.animation.predictiveback.ClassicPredictiveBackAnimation
-import com.rosan.installer.ui.animation.predictiveback.MiuixPredictiveBackAnimation
 import com.rosan.installer.ui.animation.predictiveback.NoPredictiveBackAnimation
 import com.rosan.installer.ui.animation.predictiveback.ScalePredictiveBackAnimation
 import com.rosan.installer.ui.page.main.settings.SettingsSharedViewModel
@@ -47,19 +45,6 @@ import com.rosan.installer.ui.page.main.settings.preferred.installer.notificatio
 import com.rosan.installer.ui.page.main.settings.preferred.lab.LabPage
 import com.rosan.installer.ui.page.main.settings.preferred.theme.ThemeSettingsPage
 import com.rosan.installer.ui.page.main.settings.preferred.uninstaller.UninstallerGlobalSettingsPage
-import com.rosan.installer.ui.page.miuix.settings.config.apply.MiuixApplyPage
-import com.rosan.installer.ui.page.miuix.settings.config.edit.MiuixEditPage
-import com.rosan.installer.ui.page.miuix.settings.preferred.about.MiuixAboutPage
-import com.rosan.installer.ui.page.miuix.settings.preferred.about.ossLicensePage.MiuixOpenSourceLicensePage
-import com.rosan.installer.ui.page.miuix.settings.preferred.installer.MiuixInstallerGlobalSettingsPage
-import com.rosan.installer.ui.page.miuix.settings.preferred.installer.authorizer.MiuixAuthorizerCustPage
-import com.rosan.installer.ui.page.miuix.settings.preferred.installer.dialog.MiuixDialogSettingsPage
-import com.rosan.installer.ui.page.miuix.settings.preferred.installer.notification.MiuixNotificationSettingsPage
-import com.rosan.installer.ui.page.miuix.settings.preferred.lab.MiuixLabPage
-import com.rosan.installer.ui.page.miuix.settings.preferred.theme.MiuixThemeSettingsPage
-import com.rosan.installer.ui.page.miuix.settings.preferred.uninstaller.MiuixUninstallerGlobalSettingsPage
-import com.rosan.installer.ui.page.miuix.settings.home.installer.MiuixDefaultInstallerPage
-import com.rosan.installer.ui.page.miuix.settings.home.priv.MiuixPrivPage
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
@@ -75,7 +60,6 @@ fun InstallerNavContainer(uiState: ThemeState) {
             PredictiveBackAnimation.AOSP -> AOSPCrossActivityAnimation(uiState.predictiveBackExitDirection)
             PredictiveBackAnimation.Scale -> ScalePredictiveBackAnimation(uiState.predictiveBackExitDirection)
             PredictiveBackAnimation.Classic -> ClassicPredictiveBackAnimation()
-            PredictiveBackAnimation.MIUIX -> MiuixPredictiveBackAnimation()
         }
     }
 
@@ -131,112 +115,51 @@ fun InstallerNavContainer(uiState: ThemeState) {
                 ),
                 entryProvider = entryProvider {
                     entry<Route.Main> {
-                        if (uiState.useMiuix) {
-                            MiuixMainPageWrapper(uiState, sharedViewModel)
-                        } else {
-                            Material3MainPageWrapper(uiState, sharedViewModel)
-                        }
+                        Material3MainPageWrapper(uiState, sharedViewModel)
                     }
                     entry<Route.EditConfig> { key ->
                         val id = key.id
-                        if (uiState.useMiuix) {
-                            val useBlur = uiState.useBlur
-                            MiuixEditPage(
-                                id = if (id != -1L) id else null,
-                                useBlur = useBlur
-                            )
-                        } else {
-                            EditPage(
-                                id = if (id != -1L) id else null,
-                                useBlur = useBlur
-                            )
-                        }
+                        EditPage(
+                            id = if (id != -1L) id else null,
+                            useBlur = useBlur
+                        )
                     }
                     entry<Route.ApplyConfig> { key ->
                         val id = key.id
-                        if (uiState.useMiuix) {
-                            MiuixApplyPage(id, useBlur)
-                        } else {
-                            ApplyPage(id, useBlur)
-                        }
+                        ApplyPage(id, useBlur)
                     }
                     entry<Route.About> {
-                        if (uiState.useMiuix) {
-                            MiuixAboutPage(useBlur)
-                        } else {
-                            AboutPage(useBlur)
-                        }
+                        AboutPage(useBlur)
                     }
                     entry<Route.OpenSourceLicense> {
-                        if (uiState.useMiuix) {
-                            MiuixOpenSourceLicensePage(useBlur)
-                        } else {
-                            OpenSourceLicensePage(useBlur)
-                        }
+                        OpenSourceLicensePage(useBlur)
                     }
                     entry<Route.Theme> {
-                        if (uiState.useMiuix) {
-                            MiuixThemeSettingsPage()
-                        } else {
-                            ThemeSettingsPage()
-
-                        }
+                        ThemeSettingsPage()
                     }
                     entry<Route.InstallerGlobal> {
-                        if (uiState.useMiuix) {
-                            MiuixInstallerGlobalSettingsPage(useBlur)
-                        } else {
-                            InstallerGlobalSettingsPage(useBlur)
-                        }
+                        InstallerGlobalSettingsPage(useBlur)
                     }
                     entry<Route.AuthorizerCust> {
-                        if (uiState.useMiuix) {
-                            MiuixAuthorizerCustPage(useBlur)
-                        } else {
-                            AuthorizerCustPage(useBlur)
-                        }
+                        AuthorizerCustPage(useBlur)
                     }
                     entry<Route.DialogSettings> {
-                        if (uiState.useMiuix) {
-                            MiuixDialogSettingsPage(useBlur)
-                        } else {
-                            DialogSettingsPage(useBlur)
-                        }
+                        DialogSettingsPage(useBlur)
                     }
                     entry<Route.NotificationSettings> {
-                        if (uiState.useMiuix) {
-                            MiuixNotificationSettingsPage(useBlur)
-                        } else {
-                            NotificationSettingsPage(useBlur)
-                        }
+                        NotificationSettingsPage(useBlur)
                     }
                     entry<Route.UninstallerGlobal> {
-                        if (uiState.useMiuix) {
-                            MiuixUninstallerGlobalSettingsPage(useBlur)
-                        } else {
-                            UninstallerGlobalSettingsPage(useBlur)
-                        }
+                        UninstallerGlobalSettingsPage(useBlur)
                     }
                     entry<Route.Lab> {
-                        if (uiState.useMiuix) {
-                            MiuixLabPage(useBlur)
-                        } else {
-                            LabPage(useBlur)
-                        }
+                        LabPage(useBlur)
                     }
                     entry<Route.DefaultInstaller> {
-                        if (uiState.useMiuix) {
-                            MiuixDefaultInstallerPage(useBlur)
-                        } else {
-                            DefaultInstallerPage(useBlur)
-                        }
+                        DefaultInstallerPage(useBlur)
                     }
                     entry<Route.Priv> {
-                        if (uiState.useMiuix) {
-                            MiuixPrivPage(useBlur)
-                        } else {
-                            PrivPage(useBlur)
-                        }
+                        PrivPage(useBlur)
                     }
                 },
             )
@@ -271,10 +194,6 @@ fun InstallerNavContainer(uiState: ThemeState) {
             navigationEventState = gestureState,
             contentAlignment = Alignment.TopStart,
             sizeTransform = null,
-            transitionEffects = NavDisplayTransitionEffects(
-                // Disables touch interception during transitions
-                blockInputDuringTransition = true
-            ),
             predictivePopTransitionSpec = { swipeEdge ->
                 with(predictiveBackAnimationHandler) {
                     onPredictivePopTransitionSpec(swipeEdge = swipeEdge)
