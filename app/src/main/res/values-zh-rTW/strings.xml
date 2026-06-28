@@ -36,8 +36,6 @@
     <string name="theme_settings">主題設定</string>
     <string name="theme_settings_ui_style">主題風格</string>
     <string name="theme_settings_desc">更改應用程式主題</string>
-    <string name="theme_settings_miuix_ui">Miuix</string>
-    <string name="theme_settings_miuix_ui_desc">類 HyperOS 風格介面</string>
     <string name="theme_settings_google_ui">Google Material 3</string>
     <string name="theme_settings_google_ui_desc">標準 Material Design 介面</string>
     <string name="theme_settings_ui_engine">UI 引擎</string>
@@ -574,8 +572,6 @@
     <string name="installer_installing_module">安裝模組中</string>
     <string name="auto_background_install">自動靜默安裝</string>
     <string name="auto_background_install_desc">對話安裝框開始時自動靜默安裝</string>
-    <string name="theme_settings_miuix_custom_colors">自訂顏色</string>
-    <string name="theme_settings_miuix_custom_colors_desc">在 Miuix 主題風格下自訂主題顏色</string>
     <string name="theme_settings_live_activity_dynamic_color_follow_icon">多彩實時活動進度</string>
     <string name="theme_settings_live_activity_dynamic_color_follow_icon_desc">實時活動進度的配色根據待安裝軟體包的圖示自動取色</string>
     <string name="config_install_mode_desc">預設的安裝模式以及相關個人化設置</string>

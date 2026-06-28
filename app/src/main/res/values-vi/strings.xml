@@ -52,10 +52,6 @@
     <string name="theme_settings">Cài đặt Chủ đề</string>
     <string name="theme_settings_ui_style">Kiểu UI</string>
     <string name="theme_settings_desc">Thay đổi chủ đề của ứng dụng</string>
-    <string name="theme_settings_miuix_ui">Miuix</string>
-    <string name="theme_settings_miuix_ui_desc">Tương tự như HyperOS</string>
-    <string name="theme_settings_miuix_custom_colors">Màu sắc Tùy chỉnh</string>
-    <string name="theme_settings_miuix_custom_colors_desc">Tùy chỉnh màu sắc chủ đề theo kiểu chủ đề Miuix</string>
     <string name="theme_settings_google_ui">Google Material 3</string>
     <string name="theme_settings_google_ui_desc">UI Material Design tiêu chuẩn</string>
     <string name="theme_settings_ui_engine">Công cụ UI</string>

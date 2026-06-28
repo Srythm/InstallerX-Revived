@@ -391,8 +391,6 @@
     <string name="get_source_code">التحقق من مصدر الكود</string>
     <string name="get_source_code_detail">التحقق من مصدر الكود على - GitHub</string>
     <string name="telegram_channel_desc">انضم للقناة لمتابعة آخر الإخبار والتحديثات!</string>
-    <string name="theme_settings_miuix_ui">واجهة شاومي Miuix</string>
-    <string name="theme_settings_miuix_ui_desc">مشابة لـ HyperOS</string>
     <string name="theme_settings_google_ui">واجهة Google Material 3</string>
     <string name="theme_settings_google_ui_desc">واجهة Meterial Design UI الإفتراضية</string>
     <string name="theme_settings_ui_engine">محرك واجهة المستخدم</string>
@@ -414,8 +412,6 @@
     <string name="theme_settings_palette_style">نمط اللوحة</string>
     <string name="theme_settings_palette_style_desc">تحديد نمط اللوحة</string>
     <string name="theme_settings_dynamic_color">لون ديناميكي</string>
-    <string name="theme_settings_miuix_custom_colors">ألوان مخصّصة</string>
-    <string name="theme_settings_miuix_custom_colors_desc">تخصيص ألوان السمة ضمن نمط Miuix</string>
     <string name="performance">الأداء</string>
     <string name="lab">المختبر</string>
     <string name="lab_desc">الوصول إلى الميزات التجريبية والمطورة</string>

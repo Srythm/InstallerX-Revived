@@ -44,10 +44,6 @@
     <string name="theme_settings">Ustawienia motywu</string>
     <string name="theme_settings_ui_style">Styl UI</string>
     <string name="theme_settings_desc">Zmień motyw aplikacji</string>
-    <string name="theme_settings_miuix_ui">Miuix</string>
-    <string name="theme_settings_miuix_ui_desc">Podobny do HyperOs</string>
-    <string name="theme_settings_miuix_custom_colors">Niestandardowe kolory</string>
-    <string name="theme_settings_miuix_custom_colors_desc">Zmień kolory w motywie Miuix</string>
     <string name="theme_settings_google_ui">Google material 3</string>
     <string name="theme_settings_google_ui_desc">Standardowy Material Design UI</string>
     <string name="theme_settings_ui_engine">Silnik UI</string>

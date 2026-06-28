@@ -51,10 +51,6 @@
     <string name="theme_settings">تنظیمات پوسته</string>
     <string name="theme_settings_ui_style">سبک رابط کاربری</string>
     <string name="theme_settings_desc">تغییر پوسته برنامه</string>
-    <string name="theme_settings_miuix_ui">Miuix</string>
-    <string name="theme_settings_miuix_ui_desc">مانند Hyperos</string>
-    <string name="theme_settings_miuix_custom_colors">رنگ های سفارشی</string>
-    <string name="theme_settings_miuix_custom_colors_desc">شخصی‌سازی رنگ‌های پوسته به سبک Miuix</string>
     <string name="theme_settings_google_ui_desc">رابط کاربری استاندارد بر پایه متریال دیزاین</string>
     <string name="theme_settings_ui_engine">موتور رابط کاربری</string>
     <string name="theme_settings_use_expressive_ui">استفاده از رابط کاربری Expressive</string>

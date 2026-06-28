@@ -45,10 +45,6 @@
     <string name="theme_settings">Témabeállítások</string>
     <string name="theme_settings_ui_style">Felhasználói felület stílusa</string>
     <string name="theme_settings_desc">Az alkalmazás témájának módosítása</string>
-    <string name="theme_settings_miuix_ui">Miuix</string>
-    <string name="theme_settings_miuix_ui_desc">Hasonló a Hyperoshoz</string>
-    <string name="theme_settings_miuix_custom_colors">Egyedi színek</string>
-    <string name="theme_settings_miuix_custom_colors_desc">Témaszínek testreszabása Miuix témastílusban</string>
     <string name="theme_settings_google_ui">Google Material 3</string>
     <string name="theme_settings_google_ui_desc">Standard Material Design felhasználói felület</string>
     <string name="theme_settings_ui_engine">Felhasználói felület motorja</string>

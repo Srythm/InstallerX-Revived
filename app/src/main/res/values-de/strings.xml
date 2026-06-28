@@ -34,8 +34,6 @@
     <string name="theme_settings">Design-Einstellungen</string>
     <string name="theme_settings_ui_style">App-Aussehen</string>
     <string name="theme_settings_desc">Design der App ändern</string>
-    <string name="theme_settings_miuix_ui">MIUI</string>
-    <string name="theme_settings_miuix_ui_desc">Ähnlich zu HyperOS</string>
     <string name="theme_settings_google_ui">Google Material 3 Designsprache</string>
     <string name="theme_settings_google_ui_desc">Standard Material Design UI</string>
     <string name="theme_settings_ui_engine">UI-Engine</string>
@@ -437,8 +435,6 @@
     <string name="get_update_directly_desc">Aktualisierung direkt von Github herunterladen und installieren, kein Cache wird verbleiben</string>
     <string name="uninstall_title">Deinstalliere InstallerX Revived</string>
     <string name="uninstall_content">Nach der Deinstallation dieser App wirst du InstallerX Revived nicht mehr zum installieren von Apps verwenden können.</string>
-    <string name="theme_settings_miuix_custom_colors">Benutzerdefinierte Farben</string>
-    <string name="theme_settings_miuix_custom_colors_desc">Designfarben im MIUI-Designstil anpassen</string>
     <string name="theme_settings_theme_mode">Designmodus</string>
     <string name="theme_settings_theme_mode_desc">Wähle den Designmodus aus</string>
     <string name="theme_settings_theme_mode_light">Helles Design</string>

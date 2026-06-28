@@ -259,10 +259,6 @@
     <string name="uninstall_content">Після видалення цієї програми ви більше не зможете використовувати InstallerX Revived для встановлення програм.</string>
     <string name="telegram_channel">Канал в Telegram</string>
     <string name="telegram_channel_desc">Підпишіться на канал, щоб отримувати новини та оновлення!</string>
-    <string name="theme_settings_miuix_ui">Miuix</string>
-    <string name="theme_settings_miuix_ui_desc">Схожі на Hyperos</string>
-    <string name="theme_settings_miuix_custom_colors">Користувацькі кольори</string>
-    <string name="theme_settings_miuix_custom_colors_desc">Налаштування кольорів теми в стилі теми Miuix</string>
     <string name="theme_settings_google_ui">Google Material 3</string>
     <string name="theme_settings_google_ui_desc">Стандартний дизайн Material UI</string>
     <string name="theme_settings_ui_engine">Двигун UI</string>

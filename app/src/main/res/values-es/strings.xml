@@ -379,7 +379,6 @@
     <string name="telegram_channel_desc">¡Únete al canal para recibir noticias y actualizaciones!</string>
     <string name="uninstall_title">Desinstalar InstallerX Revived</string>
     <string name="uninstall_content">Después de desinstalar esta aplicación, ya no podrá usar InstallerX Revived para instalar aplicaciones.</string>
-    <string name="theme_settings_miuix_ui_desc">Parecido a HyperOS</string>
     <string name="theme_settings_google_ui_desc">Material 3 de Google introducido en Android 16</string>
     <string name="theme_settings_ui_engine">Estilo de interfaz</string>
     <string name="theme_settings_google_ui_style">Estilo Material 3 expressive</string>
@@ -417,7 +416,6 @@
     <string name="config_target_user">Usuario de destino</string>
     <string name="config_manual_dexopt">Optimización manual de Dex</string>
     <string name="config_manual_dexopt_desc">Inicie manualmente el proceso dex2oat después de la instalación</string>
-    <string name="theme_settings_miuix_ui">Miuix</string>
     <string name="config_dexopt_mode">Modo de optimización</string>
     <string name="config_force_dexopt">Forzar optimización</string>
     <string name="config_force_dexopt_desc">Forzar la recompilación aunque el sistema lo considere innecesario</string>
@@ -525,8 +523,6 @@
     <string name="update_available">Actualización Disponible: %1$s</string>
     <string name="get_update_directly">Recibe la actualización directamente</string>
     <string name="get_update_directly_desc">Recibe la actualización directamente desde GitHub e instálala, no quedará caché</string>
-    <string name="theme_settings_miuix_custom_colors">Color Personalizado</string>
-    <string name="theme_settings_miuix_custom_colors_desc">Personalizar los colores de los temas en el estilo de tema de Miuix</string>
     <string name="theme_settings_google_ui">Google Material 3</string>
     <string name="theme_settings_theme_mode">Modo de Tema</string>
     <string name="theme_settings_theme_mode_desc">Seleccionar modo de tema</string>

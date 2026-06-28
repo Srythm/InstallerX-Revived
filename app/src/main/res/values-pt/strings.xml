@@ -79,10 +79,6 @@
     <string name="theme_settings">Configurações de Tema</string>
     <string name="theme_settings_ui_style">Estilo da Interface</string>
     <string name="theme_settings_desc">Alterar o tema da app</string>
-    <string name="theme_settings_miuix_ui">Miuix</string>
-    <string name="theme_settings_miuix_ui_desc">Similar ao HyperOS</string>
-    <string name="theme_settings_miuix_custom_colors">Cores Personalizadas</string>
-    <string name="theme_settings_miuix_custom_colors_desc">Personalize as cores do tema no estilo Miuix</string>
     <string name="theme_settings_google_ui">Google Material 3</string>
     <string name="theme_settings_google_ui_desc">Interface Padrão Material Design</string>
     <string name="theme_settings_ui_engine">Mecanismo de Interface</string>

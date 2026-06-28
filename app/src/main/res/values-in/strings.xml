@@ -44,10 +44,6 @@
     <string name="theme_settings">Pengaturan Tema</string>
     <string name="theme_settings_ui_style">Gaya UI</string>
     <string name="theme_settings_desc">Ubah tema aplikasi</string>
-    <string name="theme_settings_miuix_ui">Miuix</string>
-    <string name="theme_settings_miuix_ui_desc">Mirip dengan HyperOS</string>
-    <string name="theme_settings_miuix_custom_colors">Warna khusus</string>
-    <string name="theme_settings_miuix_custom_colors_desc">Sesuaikan warna tema dalam gaya tema Miuix</string>
     <string name="theme_settings_google_ui">Google Material 3</string>
     <string name="theme_settings_google_ui_desc">Standar UI Desain Material</string>
     <string name="lab_http_profile_local">Izinkan cleartext lokal (Localhost)</string>

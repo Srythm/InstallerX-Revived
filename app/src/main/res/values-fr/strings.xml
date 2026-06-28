@@ -36,8 +36,6 @@
     <string name="theme_settings">Paramètres du thème</string>
     <string name="theme_settings_ui_style">Style d\'interface</string>
     <string name="theme_settings_desc">Changez l\'apparence de l\'appli</string>
-    <string name="theme_settings_miuix_ui">Miuix</string>
-    <string name="theme_settings_miuix_ui_desc">Comme sur HyperOS</string>
     <string name="theme_settings_google_ui">Google Material 3</string>
     <string name="theme_settings_google_ui_desc">Interface Material Design standard</string>
     <string name="theme_settings_ui_engine">Moteur d\'interface</string>
@@ -516,8 +514,6 @@
     <string name="update_available">Mise à jour disponible : %1$s</string>
     <string name="get_update_directly">Recevez les mises à jour directement</string>
     <string name="get_update_directly_desc">Télécharger la mise à jour directement depuis GitHub et l\'installer ; aucun cache ne sera conservé</string>
-    <string name="theme_settings_miuix_custom_colors">Couleurs personnalisées</string>
-    <string name="theme_settings_miuix_custom_colors_desc">Personnalisez les couleurs du thème Miuix</string>
     <string name="theme_settings_theme_mode_desc">Sélectionnez le thème</string>
     <string name="theme_settings_theme_mode_light">Thème clair</string>
     <string name="theme_settings_theme_mode_dark">Thème sombre</string>

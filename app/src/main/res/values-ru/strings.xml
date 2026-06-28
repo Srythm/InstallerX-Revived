@@ -368,8 +368,6 @@
     <string name="telegram_group">Группа в Telegram</string>
     <string name="telegram_channel">Канал в Telegram</string>
     <string name="telegram_channel_desc">Подпишитесь на канал, чтобы получать новости и обновления!</string>
-    <string name="theme_settings_miuix_ui">MiuiX</string>
-    <string name="theme_settings_miuix_ui_desc">В стиле HyperOS</string>
     <string name="theme_settings_google_ui_desc">Стандартный Material Design</string>
     <string name="theme_settings_ui_engine">Стиль интерфейса</string>
     <string name="theme_settings_google_ui_style">Стиль Google</string>
@@ -381,8 +379,6 @@
     <string name="theme_settings_palette_style">Стиль палитры</string>
     <string name="theme_settings_palette_style_desc">Выбрать стиль палитры</string>
     <string name="theme_settings_dynamic_color">Динамический цвет</string>
-    <string name="theme_settings_miuix_custom_colors">Пользовательские цвета</string>
-    <string name="theme_settings_miuix_custom_colors_desc">Настройка цветов темы в стиле Miuix</string>
     <string name="theme_settings_dynamic_color_desc">Динамическое изменение акцентов цвета темы в тон обоев</string>
     <string name="theme_settings_theme_color">Цвет темы</string>
     <string name="theme_settings_dynamic_color_follow_icon">Цвет диалогов</string>

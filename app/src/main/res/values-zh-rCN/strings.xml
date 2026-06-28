@@ -110,10 +110,6 @@
     <string name="theme_settings">主题设置</string>
     <string name="theme_settings_ui_style">主题风格</string>
     <string name="theme_settings_desc">更改应用主题</string>
-    <string name="theme_settings_miuix_ui">Miuix</string>
-    <string name="theme_settings_miuix_ui_desc">类 HyperOS 风格界面</string>
-    <string name="theme_settings_miuix_custom_colors">自定义颜色</string>
-    <string name="theme_settings_miuix_custom_colors_desc">在 Miuix 主题风格下自定义主题颜色</string>
     <string name="theme_settings_google_ui">Google Material 3</string>
     <string name="theme_settings_google_ui_desc">标准 Material Design 界面</string>
     <string name="theme_settings_ui_engine">UI 引擎</string>

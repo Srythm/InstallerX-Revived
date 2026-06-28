@@ -44,10 +44,6 @@
     <string name="theme_settings">テーマ設定</string>
     <string name="theme_settings_ui_style">UI スタイル</string>
     <string name="theme_settings_desc">アプリのテーマを変更します</string>
-    <string name="theme_settings_miuix_ui">Miuix</string>
-    <string name="theme_settings_miuix_ui_desc">HyperOS に類似</string>
-    <string name="theme_settings_miuix_custom_colors">カスタムカラー</string>
-    <string name="theme_settings_miuix_custom_colors_desc">Miuix テーマスタイルでテーマカラーをカスタマイズします</string>
     <string name="theme_settings_google_ui">Google Material 3</string>
     <string name="theme_settings_google_ui_desc">標準的なマテリアルデザイン UI</string>
     <string name="theme_settings_ui_engine">UI エンジン</string>
