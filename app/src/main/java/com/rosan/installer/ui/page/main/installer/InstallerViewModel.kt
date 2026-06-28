@@ -472,6 +472,7 @@ class InstallerViewModel(
                     } ?: currentState.uiUninstallInfo
 
                     currentState.copy(
+                        config = session.config,
                         stage = newStage,
                         currentPackageName = newPackageName,
                         uiUninstallInfo = mergedUninstallInfo,
