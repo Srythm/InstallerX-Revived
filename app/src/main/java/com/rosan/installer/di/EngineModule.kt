@@ -87,6 +87,7 @@ val engineModule = module {
             deviceCapabilityProvider = get(),
             appSettingsRepo = get(),
             postInstallTaskProvider = get(),
+            platformInstallPolicyChecker = get(),
             taskScope = get(named("AppScope"))
         )
     }

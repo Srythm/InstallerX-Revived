@@ -55,6 +55,7 @@ val viewModelModule = module {
             systemEnvProvider = get(),
             privilegedProvider = get(),
             updateSetting = get(),
+            setLauncherIcon = get(),
             exportBackup = get(),
             prepareBackupRestore = get(),
             restoreBackup = get(),
