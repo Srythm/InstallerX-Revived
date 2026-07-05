@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rosan.installer.BuildConfig
 import com.rosan.installer.R
 import com.rosan.installer.core.bitmask.addFlag
 import com.rosan.installer.core.bitmask.hasFlag
@@ -20,6 +21,7 @@ import com.rosan.installer.domain.engine.model.packageinfo.PackageAnalysisResult
 import com.rosan.installer.domain.engine.model.packageinfo.analyzePackageSignatureMatch
 import com.rosan.installer.domain.engine.model.packageinfo.analyzePackageSignatureSelection
 import com.rosan.installer.domain.engine.model.source.DataType
+import com.rosan.installer.domain.device.provider.DeviceCapabilityProvider
 import com.rosan.installer.domain.engine.provider.InstalledPackageSignatureProvider
 import com.rosan.installer.domain.engine.usecase.GetAppIconColorUseCase
 import com.rosan.installer.domain.engine.usecase.GetAppIconUseCase
@@ -60,6 +62,7 @@ class InstallerViewModel(
     private val getAppIcon: GetAppIconUseCase,
     private val getAppIconColor: GetAppIconColorUseCase,
     private val getAppLabel: GetAppLabelUseCase,
+    private val deviceCapabilityProvider: DeviceCapabilityProvider,
     private val installedPackageSignatureProvider: InstalledPackageSignatureProvider
 ) : ViewModel() {
 
@@ -135,6 +138,7 @@ class InstallerViewModel(
     private var autoInstallJob: Job? = null
     private val settingsLoadingJob: Job
     private var collectRepoJob: Job? = null
+    private var unknownSourcePermissionLabelPackageName: String? = null
 
     init {
         settingsLoadingJob = loadInitialSettings()
@@ -164,6 +168,7 @@ class InstallerViewModel(
         val newConfig = updateBlock(_localState.value.config)
         session.config = newConfig
         _localState.update { it.copy(config = newConfig) }
+        fetchUnknownSourcePermissionAppLabel(newConfig)
     }
 
     fun dispatch(action: InstallerViewAction) {
@@ -341,7 +346,9 @@ class InstallerViewModel(
 
     private fun collectRepo(session: InstallerSessionRepository) {
         this.session = session
-        if (session.config.enableCustomizeUser) loadAvailableUsers(session.config.authorizer)
+        if (session.config.enableCustomizeUser) {
+            loadAvailableUsers(session.config.authorizer, session.config.customizeAuthorizer)
+        }
 
         _localState.update {
             val validPackages = session.analysisResults.map { res -> res.packageName }.toSet()
@@ -350,6 +357,7 @@ class InstallerViewModel(
                 config = session.config,   // Synchronize the entire ConfigModel to UI state
                 currentPackageName = null,
                 initiatorAppLabel = null,  // Reset label on new session
+                unknownSourcePermissionAppLabel = null,
                 analysisResults = session.analysisResults,
                 isInstallingModule = session.analysisResults.hasSelectedModule(),
                 displayIcons = it.displayIcons.filterKeys { key -> key in validPackages } + analysedIcons,
@@ -357,7 +365,9 @@ class InstallerViewModel(
             )
         }
 
+        unknownSourcePermissionLabelPackageName = null
         fetchInitiatorAppLabel(session.config.initiatorPackageName)
+        fetchUnknownSourcePermissionAppLabel(session.config)
 
         collectRepoJob?.cancel()
         autoInstallJob?.cancel()
@@ -573,9 +583,9 @@ class InstallerViewModel(
         updateConfig { it.copy(targetUserId = userId) }
     }
 
-    private fun loadAvailableUsers(authorizer: Authorizer) {
+    private fun loadAvailableUsers(authorizer: Authorizer, customizeAuthorizer: String = "") {
         viewModelScope.launch {
-            getAvailableUsers(authorizer)
+            getAvailableUsers(authorizer, customizeAuthorizer)
                 .onSuccess { users ->
                     _localState.update { it.copy(availableUsers = users) }
                     // If the currently selected user is not in the available list, reset it to 0 (Owner).
@@ -930,18 +940,27 @@ class InstallerViewModel(
         }
     }
 
+    private fun fetchUnknownSourcePermissionAppLabel(config: ConfigModel) {
+        val packageName = if (config.authorizer == Authorizer.None && !deviceCapabilityProvider.isSystemApp) {
+            BuildConfig.APPLICATION_ID
+        } else {
+            config.initiatorPackageName
+        }
+        if (packageName.isNullOrBlank()) {
+            unknownSourcePermissionLabelPackageName = null
+            _localState.update { it.copy(unknownSourcePermissionAppLabel = null) }
+            return
+        }
+        if (unknownSourcePermissionLabelPackageName == packageName) return
+
+        unknownSourcePermissionLabelPackageName = packageName
+        viewModelScope.launch {
+            val label = getAppLabel(packageName)
+            _localState.update { it.copy(unknownSourcePermissionAppLabel = label) }
+        }
+    }
+
     companion object {
-        /**
-         * Wall-clock delay (ms) between setting [isClosingFullscreen] = true
-         * and the synchronous [close] teardown. Kept in sync with the
-         * fade-out animation duration in
-         * [com.rosan.installer.ui.page.main.installer.components.PositionFullScreen].
-         * The value here is intentionally the lower bound: the composable
-         * fade-out takes 220ms, the delay matches that, and a tiny drift
-         * means the composable finishes its animation at alpha=0 a hair
-         * before the session is torn down — which is invisible (the layer
-         * is already fully transparent at that point).
-         */
         const val FullscreenCloseFadeOutMs = 220L
     }
 }

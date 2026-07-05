@@ -4,9 +4,6 @@ package com.rosan.installer.ui.page.main.settings.config.edit
 
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -36,9 +33,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
 import com.rosan.installer.R
@@ -56,7 +51,6 @@ import com.rosan.installer.ui.page.main.widget.setting.BaseItemContainer
 import com.rosan.installer.ui.page.main.widget.setting.DropDownMenuWidget
 import com.rosan.installer.ui.page.main.widget.setting.SegmentedColumnScope
 import com.rosan.installer.ui.page.main.widget.setting.SwitchWidget
-import com.rosan.installer.ui.util.isDhizukuActive
 import com.rosan.installer.ui.util.isSystemPackageInstallerActive
 import org.koin.compose.koinInject
 
@@ -142,18 +136,16 @@ fun SegmentedColumnScope.dataAuthorizerWidget(
                 )
             }
 
-            // Map authorizers to their dynamic display names
-            val descriptions = authorizers.map { authorizer ->
+            val globalAuthorizerName =
+                if (globalAuthorizer == Authorizer.None && capabilityProvider.isSystemApp) {
+                    stringResource(R.string.working_status_system_installer)
+                } else {
+                    stringResource(globalAuthorizer.displayNameRes)
+                }
+
+            val authorizerNames = authorizers.map { authorizer ->
                 when (authorizer) {
-                    Authorizer.Global -> {
-                        // Dynamically resolve the global authorizer's name
-                        val globalName = if (globalAuthorizer == Authorizer.None && capabilityProvider.isSystemApp) {
-                            stringResource(R.string.working_status_system_installer)
-                        } else {
-                            stringResource(globalAuthorizer.displayNameRes)
-                        }
-                        stringResource(R.string.config_authorizer_global_desc, globalName)
-                    }
+                    Authorizer.Global -> stringResource(R.string.config_authorizer_global_desc, globalAuthorizerName)
 
                     Authorizer.None -> {
                         // Check if it should be displayed as system installer
@@ -167,16 +159,27 @@ fun SegmentedColumnScope.dataAuthorizerWidget(
                     else -> stringResource(authorizer.displayNameRes)
                 }
             }
+            val selectedDescription = authorizers
+                .indexOf(stateAuthorizer)
+                .takeIf { it >= 0 }
+                ?.let(authorizerNames::get)
+                ?.let { description ->
+                    if (stateAuthorizer == Authorizer.Global &&
+                        globalAuthorizer == Authorizer.Customize &&
+                        state.globalCustomizeAuthorizer.isNotBlank()
+                    ) {
+                        "$description\n${stringResource(R.string.config_authorizer_command_desc, state.globalCustomizeAuthorizer)}"
+                    } else {
+                        description
+                    }
+                }
 
             DropDownMenuWidget(
                 icon = Icons.TwoTone.Memory,
                 title = stringResource(R.string.config_authorizer),
-                description = authorizers
-                    .indexOf(stateAuthorizer)
-                    .takeIf { it >= 0 }
-                    ?.let(descriptions::get),
+                description = selectedDescription,
                 choice = authorizers.indexOf(stateAuthorizer),
-                data = descriptions,
+                data = authorizerNames,
             ) { index ->
                 authorizers.getOrNull(index)?.let {
                     dispatch(EditViewAction.ChangeDataAuthorizer(it))
@@ -196,7 +199,7 @@ fun SegmentedColumnScope.dataAuthorizerWidget(
                         Icon(imageVector = Icons.TwoTone.Terminal, contentDescription = null)
                     },
                     label = {
-                        Text(text = stringResource(R.string.config_customize_authorizer))
+                        Text(text = stringResource(R.string.config_authorizer_customize))
                     },
                     value = customizeAuthorizer,
                     onValueChange = { dispatch(EditViewAction.ChangeDataCustomizeAuthorizer(it)) },
@@ -238,16 +241,19 @@ fun DataAutoApproveSessionWidget(
     dispatch: (EditViewAction) -> Unit,
     onEnableRequest: () -> Unit
 ) {
-    val enabled = !state.labRespectPlatformInstallPolicy
+    val isDhizuku = state.isDhizukuAuthorizerActive
+    val enabled = !isDhizuku && !state.labRespectPlatformInstallPolicy
     SwitchWidget(
         icon = AppIcons.Active,
         title = stringResource(id = R.string.config_auto_approve_session),
         description = stringResource(
-            id = if (enabled) {
-                R.string.config_auto_approve_session_desc
-            } else {
-                R.string.config_auto_approve_session_disabled_desc
-            }
+            id = state.dhizukuAwareDescriptionRes(
+                if (state.labRespectPlatformInstallPolicy) {
+                    R.string.config_auto_approve_session_disabled_desc
+                } else {
+                    R.string.config_auto_approve_session_desc
+                }
+            )
         ),
         enabled = enabled,
         checked = state.data.autoApproveSession,
@@ -346,19 +352,15 @@ fun SegmentedColumnScope.dataPackageSourceWidget(
     dispatch: (EditViewAction) -> Unit,
     visible: Boolean = true
 ) {
-    val stateAuthorizer = state.data.authorizer
-    val globalAuthorizer = state.globalAuthorizer
     val enableCustomizePackageSource = state.data.enableCustomizePackageSource
     val currentSource = state.data.packageSource
-    val isDhizuku = isDhizukuActive(stateAuthorizer, globalAuthorizer)
-    val enabled = !isDhizuku && !state.labRespectPlatformInstallPolicy
+    val enabled = !state.labRespectPlatformInstallPolicy
 
     expandableItem(
         animatedVisibility = visible,
         expanded = enabled && enableCustomizePackageSource,
         topContent = {
             val description = when {
-                isDhizuku -> stringResource(R.string.dhizuku_cannot_set_package_source_desc)
                 state.labRespectPlatformInstallPolicy ->
                     stringResource(R.string.config_customize_package_source_disabled_desc)
                 else -> stringResource(id = R.string.config_customize_package_source_desc)
@@ -481,7 +483,7 @@ fun SegmentedColumnScope.dataDeclareInstallerWidget(state: EditViewState, dispat
     val globalAuthorizer = state.globalAuthorizer
     val currentMode = state.data.installerMode
 
-    val isDhizuku = isDhizukuActive(stateAuthorizer, globalAuthorizer)
+    val isDhizuku = state.isDhizukuAuthorizerActive
     val isExpanded = currentMode == InstallerMode.Custom && !isDhizuku
 
     expandableItem(
@@ -494,9 +496,7 @@ fun SegmentedColumnScope.dataDeclareInstallerWidget(state: EditViewState, dispat
                 InstallerMode.Custom to stringResource(R.string.config_installer_mode_custom)
             )
 
-            val description = if (isDhizuku) {
-                stringResource(R.string.dhizuku_cannot_set_installer_desc)
-            } else {
+            val description = state.dhizukuAwareDescription(
                 when (currentMode) {
                     InstallerMode.Self -> {
                         val descRes = if (
@@ -515,7 +515,7 @@ fun SegmentedColumnScope.dataDeclareInstallerWidget(state: EditViewState, dispat
                     InstallerMode.Initiator -> stringResource(R.string.config_installer_mode_initiator)
                     InstallerMode.Custom -> stringResource(R.string.config_installer_mode_custom)
                 }
-            }
+            )
 
             DropDownMenuWidget(
                 icon = AppIcons.InstallSource,
@@ -549,11 +549,6 @@ fun DataInstallerWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit
     val matchingPackage = remember(currentInstaller, managedPackages) {
         managedPackages.find { it.packageName == currentInstaller }
     }
-
-    val layoutDirection = LocalLayoutDirection.current
-    val leftCutoutOffset = WindowInsets.displayCutout
-        .asPaddingValues()
-        .calculateLeftPadding(layoutDirection)
 
     BaseItemContainer {
         ExposedDropdownMenuBox(
@@ -592,7 +587,6 @@ fun DataInstallerWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
                 modifier = Modifier.exposedDropdownSize(),
-                offset = DpOffset(x = leftCutoutOffset, y = 0.dp),
                 properties = PopupProperties(
                     focusable = true,
                     clippingEnabled = false
@@ -630,23 +624,20 @@ fun DataInstallerWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit
 }
 
 fun SegmentedColumnScope.dataUserWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit) {
-    val stateAuthorizer = state.data.authorizer
-    val globalAuthorizer = state.globalAuthorizer
     val enableCustomizeUser = state.data.enableCustomizeUser
     val targetUserId = state.data.targetUserId
     val availableUsers = state.availableUsers
-    val isDhizuku = isDhizukuActive(stateAuthorizer, globalAuthorizer)
+    val isDhizuku = state.isDhizukuAuthorizerActive
 
     expandableItem(
         expanded = enableCustomizeUser && !isDhizuku,
         topContent = {
-            val description =
-                if (isDhizuku) stringResource(R.string.dhizuku_cannot_set_user_desc)
-                else stringResource(id = R.string.config_customize_user_desc)
             SwitchWidget(
                 icon = AppIcons.InstallUser,
                 title = stringResource(id = R.string.config_customize_user),
-                description = description,
+                description = stringResource(
+                    id = state.dhizukuAwareDescriptionRes(R.string.config_customize_user_desc)
+                ),
                 checked = enableCustomizeUser,
                 enabled = !isDhizuku,
                 onCheckedChange = {
@@ -671,21 +662,18 @@ fun SegmentedColumnScope.dataUserWidget(state: EditViewState, dispatch: (EditVie
 }
 
 fun SegmentedColumnScope.dataManualDexoptWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit) {
-    val stateAuthorizer = state.data.authorizer
-    val globalAuthorizer = state.globalAuthorizer
     val expanded = state.data.enableManualDexopt
-    val isDhizuku = isDhizukuActive(stateAuthorizer, globalAuthorizer)
+    val isDhizuku = state.isDhizukuAuthorizerActive
     val showDexoptOptions = expanded && !isDhizuku
 
     // Multi-item integration completely eliminates the need for AnimatedVisibility and manual shape adjustments
     item(forceFlatBottom = showDexoptOptions) {
-        val description =
-            if (isDhizuku) stringResource(R.string.dhizuku_cannot_set_dexopt_desc)
-            else stringResource(R.string.config_manual_dexopt_desc)
         SwitchWidget(
             icon = Icons.TwoTone.Speed,
             title = stringResource(id = R.string.config_manual_dexopt),
-            description = description,
+            description = stringResource(
+                id = state.dhizukuAwareDescriptionRes(R.string.config_manual_dexopt_desc)
+            ),
             checked = expanded,
             enabled = !isDhizuku,
             onCheckedChange = {
@@ -798,10 +786,14 @@ fun DataForAllUserWidget(state: EditViewState, dispatch: (EditViewAction) -> Uni
 
 @Composable
 fun DataAllowTestOnlyWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit) {
+    val isDhizuku = state.isDhizukuAuthorizerActive
     SwitchWidget(
         icon = AppIcons.BugReport,
         title = stringResource(id = R.string.config_allow_test),
-        description = stringResource(id = R.string.config_allow_test_desc),
+        description = stringResource(
+            id = state.dhizukuAwareDescriptionRes(R.string.config_allow_test_desc)
+        ),
+        enabled = !isDhizuku,
         checked = state.data.allowTestOnly,
         onCheckedChange = { dispatch(EditViewAction.ChangeDataAllowTestOnly(it)) }
     )
@@ -809,10 +801,14 @@ fun DataAllowTestOnlyWidget(state: EditViewState, dispatch: (EditViewAction) -> 
 
 @Composable
 fun DataAllowDowngradeWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit) {
+    val isDhizuku = state.isDhizukuAuthorizerActive
     SwitchWidget(
         icon = AppIcons.InstallAllowDowngrade,
         title = stringResource(id = R.string.config_allow_downgrade),
-        description = stringResource(id = R.string.config_allow_downgrade_desc),
+        description = stringResource(
+            id = state.dhizukuAwareDescriptionRes(R.string.config_allow_downgrade_desc)
+        ),
+        enabled = !isDhizuku,
         checked = state.data.allowDowngrade,
         onCheckedChange = { dispatch(EditViewAction.ChangeDataAllowDowngrade(it)) }
     )
@@ -820,10 +816,14 @@ fun DataAllowDowngradeWidget(state: EditViewState, dispatch: (EditViewAction) ->
 
 @Composable
 fun DataBypassLowTargetSdkWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit) {
+    val isDhizuku = state.isDhizukuAuthorizerActive
     SwitchWidget(
         icon = AppIcons.InstallBypassLowTargetSdk,
         title = stringResource(id = R.string.config_bypass_low_target_sdk),
-        description = stringResource(id = R.string.config_bypass_low_target_sdk_desc),
+        description = stringResource(
+            id = state.dhizukuAwareDescriptionRes(R.string.config_bypass_low_target_sdk_desc)
+        ),
+        enabled = !isDhizuku,
         checked = state.data.bypassLowTargetSdk,
         onCheckedChange = { dispatch(EditViewAction.ChangeDataBypassLowTargetSdk(it)) }
     )
@@ -853,10 +853,14 @@ fun DataAllowSigUnknownWidget(state: EditViewState, dispatch: (EditViewAction) -
 
 @Composable
 fun DataAllowAllRequestedPermissionsWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit) {
+    val isDhizuku = state.isDhizukuAuthorizerActive
     SwitchWidget(
         icon = AppIcons.InstallAllowAllRequestedPermissions,
         title = stringResource(id = R.string.config_grant_all_permissions),
-        description = stringResource(id = R.string.config_grant_all_permissions_desc),
+        description = stringResource(
+            id = state.dhizukuAwareDescriptionRes(R.string.config_grant_all_permissions_desc)
+        ),
+        enabled = !isDhizuku,
         checked = state.data.allowAllRequestedPermissions,
         onCheckedChange = { dispatch(EditViewAction.ChangeDataAllowAllRequestedPermissions(it)) }
     )
@@ -864,10 +868,14 @@ fun DataAllowAllRequestedPermissionsWidget(state: EditViewState, dispatch: (Edit
 
 @Composable
 fun DataRequestUpdateOwnershipWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit) {
+    val isDhizuku = state.isDhizukuAuthorizerActive
     SwitchWidget(
         icon = AppIcons.InstallRequestUpdateOwnership,
         title = stringResource(id = R.string.config_request_update_ownership),
-        description = stringResource(id = R.string.config_request_update_ownership_desc),
+        description = stringResource(
+            id = state.dhizukuAwareDescriptionRes(R.string.config_request_update_ownership_desc)
+        ),
+        enabled = !isDhizuku,
         checked = state.data.requestUpdateOwnership,
         onCheckedChange = { dispatch(EditViewAction.ChangeDataRequestUpdateOwnership(it)) }
     )

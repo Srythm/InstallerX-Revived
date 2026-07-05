@@ -824,7 +824,8 @@ class ActionHandler(
     private fun installMetadata(): InstallMetadata =
         InstallMetadata(
             sourceUris = session.sourceUris,
-            referrerUri = session.referrerUri
+            referrerUri = session.referrerUri,
+            operationSessionKey = session.id
         )
 
     // `InstallMode.isNotification` is defined on the enum itself in
