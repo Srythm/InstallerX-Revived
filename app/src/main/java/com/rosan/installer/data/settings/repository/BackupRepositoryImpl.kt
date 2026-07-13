@@ -10,12 +10,14 @@ import com.rosan.installer.BuildConfig
 import com.rosan.installer.R
 import com.rosan.installer.data.settings.local.datastore.AppDataStore
 import com.rosan.installer.data.settings.local.room.INSTALLER_ROOM_SCHEMA_VERSION
+import com.rosan.installer.data.settings.local.room.InstallerRoom
 import com.rosan.installer.data.settings.local.room.dao.AppDao
 import com.rosan.installer.data.settings.local.room.dao.ConfigDao
 import com.rosan.installer.data.settings.local.room.dao.OperationHistoryDao
 import com.rosan.installer.data.settings.local.room.entity.AppEntity
 import com.rosan.installer.data.settings.local.room.entity.ConfigEntity
 import com.rosan.installer.data.settings.local.room.entity.OperationHistoryEntity
+import androidx.room3.withWriteTransaction
 import com.rosan.installer.domain.history.model.InstallMethod
 import com.rosan.installer.domain.history.model.OperationStatus
 import com.rosan.installer.domain.history.model.OperationType
@@ -48,6 +50,7 @@ class BackupRepositoryImpl(
     private val configDao: ConfigDao,
     private val appDao: AppDao,
     private val historyDao: OperationHistoryDao,
+    private val room: InstallerRoom,
     private val appDataStore: AppDataStore,
     private val dataStore: DataStore<Preferences>
 ) : BackupRepository {
@@ -208,31 +211,35 @@ class BackupRepositoryImpl(
         )
 
     private suspend fun applyImportPlan(importPlan: ImportPlan): RestoreResult {
-        appDao.deleteAll()
-        configDao.deleteAll()
-        historyDao.clear()
-
         val configIdMap = linkedMapOf<Long, Long>()
-        importPlan.profiles.forEach { profile ->
-            val newConfigId = configDao.insertAndReturnId(profile.entity)
-            configIdMap[profile.backupId] = newConfigId
-        }
+        var restoredAppsCount = 0
+        room.withWriteTransaction {
+            appDao.deleteAll()
+            configDao.deleteAll()
+            historyDao.clear()
 
-        val restoredApps = importPlan.scopes.mapNotNull { scope ->
-            val configId = configIdMap[scope.backupId] ?: return@mapNotNull null
-            scope.entity.copy(configId = configId)
-        }
-        appDao.insertAll(restoredApps)
+            importPlan.profiles.forEach { profile ->
+                val newConfigId = configDao.insertAndReturnId(profile.entity)
+                configIdMap[profile.backupId] = newConfigId
+            }
 
-        importPlan.history.forEach { entry ->
-            historyDao.insert(entry.toEntity())
+            val restoredApps = importPlan.scopes.mapNotNull { scope ->
+                val configId = configIdMap[scope.backupId] ?: return@mapNotNull null
+                scope.entity.copy(configId = configId)
+            }
+            restoredAppsCount = restoredApps.size
+            appDao.insertAll(restoredApps)
+
+            importPlan.history.forEach { entry ->
+                historyDao.insert(entry.toEntity())
+            }
         }
 
         val settingsResult = writeSettings(importPlan.settings)
 
         return RestoreResult(
             restoredProfiles = importPlan.profiles.size,
-            restoredScopes = restoredApps.size,
+            restoredScopes = restoredAppsCount,
             restoredSettings = settingsResult.restored,
             restoredHistory = importPlan.history.size,
             ignoredSettings = settingsResult.ignored,
@@ -242,25 +249,27 @@ class BackupRepositoryImpl(
 
     private suspend fun rollback(snapshot: PreRestoreSnapshot) {
         try {
-            appDao.deleteAll()
-            configDao.deleteAll()
-            historyDao.clear()
-
             val configIdMap = linkedMapOf<Long, Long>()
-            snapshot.configs.forEach { config ->
-                val oldConfigId = config.id
-                val newConfigId = configDao.insertAndReturnId(config)
-                configIdMap[oldConfigId] = newConfigId
-            }
+            room.withWriteTransaction {
+                appDao.deleteAll()
+                configDao.deleteAll()
+                historyDao.clear()
 
-            val restoredApps = snapshot.apps.mapNotNull { app ->
-                val configId = configIdMap[app.configId] ?: return@mapNotNull null
-                app.copy(configId = configId)
-            }
-            appDao.insertAll(restoredApps)
+                snapshot.configs.forEach { config ->
+                    val oldConfigId = config.id
+                    val newConfigId = configDao.insertAndReturnId(config)
+                    configIdMap[oldConfigId] = newConfigId
+                }
 
-            snapshot.history.forEach { entity ->
-                historyDao.insert(entity.copy(id = 0L))
+                val restoredApps = snapshot.apps.mapNotNull { app ->
+                    val configId = configIdMap[app.configId] ?: return@mapNotNull null
+                    app.copy(configId = configId)
+                }
+                appDao.insertAll(restoredApps)
+
+                snapshot.history.forEach { entity ->
+                    historyDao.insert(entity.copy(id = 0L))
+                }
             }
 
             writeSettings(snapshot.settings)

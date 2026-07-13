@@ -4,6 +4,7 @@ package com.rosan.installer.di
 
 import com.rosan.installer.core.reflection.ReflectionProvider
 import com.rosan.installer.core.reflection.ReflectionProviderImpl
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -17,6 +18,11 @@ val coreModule = module {
     single<CoroutineScope>(named("AppScope")) {
         CoroutineScope(SupervisorJob() + Dispatchers.IO)
     }
+
+    // Named dispatchers for injectable coroutine contexts
+    single<CoroutineDispatcher>(named("IoDispatcher")) { Dispatchers.IO }
+    single<CoroutineDispatcher>(named("DefaultDispatcher")) { Dispatchers.Default }
+    single<CoroutineDispatcher>(named("MainDispatcher")) { Dispatchers.Main }
 
     singleOf(::ReflectionProviderImpl) { bind<ReflectionProvider>() }
 }

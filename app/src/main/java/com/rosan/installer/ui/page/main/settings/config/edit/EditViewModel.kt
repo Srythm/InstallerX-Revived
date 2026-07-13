@@ -21,7 +21,7 @@ import com.rosan.installer.domain.settings.usecase.config.GetConfigDraftUseCase
 import com.rosan.installer.domain.settings.usecase.config.SaveConfigUseCase
 import com.rosan.installer.domain.settings.usecase.settings.GetPackageUidUseCase
 import com.rosan.installer.ui.util.isDhizukuActive
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -42,7 +42,8 @@ class EditViewModel(
     private val getConfigDraft: GetConfigDraftUseCase,
     private val saveConfig: SaveConfigUseCase,
     private val getAvailableUsers: GetAvailableUsersUseCase,
-    private val getPackageUid: GetPackageUidUseCase
+    private val getPackageUid: GetPackageUidUseCase,
+    private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
     // Separate mutable states for editable data to combine later
@@ -68,13 +69,14 @@ class EditViewModel(
             availableUsers = availableUsers,
             managedInstallerPackages = managedInstallerPackages,
             globalAuthorizer = prefs.authorizer,
+            globalCustomizeAuthorizer = prefs.customizeAuthorizer,
             globalInstallerBiometricAuthMode = prefs.installerRequireBiometricAuth,
             checkAppSignature = prefs.checkAppSignature,
             labRespectPlatformInstallPolicy = prefs.labRespectPlatformInstallPolicy
         )
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.Eagerly,
+        started = SharingStarted.WhileSubscribed(5000),
         initialValue = EditViewState()
     )
 
@@ -161,6 +163,9 @@ class EditViewModel(
 
     private fun changeDataCustomizeAuthorizer(customizeAuthorizer: String) {
         _data.update { it.copy(customizeAuthorizer = customizeAuthorizer) }
+        if (_data.value.enableCustomizeUser && effectiveAuthorizer() == Authorizer.Customize) {
+            loadAvailableUsers()
+        }
     }
 
     private fun changeDataInstallMode(installMode: InstallMode) {
@@ -323,10 +328,10 @@ class EditViewModel(
     private fun loadAvailableUsers() {
         viewModelScope.launch {
             val currentData = _data.value
-            val authorizer =
-                if (currentData.authorizer == Authorizer.Global) state.value.globalAuthorizer else currentData.authorizer
+            val authorizer = effectiveAuthorizer()
+            val customizeAuthorizer = effectiveCustomizeAuthorizer(currentData)
 
-            val newAvailableUsers = getAvailableUsers(authorizer).getOrElse { emptyMap() }
+            val newAvailableUsers = getAvailableUsers(authorizer, customizeAuthorizer).getOrElse { emptyMap() }
 
             _availableUsers.value = newAvailableUsers
 
@@ -338,11 +343,23 @@ class EditViewModel(
         }
     }
 
+    private fun effectiveAuthorizer(): Authorizer {
+        val currentData = _data.value
+        return if (currentData.authorizer == Authorizer.Global) state.value.globalAuthorizer else currentData.authorizer
+    }
+
+    private fun effectiveCustomizeAuthorizer(data: EditViewState.Data = _data.value): String =
+        if (data.authorizer == Authorizer.Global && state.value.globalAuthorizer == Authorizer.Customize) {
+            state.value.globalCustomizeAuthorizer
+        } else {
+            data.customizeAuthorizer
+        }
+
     private var loadDataJob: Job? = null
 
     private fun loadData() {
         loadDataJob?.cancel()
-        loadDataJob = viewModelScope.launch(Dispatchers.IO) {
+        loadDataJob = viewModelScope.launch(ioDispatcher) {
             val prefs = appSettingsRepo.preferencesFlow.first()
             val configModel = getConfigDraft(id, prefs.authorizer)
 
@@ -364,7 +381,7 @@ class EditViewModel(
 
     private fun saveData() {
         saveDataJob?.cancel()
-        saveDataJob = viewModelScope.launch(Dispatchers.IO) {
+        saveDataJob = viewModelScope.launch(ioDispatcher) {
             val currentData = _data.value
             var model = currentData.toConfigModel()
             if (id != null) model = model.copy(id = id)

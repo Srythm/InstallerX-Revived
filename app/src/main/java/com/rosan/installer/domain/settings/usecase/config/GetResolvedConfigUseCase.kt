@@ -10,11 +10,7 @@ import com.rosan.installer.domain.settings.model.config.InstallRequesterMode
 import com.rosan.installer.domain.settings.repository.AppRepository
 import com.rosan.installer.domain.settings.repository.AppSettingsRepository
 import com.rosan.installer.domain.settings.repository.ConfigRepository
-import com.rosan.installer.domain.settings.repository.IntSetting
-import com.rosan.installer.domain.settings.repository.StringSetting
-import com.rosan.installer.domain.settings.repository.BooleanSetting
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
 class GetResolvedConfigUseCase(
@@ -37,8 +33,8 @@ class GetResolvedConfigUseCase(
         // Always store the initiator package name so it is available if the user switches to Initiator mode in the UI later.
         model = model.copy(initiatorPackageName = packageName)
 
-        val currentUninstallFlags = appSettingsRepo.getInt(IntSetting.UninstallFlags, 0).first()
-        model = model.copy(uninstallFlags = currentUninstallFlags)
+        val prefs = appSettingsRepo.snapshot()
+        model = model.copy(uninstallFlags = prefs.uninstallFlags)
 
         val targetUid = when (model.installRequesterMode) {
             InstallRequesterMode.Disable -> null
@@ -53,8 +49,7 @@ class GetResolvedConfigUseCase(
             model = model.copy(callingFromUid = targetUid)
         }
 
-        val allowInstallWithoutUserAction = appSettingsRepo.getBoolean(BooleanSetting.LabInstallWithoutUserAction).first()
-        model = model.copy(allowInstallWithoutUserAction = allowInstallWithoutUserAction)
+        model = model.copy(allowInstallWithoutUserAction = prefs.labInstallWithoutUserAction)
 
         return@withContext model
     }
@@ -83,7 +78,7 @@ class GetResolvedConfigUseCase(
         return app
     }
 
-    private suspend fun getGlobalAuthorizer() = appSettingsRepo.preferencesFlow.first().authorizer
+    private suspend fun getGlobalAuthorizer() = appSettingsRepo.snapshot().authorizer
 
-    private suspend fun getGlobalCustomizeAuthorizer() = appSettingsRepo.getString(StringSetting.CustomizeAuthorizer, "").first()
+    private suspend fun getGlobalCustomizeAuthorizer() = appSettingsRepo.snapshot().customizeAuthorizer
 }

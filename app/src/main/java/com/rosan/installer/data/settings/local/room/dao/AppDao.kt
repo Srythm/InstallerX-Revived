@@ -35,16 +35,16 @@ interface AppDao {
     fun flowAll(): Flow<List<AppEntity>>
 
     @Query("select * from app where id = :id limit 1")
-    fun find(id: Long): AppEntity?
+    suspend fun find(id: Long): AppEntity?
 
     @Query("select * from app where id = :id limit 1")
     fun flowFind(id: Long): Flow<AppEntity?>
 
     @Query("select * from app where package_name = :packageName limit 1")
-    fun findByPackageName(packageName: String): AppEntity?
+    suspend fun findByPackageName(packageName: String): AppEntity?
 
     @Query("select * from app where package_name is null limit 1")
-    fun findByNullPackageName(): AppEntity?
+    suspend fun findByNullPackageName(): AppEntity?
 
     @Query("select * from app where package_name = :packageName limit 1")
     fun flowFindByPackageName(packageName: String): Flow<AppEntity?>

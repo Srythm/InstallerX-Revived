@@ -7,11 +7,12 @@ import android.os.IBinder
 import com.rosan.installer.core.reflection.ReflectionProvider
 import com.rosan.installer.domain.device.provider.DeviceCapabilityProvider
 import com.rosan.installer.domain.privileged.provider.PostInstallTaskProvider
-import com.rosan.installer.framework.privileged.util.requireShizukuPermissionGranted
+import com.rosan.installer.framework.privileged.core.execution.authorization.requireShizukuPermissionGranted
+import kotlinx.coroutines.CoroutineScope
 import rikka.shizuku.ShizukuBinderWrapper
 
 class ShizukuAppInstallerRepoImpl(
-    context: Context, reflect: ReflectionProvider, capabilityProvider: DeviceCapabilityProvider, postInstallTaskProvider: PostInstallTaskProvider
-) : IBinderAppInstallerRepoImpl(context, reflect, capabilityProvider, postInstallTaskProvider) {
+    context: Context, reflect: ReflectionProvider, capabilityProvider: DeviceCapabilityProvider, postInstallTaskProvider: PostInstallTaskProvider, taskScope: CoroutineScope
+) : IBinderAppInstallerRepoImpl(context, reflect, capabilityProvider, postInstallTaskProvider, taskScope) {
     override suspend fun iBinderWrapper(iBinder: IBinder): IBinder = requireShizukuPermissionGranted { ShizukuBinderWrapper(iBinder) }
 }

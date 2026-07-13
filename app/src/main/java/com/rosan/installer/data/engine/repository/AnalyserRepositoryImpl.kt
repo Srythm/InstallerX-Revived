@@ -17,6 +17,7 @@ import com.rosan.installer.domain.engine.model.install.SessionMode
 import com.rosan.installer.domain.engine.repository.AnalyserRepository
 import com.rosan.installer.domain.engine.usecase.SelectOptimalSplitsUseCase
 import com.rosan.installer.domain.settings.model.config.ConfigModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -166,6 +167,8 @@ class AnalyserRepositoryImpl(
             if (fileType == DataType.NONE) return emptyList()
             // Delegate to the Unified Analyzer
             unifiedContainerAnalyser.analyze(config, data, fileType, extra.copy(dataType = fileType))
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Timber.e(e, "Fatal error analyzing source: ${data.source}")
             if (e is ZipException) throw e

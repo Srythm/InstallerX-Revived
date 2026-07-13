@@ -14,64 +14,6 @@ import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.blur.textureBlur
 import top.yukonga.miuix.kmp.shader.isRenderEffectSupported
-import top.yukonga.miuix.kmp.theme.MiuixTheme
-
-/**
- * Remember a LayerBackdrop with a solid background to prevent alpha-blending artifacts.
- * @param enableBlur Whether the blur effect is globally enabled.
- * @return A LayerBackdrop instance if supported and enabled, null otherwise.
- */
-@Composable
-fun rememberMiuixBlurBackdrop(enableBlur: Boolean): LayerBackdrop? {
-    if (!enableBlur || !isRenderEffectSupported()) return null
-    val surfaceColor = MiuixTheme.colorScheme.surface
-    return rememberLayerBackdrop {
-        drawRect(surfaceColor)
-        drawContent()
-    }
-}
-
-/**
- * Determine the app bar background color based on the Backdrop availability.
- * @return Transparent if Backdrop is active, otherwise the default surface color.
- */
-@Composable
-fun LayerBackdrop?.getMiuixAppBarColor(): Color =
-    this?.let { Color.Transparent } ?: MiuixTheme.colorScheme.surface
-
-/**
- * Apply a standard glassmorphism blur effect using Miuix Backdrop.
- * @param backdrop The LayerBackdrop providing the visual source.
- * @param enabled Whether the effect is locally enabled for this component.
- * @param blurRadius The radius of the Gaussian blur.
- * @param shape The clipping shape for the blurred area.
- */
-@Composable
-fun Modifier.installerMiuixBlurEffect(
-    backdrop: LayerBackdrop?,
-    enabled: Boolean = true,
-    blurRadius: Float = 25f,
-    shape: Shape = RectangleShape
-): Modifier {
-    // Return early if disabled or backdrop is unavailable
-    if (!enabled || backdrop == null) return this
-
-    // Grab the current theme surface color for blending
-    val blendColor = MiuixTheme.colorScheme.surface.copy(alpha = 0.8f)
-
-    return this.then(
-        Modifier.textureBlur(
-            backdrop = backdrop,
-            shape = shape,
-            blurRadius = blurRadius,
-            colors = BlurColors(
-                blendColors = listOf(
-                    BlendColorEntry(color = blendColor)
-                )
-            )
-        )
-    )
-}
 
 /**
  * Remember a LayerBackdrop for Material 3 with a surfaceContainer background

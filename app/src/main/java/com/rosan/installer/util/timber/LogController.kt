@@ -5,7 +5,6 @@ package com.rosan.installer.util.timber
 import android.content.Context
 import com.rosan.installer.core.env.AppConfig
 import com.rosan.installer.domain.settings.repository.AppSettingsRepository
-import com.rosan.installer.domain.settings.repository.BooleanSetting
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -26,10 +25,12 @@ class LogController(
         // Evaluate the global logging configuration first
         if (AppConfig.isLogEnabled) {
             scope.launch {
-                appSettingsRepo.getBoolean(BooleanSetting.EnableFileLogging, true)
-                    .collectLatest { enabled ->
-                        updateLoggingState(enabled)
-                    }
+                // Use the already-aggregated preferences flow instead of a separate DataStore
+                // subscription for a single boolean. This avoids an extra collector and keeps
+                // the logging decision aligned with the canonical AppPreferences state.
+                appSettingsRepo.preferencesFlow.collectLatest { prefs ->
+                    updateLoggingState(prefs.enableFileLogging)
+                }
             }
         } else {
             // Force disable file logging if globally disabled

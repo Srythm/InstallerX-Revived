@@ -5,6 +5,7 @@ package com.rosan.installer.ui.page.main.settings.preferred.about
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -101,13 +103,12 @@ fun OpenSourceLicensePage(useBlur: Boolean) {
             )
         },
     ) { paddingValues ->
-        val cornerRadius = 16.dp
         LibrariesContainer(
             libraries = libraries,
             modifier = Modifier
                 .fillMaxSize()
                 .then(backdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier),
-            contentPadding = paddingValues,
+            contentPadding = paddingValues + PaddingValues(horizontal = 16.dp),
             colors = LibraryDefaults.libraryColors(
                 libraryBackgroundColor = MaterialTheme.colorScheme.surfaceContainer,
                 libraryContentColor = MaterialTheme.colorScheme.onSurface
@@ -183,7 +184,10 @@ fun OpenSourceLicensePage(useBlur: Boolean) {
                             )
                         }
 
-                        items(library.licenses.toList()) { license ->
+                        items(
+                            items = library.licenses.toList(),
+                            key = { it.name }
+                        ) { license ->
                             OutlinedCard(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(16.dp),

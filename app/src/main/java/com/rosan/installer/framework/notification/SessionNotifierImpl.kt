@@ -20,8 +20,6 @@ import com.rosan.installer.domain.session.model.ProgressEntity
 import com.rosan.installer.domain.session.repository.InstallerSessionRepository
 import com.rosan.installer.domain.settings.model.config.Authorizer
 import com.rosan.installer.domain.settings.repository.AppSettingsRepository
-import com.rosan.installer.domain.settings.repository.BooleanSetting
-import com.rosan.installer.domain.settings.repository.IntSetting
 import com.rosan.installer.framework.notification.builder.AnimationContext
 import com.rosan.installer.framework.notification.builder.InstallState
 import com.rosan.installer.framework.notification.builder.InstallerNotificationBuilder
@@ -58,11 +56,11 @@ class SessionNotifierImpl(
     getAppIcon: GetAppIconUseCase
 ) : SessionNotifier {
 
-    companion object {
-        private const val MINIMUM_VISIBILITY_DURATION_MS = 400L
-        private const val NOTIFICATION_UPDATE_INTERVAL_MS = 500L
-        private const val PROGRESS_UPDATE_THRESHOLD = 0.03f
-        private const val XMSF_PACKAGE_NAME = "com.xiaomi.xmsf"
+    private companion object {
+        const val MINIMUM_VISIBILITY_DURATION_MS = 400L
+        const val NOTIFICATION_UPDATE_INTERVAL_MS = 500L
+        const val PROGRESS_UPDATE_THRESHOLD = 0.03f
+        const val XMSF_PACKAGE_NAME = "com.xiaomi.xmsf"
     }
 
     private data class NotificationSettings(
@@ -133,17 +131,18 @@ class SessionNotifierImpl(
         sessionStartTime = System.currentTimeMillis()
 
         scope.launch {
-            globalAuthorizer = appSettingsRepo.preferencesFlow.first().authorizer
+            val prefs = appSettingsRepo.snapshot()
+            globalAuthorizer = prefs.authorizer
 
             val settings = NotificationSettings(
-                showDialog = appSettingsRepo.getBoolean(BooleanSetting.ShowDialogWhenPressingNotification, true).first(),
-                showLiveActivity = appSettingsRepo.getBoolean(BooleanSetting.ShowLiveActivity, false).first(),
-                showMiIsland = appSettingsRepo.getBoolean(BooleanSetting.ShowMiIsland, false).first(),
-                miIslandBypassRestriction = appSettingsRepo.getBoolean(BooleanSetting.ShowMiIslandBypassRestriction, false).first(),
-                miIslandOuterGlow = appSettingsRepo.getBoolean(BooleanSetting.ShowMiIslandOuterGlow, true).first(),
-                showMiIslandBlockingInterval = appSettingsRepo.getInt(IntSetting.ShowMiIslandBlockingInterval, 100).first(),
-                preferSystemIcon = appSettingsRepo.getBoolean(BooleanSetting.PreferSystemIconForInstall, false).first(),
-                preferDynamicColor = appSettingsRepo.getBoolean(BooleanSetting.LiveActivityDynColorFollowPkgIcon, false).first()
+                showDialog = prefs.showDialogWhenPressingNotification,
+                showLiveActivity = prefs.showLiveActivity,
+                showMiIsland = prefs.useMiIsland,
+                miIslandBypassRestriction = prefs.useMiIslandBypassRestriction,
+                miIslandOuterGlow = prefs.useMiIslandOuterGlow,
+                showMiIslandBlockingInterval = prefs.useMiIslandBlockingIntervalMs,
+                preferSystemIcon = prefs.preferSystemIcon,
+                preferDynamicColor = prefs.useDynColorFollowPkgIconForLiveActivity
             )
 
             val isModernEligible = Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA

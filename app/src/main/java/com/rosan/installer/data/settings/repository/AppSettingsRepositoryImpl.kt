@@ -58,6 +58,7 @@ class AppSettingsRepositoryImpl(
             ),
             alwaysUseRootInSystem = prefs[AppDataStore.ALWAYS_USE_ROOT_IN_SYSTEM] ?: false,
             customizeAuthorizer = prefs[AppDataStore.CUSTOMIZE_AUTHORIZER] ?: "",
+            hideIdenticalInstallComparisons = prefs[AppDataStore.DIALOG_HIDE_IDENTICAL_COMPARISONS] ?: false,
             showDialogInstallExtendedMenu = prefs[AppDataStore.DIALOG_SHOW_EXTENDED_MENU] ?: false,
             showSmartSuggestion = prefs[AppDataStore.DIALOG_SHOW_INTELLIGENT_SUGGESTION] ?: true,
             disableNotificationForDialogInstall = prefs[AppDataStore.DIALOG_DISABLE_NOTIFICATION_ON_DISMISS] ?: false,
@@ -87,7 +88,6 @@ class AppSettingsRepositoryImpl(
                 value = prefs[AppDataStore.SMART_AUTHORIZER_CANDIDATES].orEmpty(),
                 isSystemApp = capabilityProvider.isSystemApp
             ),
-            showMiuixUI = prefs[AppDataStore.UI_USE_MIUIX] ?: false,
             preferSystemIcon = prefs[AppDataStore.PREFER_SYSTEM_ICON_FOR_INSTALL] ?: false,
             showLauncherIcon = prefs[AppDataStore.SHOW_LAUNCHER_ICON] ?: true,
             userSetLSPosedActive = prefs[AppDataStore.USER_SET_LSPOSED_ACTIVE] ?: false,
@@ -138,7 +138,6 @@ class AppSettingsRepositoryImpl(
             paletteStyle = PaletteStyle.fromValueOrDefault(prefs[AppDataStore.THEME_PALETTE_STYLE] ?: PaletteStyle.TonalSpot.name),
             colorSpec = ThemeColorSpec.fromValueOrDefault(prefs[AppDataStore.THEME_COLOR_SPEC] ?: ThemeColorSpec.SPEC_2025.name),
             useDynamicColor = prefs[AppDataStore.THEME_USE_DYNAMIC_COLOR] ?: true,
-            useMiuixMonet = prefs[AppDataStore.UI_USE_MIUIX_MONET] ?: false,
             useAppleFloatingBar = prefs[AppDataStore.UI_USE_APPLE_FLOATING_BAR] ?: false,
             seedColorInt = prefs[AppDataStore.THEME_SEED_COLOR] ?: DEFAULT_SEED_COLOR,
             useDynColorFollowPkgIcon = prefs[AppDataStore.UI_DYN_COLOR_FOLLOW_PKG_ICON] ?: false,
@@ -146,7 +145,7 @@ class AppSettingsRepositoryImpl(
             useBlur = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) prefs[AppDataStore.UI_USE_BLUR]
                 ?: true else false,
             predictiveBackAnimation = PredictiveBackAnimation.fromValueOrDefault(
-                prefs[AppDataStore.PREDICTIVE_BACK_ANIMATION] ?: PredictiveBackAnimation.MIUIX.value
+                prefs[AppDataStore.PREDICTIVE_BACK_ANIMATION] ?: PredictiveBackAnimation.AOSP.value
             ),
             predictiveBackExitDirection = PredictiveBackExitDirection.fromValueOrDefault(
                 prefs[AppDataStore.PREDICTIVE_BACK_EXIT_DIRECTION] ?: PredictiveBackExitDirection.ALWAYS_RIGHT.value
@@ -233,8 +232,6 @@ class AppSettingsRepositoryImpl(
         when (setting) {
             BooleanSetting.UiUseBlur -> AppDataStore.UI_USE_BLUR
             BooleanSetting.ThemeUseDynamicColor -> AppDataStore.THEME_USE_DYNAMIC_COLOR
-            BooleanSetting.UiUseMiuix -> AppDataStore.UI_USE_MIUIX
-            BooleanSetting.UiUseMiuixMonet -> AppDataStore.UI_USE_MIUIX_MONET
             BooleanSetting.UiUseAppleFloatingBar -> AppDataStore.UI_USE_APPLE_FLOATING_BAR
             BooleanSetting.UiDynColorFollowPkgIcon -> AppDataStore.UI_DYN_COLOR_FOLLOW_PKG_ICON
             BooleanSetting.LiveActivityDynColorFollowPkgIcon -> AppDataStore.LIVE_ACTIVITY_DYN_COLOR_FOLLOW_PKG_ICON
@@ -254,6 +251,7 @@ class AppSettingsRepositoryImpl(
             BooleanSetting.ApplySelectedFirst -> AppDataStore.APPLY_SELECTED_FIRST
             BooleanSetting.ApplyShowSystemApp -> AppDataStore.APPLY_SHOW_SYSTEM_APP
             BooleanSetting.ApplyShowPackageName -> AppDataStore.APPLY_SHOW_PACKAGE_NAME
+            BooleanSetting.DialogHideIdenticalComparisons -> AppDataStore.DIALOG_HIDE_IDENTICAL_COMPARISONS
             BooleanSetting.DialogVersionCompareSingleLine -> AppDataStore.DIALOG_VERSION_COMPARE_SINGLE_LINE
             BooleanSetting.DialogSdkCompareMultiLine -> AppDataStore.DIALOG_SDK_COMPARE_MULTI_LINE
             BooleanSetting.DialogShowExtendedMenu -> AppDataStore.DIALOG_SHOW_EXTENDED_MENU

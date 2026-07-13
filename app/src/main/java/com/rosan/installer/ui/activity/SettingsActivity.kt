@@ -23,7 +23,6 @@ import com.rosan.installer.ui.theme.LocalWindowLayoutInfo
 import com.rosan.installer.ui.theme.rememberWindowLayoutInfo
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 class SettingsActivity : ComponentActivity(), KoinComponent {
     private val themeStateProvider by inject<ThemeStateProvider>()
@@ -51,19 +50,13 @@ class SettingsActivity : ComponentActivity(), KoinComponent {
                 LocalWindowLayoutInfo provides layoutInfo
             ) {
                 InstallerTheme(
-                    useMiuix = uiState.useMiuix,
                     themeMode = uiState.themeMode,
                     paletteStyle = uiState.paletteStyle,
                     colorSpec = uiState.colorSpec,
                     useDynamicColor = uiState.useDynamicColor,
-                    useMiuixMonet = uiState.useMiuixMonet,
                     seedColor = androidx.compose.ui.graphics.Color(uiState.seedColor)
                 ) {
-                    val backgroundColor =
-                        if (uiState.useMiuix)
-                            MiuixTheme.colorScheme.surface
-                        else
-                            MaterialTheme.colorScheme.surfaceContainer
+                    val backgroundColor = MaterialTheme.colorScheme.surfaceContainer
                     Box(
                         modifier = Modifier
                             .fillMaxSize()

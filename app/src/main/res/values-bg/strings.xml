@@ -76,10 +76,6 @@
     <string name="theme_settings">Настройки за Темата</string>
     <string name="theme_settings_ui_style">Стил на Интерфейса</string>
     <string name="theme_settings_desc">Промени темата на приложението</string>
-    <string name="theme_settings_miuix_ui">Miuix</string>
-    <string name="theme_settings_miuix_ui_desc">Близък до HyperOS</string>
-    <string name="theme_settings_miuix_custom_colors">Персонализирай Цветовете</string>
-    <string name="theme_settings_miuix_custom_colors_desc">Персонализирай цветове на темата в Miuix темен стил</string>
     <string name="theme_settings_google_ui">Google Material 3</string>
     <string name="theme_settings_google_ui_desc">Стандартен Material Design интерфейс</string>
     <string name="theme_settings_ui_engine">Интерфейсов \"Двигател\" (!)</string>

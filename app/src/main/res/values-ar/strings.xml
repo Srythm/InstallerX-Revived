@@ -81,7 +81,6 @@
     <string name="config_authorizer_shizuku">Shizuku</string>
     <string name="config_authorizer_dhizuku">Dhizuku</string>
     <string name="config_authorizer_customize">مخصص</string>
-    <string name="config_customize_authorizer">مُفوِّض مخصص</string>
     <string name="config_install_mode">وضع التثبيت</string>
     <string name="config_install_mode_global">عام</string>
     <string name="config_install_mode_global_desc">عام (%1$s)</string>
@@ -292,7 +291,6 @@
     <string name="close_notification_immediately_on_dialog_dismiss">إغفال نافذة الحوار سيؤدي إلى الخروج الصامت</string>
     <string name="close_session_countdown">ضبط العد التنازلي</string>
     <string name="close_session_countdown_desc">عد تنازلي للإغلاق التلقائي بعد نجاح التثبيت عبر Dhizuku</string>
-    <string name="dhizuku_cannot_set_installer_desc">وضع Dhizuku لا يدعم تعيين المُثبِّت!</string>
     <string name="grant_permission_after_install">انقر لمنح الإذن بعد التثبيت</string>
     <string name="show_intelligent_suggestion">عرض الاقتراحات الذكية (تجريبي)</string>
     <string name="show_intelligent_suggestion_desc">عرض اقتراحات ذكية عند فشل التثبيت</string>
@@ -391,8 +389,6 @@
     <string name="get_source_code">التحقق من مصدر الكود</string>
     <string name="get_source_code_detail">التحقق من مصدر الكود على - GitHub</string>
     <string name="telegram_channel_desc">انضم للقناة لمتابعة آخر الإخبار والتحديثات!</string>
-    <string name="theme_settings_miuix_ui">واجهة شاومي Miuix</string>
-    <string name="theme_settings_miuix_ui_desc">مشابة لـ HyperOS</string>
     <string name="theme_settings_google_ui">واجهة Google Material 3</string>
     <string name="theme_settings_google_ui_desc">واجهة Meterial Design UI الإفتراضية</string>
     <string name="theme_settings_ui_engine">محرك واجهة المستخدم</string>
@@ -414,8 +410,6 @@
     <string name="theme_settings_palette_style">نمط اللوحة</string>
     <string name="theme_settings_palette_style_desc">تحديد نمط اللوحة</string>
     <string name="theme_settings_dynamic_color">لون ديناميكي</string>
-    <string name="theme_settings_miuix_custom_colors">ألوان مخصّصة</string>
-    <string name="theme_settings_miuix_custom_colors_desc">تخصيص ألوان السمة ضمن نمط Miuix</string>
     <string name="performance">الأداء</string>
     <string name="lab">المختبر</string>
     <string name="lab_desc">الوصول إلى الميزات التجريبية والمطورة</string>

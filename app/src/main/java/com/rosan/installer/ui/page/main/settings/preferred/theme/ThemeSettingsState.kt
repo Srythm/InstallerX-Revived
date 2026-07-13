@@ -12,10 +12,9 @@ import com.rosan.installer.domain.settings.model.preferences.theme.ThemeColorSpe
 import com.rosan.installer.domain.settings.model.preferences.theme.ThemeMode
 
 data class ThemeSettingsState(
-    val showMiuixUI: Boolean = false,
     // Blur is off by default. When enabled, every settings subpage that
     // passes useBlur=true gets a `LayerBackdrop` re-rendering the
-    // surface every frame (miuix `textureBlur` + `installerMaterial3BlurEffect`),
+    // surface every frame (`textureBlur` + `installerMaterial3BlurEffect`),
     // and `AnimatedFluidBackground` (shown on the home status card while
     // the app is the active installer) runs 4 color animations plus
     // a `withFrameNanos` loop that recomposes the Canvas every frame
@@ -30,7 +29,6 @@ data class ThemeSettingsState(
     val paletteStyle: PaletteStyle = PaletteStyle.TonalSpot,
     val colorSpec: ThemeColorSpec = ThemeColorSpec.SPEC_2025,
     val useDynamicColor: Boolean = true,
-    val useMiuixMonet: Boolean = false,
     val useAppleFloatingBar: Boolean = false,
     val seedColor: Color = PresetColors[0].color,
     val availableColors: List<RawColor> = PresetColors,
@@ -38,6 +36,6 @@ data class ThemeSettingsState(
     val useDynColorFollowPkgIconForLiveActivity: Boolean = false,
     val preferSystemIcon: Boolean = false,
     val showLiveActivity: Boolean = false,
-    val predictiveBackAnimation: PredictiveBackAnimation = PredictiveBackAnimation.None,
+    val predictiveBackAnimation: PredictiveBackAnimation = PredictiveBackAnimation.AOSP,
     val predictiveBackExitDirection: PredictiveBackExitDirection = PredictiveBackExitDirection.FOLLOW_GESTURE
 )

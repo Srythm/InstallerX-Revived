@@ -7,10 +7,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rosan.installer.BuildConfig
 import com.rosan.installer.R
 import com.rosan.installer.core.bitmask.addFlag
 import com.rosan.installer.core.bitmask.hasFlag
 import com.rosan.installer.core.bitmask.removeFlag
+import com.rosan.installer.domain.engine.model.install.MmzSelectionMode
 import com.rosan.installer.domain.engine.model.install.SessionMode
 import com.rosan.installer.domain.engine.model.install.UninstallFlags
 import com.rosan.installer.domain.engine.model.install.sourcePath
@@ -19,6 +21,7 @@ import com.rosan.installer.domain.engine.model.packageinfo.PackageAnalysisResult
 import com.rosan.installer.domain.engine.model.packageinfo.analyzePackageSignatureMatch
 import com.rosan.installer.domain.engine.model.packageinfo.analyzePackageSignatureSelection
 import com.rosan.installer.domain.engine.model.source.DataType
+import com.rosan.installer.domain.device.provider.DeviceCapabilityProvider
 import com.rosan.installer.domain.engine.provider.InstalledPackageSignatureProvider
 import com.rosan.installer.domain.engine.usecase.GetAppIconColorUseCase
 import com.rosan.installer.domain.engine.usecase.GetAppIconUseCase
@@ -59,6 +62,7 @@ class InstallerViewModel(
     private val getAppIcon: GetAppIconUseCase,
     private val getAppIconColor: GetAppIconColorUseCase,
     private val getAppLabel: GetAppLabelUseCase,
+    private val deviceCapabilityProvider: DeviceCapabilityProvider,
     private val installedPackageSignatureProvider: InstalledPackageSignatureProvider
 ) : ViewModel() {
 
@@ -92,6 +96,7 @@ class InstallerViewModel(
             viewSettings = local.viewSettings.copy(
                 useBlur = prefs.useBlur,
                 closeSessionCountDown = prefs.closeSessionCountDown,
+                hideIdenticalComparisons = prefs.hideIdenticalInstallComparisons,
                 showExtendedMenu = prefs.showDialogInstallExtendedMenu,
                 showSmartSuggestion = prefs.showSmartSuggestion,
                 disableNotificationOnDismiss = prefs.disableNotificationForDialogInstall,
@@ -114,12 +119,15 @@ class InstallerViewModel(
         )
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.Eagerly,
+        started = SharingStarted.WhileSubscribed(5000),
         initialValue = _localState.value
     )
 
     val isInstallingModule: Boolean
-        get() = _localState.value.analysisResults.any { result ->
+        get() = _localState.value.isInstallingModule
+
+    private fun List<PackageAnalysisResult>.hasSelectedModule(): Boolean =
+        any { result ->
             result.appEntities.any { entity -> entity.selected && entity.app is AppEntity.ModuleEntity }
         }
 
@@ -131,6 +139,7 @@ class InstallerViewModel(
     private var autoInstallJob: Job? = null
     private val settingsLoadingJob: Job
     private var collectRepoJob: Job? = null
+    private var unknownSourcePermissionLabelPackageName: String? = null
 
     init {
         settingsLoadingJob = loadInitialSettings()
@@ -160,11 +169,13 @@ class InstallerViewModel(
         val newConfig = updateBlock(_localState.value.config)
         session.config = newConfig
         _localState.update { it.copy(config = newConfig) }
+        fetchUnknownSourcePermissionAppLabel(newConfig)
     }
 
     fun dispatch(action: InstallerViewAction) {
         when (action) {
             is InstallerViewAction.CollectSession -> collectRepo(action.session)
+            is InstallerViewAction.PrepareClose -> session.prepareClose()
             is InstallerViewAction.Close -> {
                 // The install UI must fade out before the activity is torn
                 // down whenever the *current render* is the fullscreen
@@ -206,6 +217,7 @@ class InstallerViewModel(
                 _localState.update { it.copy(navigatedFromPrepareToChoice = uiState.value.stage is InstallerStage.InstallPrepare) }
                 installChoice()
             }
+            is InstallerViewAction.SetMmzSelectionMode -> setMmzSelectionMode(action.mode)
 
             is InstallerViewAction.InstallPrepare -> installPrepare()
             is InstallerViewAction.InstallExtendedMenu -> installExtendedMenu()
@@ -219,11 +231,6 @@ class InstallerViewModel(
             is InstallerViewAction.Uninstall -> session.uninstallInfo.value?.packageName?.let { session.uninstall(it) }
             is InstallerViewAction.StartUnarchive -> session.startUnarchive()
             is InstallerViewAction.OpenUnarchiveErrorAction -> session.openUnarchiveErrorAction()
-
-            is InstallerViewAction.ShowMiuixSheetRightActionSettings -> _localState.update { it.copy(showMiuixSheetRightActionSettings = true) }
-            is InstallerViewAction.HideMiuixSheetRightActionSettings -> _localState.update { it.copy(showMiuixSheetRightActionSettings = false) }
-            is InstallerViewAction.ShowMiuixPermissionList -> _localState.update { it.copy(showMiuixPermissionList = true) }
-            is InstallerViewAction.HideMiuixPermissionList -> _localState.update { it.copy(showMiuixPermissionList = false) }
 
             is InstallerViewAction.SetTempShowOPPOSpecial -> _localState.update { it.copy(tempShowOPPOSpecial = action.show) }
             is InstallerViewAction.SetTempLabShowFilePath -> _localState.update { it.copy(tempLabShowFilePath = action.show) }
@@ -341,7 +348,9 @@ class InstallerViewModel(
 
     private fun collectRepo(session: InstallerSessionRepository) {
         this.session = session
-        if (session.config.enableCustomizeUser) loadAvailableUsers(session.config.authorizer)
+        if (session.config.enableCustomizeUser) {
+            loadAvailableUsers(session.config.authorizer, session.config.customizeAuthorizer)
+        }
 
         _localState.update {
             val validPackages = session.analysisResults.map { res -> res.packageName }.toSet()
@@ -350,13 +359,17 @@ class InstallerViewModel(
                 config = session.config,   // Synchronize the entire ConfigModel to UI state
                 currentPackageName = null,
                 initiatorAppLabel = null,  // Reset label on new session
+                unknownSourcePermissionAppLabel = null,
                 analysisResults = session.analysisResults,
+                isInstallingModule = session.analysisResults.hasSelectedModule(),
                 displayIcons = it.displayIcons.filterKeys { key -> key in validPackages } + analysedIcons,
                 error = session.error
             )
         }
 
+        unknownSourcePermissionLabelPackageName = null
         fetchInitiatorAppLabel(session.config.initiatorPackageName)
+        fetchUnknownSourcePermissionAppLabel(session.config)
 
         collectRepoJob?.cancel()
         autoInstallJob?.cancel()
@@ -399,6 +412,7 @@ class InstallerViewModel(
                     _localState.update {
                         it.copy(
                             analysisResults = session.analysisResults,
+                            isInstallingModule = session.analysisResults.hasSelectedModule(),
                             displayIcons = it.displayIcons + analysedIcons
                         )
                     }
@@ -571,9 +585,9 @@ class InstallerViewModel(
         updateConfig { it.copy(targetUserId = userId) }
     }
 
-    private fun loadAvailableUsers(authorizer: Authorizer) {
+    private fun loadAvailableUsers(authorizer: Authorizer, customizeAuthorizer: String = "") {
         viewModelScope.launch {
-            getAvailableUsers(authorizer)
+            getAvailableUsers(authorizer, customizeAuthorizer)
                 .onSuccess { users ->
                     _localState.update { it.copy(availableUsers = users) }
                     // If the currently selected user is not in the available list, reset it to 0 (Owner).
@@ -650,7 +664,14 @@ class InstallerViewModel(
         // composition of [PositionFullScreen] on the next install would
         // see `isClosing = true` and fade out immediately.
         _isClosingFullscreen.value = false
-        _localState.update { it.copy(currentPackageName = null, uiUninstallInfo = null, stage = InstallerStage.Ready) }
+        _localState.update {
+            it.copy(
+                currentPackageName = null,
+                uiUninstallInfo = null,
+                stage = InstallerStage.Ready,
+                mmzSelectionMode = MmzSelectionMode.INITIAL_CHOICE
+            )
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -672,12 +693,14 @@ class InstallerViewModel(
     // run — the user would see the install UI "snap" away.
     //
     // [requestFullscreenClose] therefore:
-    //   1. flips [_isClosingFullscreen] to true (drives the fade-out in
+    //   1. marks the session as closing so Activity.onStop cannot move it
+    //      into background mode during the exit animation,
+    //   2. flips [_isClosingFullscreen] to true (drives the fade-out in
     //      [PositionFullScreen] via [isClosingFullscreen] state),
-    //   2. waits [FullscreenCloseFadeOutMs] on [viewModelScope] (which is
+    //   3. waits [FullscreenCloseFadeOutMs] on [viewModelScope] (which is
     //      tied to the ViewModel's lifetime, not the composition's, so it
     //      survives any composition churn in the meantime),
-    //   3. then calls [close] which performs the synchronous teardown.
+    //   4. then calls [close] which performs the synchronous teardown.
     //
     // The delay is intentionally a wall-clock wait, not coupled to the
     // animation, so a small drift between the two clocks does not leave a
@@ -694,6 +717,7 @@ class InstallerViewModel(
      */
     fun requestFullscreenClose() {
         if (_isClosingFullscreen.value) return
+        session.prepareClose()
         _isClosingFullscreen.value = true
         viewModelScope.launch {
             delay(FullscreenCloseFadeOutMs)
@@ -708,6 +732,10 @@ class InstallerViewModel(
     }
 
     private fun analyse() = session.analyse()
+
+    private fun setMmzSelectionMode(mode: MmzSelectionMode) {
+        _localState.update { it.copy(mmzSelectionMode = mode) }
+    }
 
     private fun installChoice() {
         autoInstallJob?.cancel()
@@ -741,25 +769,29 @@ class InstallerViewModel(
             it.copy(
                 currentPackageName = null,
                 stage = InstallerStage.InstallChoice,
-                analysisResults = currentResults // Ensure the UI receives the latest list
+                analysisResults = currentResults,
+                isInstallingModule = currentResults.hasSelectedModule(),
+                mmzSelectionMode = MmzSelectionMode.INITIAL_CHOICE
             )
         }
     }
 
     private fun installPrepare() {
         // Read from _localState instead of session
-        val selectedEntities = _localState.value.analysisResults.flatMap { it.appEntities }.filter { it.selected }
+        val currentState = _localState.value
+        val selectedEntities = currentState.analysisResults.flatMap { it.appEntities }.filter { it.selected }
         val uniquePackages = selectedEntities.groupBy { it.app.packageName }
 
         if (uniquePackages.size == 1) {
             val targetPackageName = selectedEntities.first().app.packageName
+            val seedColor = if (currentState.viewSettings.useDynColorFollowPkgIcon)
+                currentState.analysisResults.find { res -> res.packageName == targetPackageName }?.seedColor?.let { c -> Color(c) }
+            else null
             _localState.update {
                 it.copy(
                     currentPackageName = targetPackageName,
                     stage = InstallerStage.InstallPrepare,
-                    seedColor = if (it.viewSettings.useDynColorFollowPkgIcon)
-                        _localState.value.analysisResults.find { res -> res.packageName == targetPackageName }?.seedColor?.let { c -> Color(c) }
-                    else null
+                    seedColor = seedColor
                 )
             }
         } else {
@@ -831,7 +863,12 @@ class InstallerViewModel(
             session.analysisResults = currentResults
 
             // Correctly update the StateFlow with new data, Compose will recompose automatically
-            _localState.update { it.copy(analysisResults = currentResults.toList()) }
+            _localState.update {
+                it.copy(
+                    analysisResults = currentResults.toList(),
+                    isInstallingModule = currentResults.hasSelectedModule()
+                )
+            }
         }
     }
 
@@ -908,18 +945,27 @@ class InstallerViewModel(
         }
     }
 
+    private fun fetchUnknownSourcePermissionAppLabel(config: ConfigModel) {
+        val packageName = if (config.authorizer == Authorizer.None && !deviceCapabilityProvider.isSystemApp) {
+            BuildConfig.APPLICATION_ID
+        } else {
+            config.initiatorPackageName
+        }
+        if (packageName.isNullOrBlank()) {
+            unknownSourcePermissionLabelPackageName = null
+            _localState.update { it.copy(unknownSourcePermissionAppLabel = null) }
+            return
+        }
+        if (unknownSourcePermissionLabelPackageName == packageName) return
+
+        unknownSourcePermissionLabelPackageName = packageName
+        viewModelScope.launch {
+            val label = getAppLabel(packageName)
+            _localState.update { it.copy(unknownSourcePermissionAppLabel = label) }
+        }
+    }
+
     companion object {
-        /**
-         * Wall-clock delay (ms) between setting [isClosingFullscreen] = true
-         * and the synchronous [close] teardown. Kept in sync with the
-         * fade-out animation duration in
-         * [com.rosan.installer.ui.page.main.installer.components.PositionFullScreen].
-         * The value here is intentionally the lower bound: the composable
-         * fade-out takes 220ms, the delay matches that, and a tiny drift
-         * means the composable finishes its animation at alpha=0 a hair
-         * before the session is torn down — which is invisible (the layer
-         * is already fully transparent at that point).
-         */
         const val FullscreenCloseFadeOutMs = 220L
     }
 }
