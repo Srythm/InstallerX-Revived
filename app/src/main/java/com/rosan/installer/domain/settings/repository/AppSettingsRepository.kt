@@ -54,6 +54,7 @@ enum class BooleanSetting {
     ApplySelectedFirst,
     ApplyShowSystemApp,
     ApplyShowPackageName,
+    DialogHideIdenticalComparisons,
     DialogVersionCompareSingleLine,
     DialogSdkCompareMultiLine,
     DialogShowExtendedMenu,

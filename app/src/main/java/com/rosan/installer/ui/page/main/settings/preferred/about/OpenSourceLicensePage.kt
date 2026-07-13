@@ -52,7 +52,9 @@ import com.mikepenz.aboutlibraries.ui.compose.m3.style.m3VariantColors
 import com.mikepenz.aboutlibraries.ui.compose.variant.LibraryDetailMode
 import com.mikepenz.aboutlibraries.ui.compose.variant.LibraryRow
 import com.rosan.installer.R
+import com.rosan.installer.ui.icons.AppIcons
 import com.rosan.installer.ui.navigation.LocalNavigator
+import com.rosan.installer.ui.page.main.widget.card.InfoTipCard
 import com.rosan.installer.ui.page.main.widget.setting.ExpressiveBackButton
 import com.rosan.installer.ui.theme.CornerRadius
 import com.rosan.installer.ui.theme.getMaterial3AppBarColor

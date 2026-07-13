@@ -3,6 +3,7 @@
 package com.rosan.installer.ui.page.main.settings.preferred.installer.dialog
 
 data class DialogSettingsState(
+    val hideIdenticalComparisons: Boolean = false,
     val versionCompareInSingleLine: Boolean = false,
     val sdkCompareInMultiLine: Boolean = false,
     val showDialogInstallExtendedMenu: Boolean = false,

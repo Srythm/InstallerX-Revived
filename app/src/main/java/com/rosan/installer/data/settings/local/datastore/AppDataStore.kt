@@ -114,6 +114,8 @@ class AppDataStore(
         val APPLY_SHOW_PACKAGE_NAME = register(booleanPreferencesKey("apply_show_package_name"), PreferenceValueType.BOOLEAN)
 
         // InstallerViewModel
+        val DIALOG_HIDE_IDENTICAL_COMPARISONS =
+            register(booleanPreferencesKey("hide_identical_install_comparisons"), PreferenceValueType.BOOLEAN)
         val DIALOG_VERSION_COMPARE_SINGLE_LINE =
             register(booleanPreferencesKey("show_dialog_version_compare_single_line"), PreferenceValueType.BOOLEAN)
         val DIALOG_SDK_COMPARE_MULTI_LINE =

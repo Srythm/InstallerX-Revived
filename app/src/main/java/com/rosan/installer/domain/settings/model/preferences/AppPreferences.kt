@@ -17,6 +17,7 @@ data class AppPreferences(
     val authorizer: Authorizer,
     val alwaysUseRootInSystem: Boolean,
     val customizeAuthorizer: String,
+    val hideIdenticalInstallComparisons: Boolean,
     val showDialogInstallExtendedMenu: Boolean,
     val showSmartSuggestion: Boolean,
     val disableNotificationForDialogInstall: Boolean,

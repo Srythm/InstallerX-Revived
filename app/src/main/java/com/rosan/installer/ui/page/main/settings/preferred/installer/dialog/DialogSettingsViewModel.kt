@@ -20,6 +20,7 @@ class DialogSettingsViewModel(
 
     val state: StateFlow<DialogSettingsState> = appSettingsRepo.preferencesFlow.map { prefs ->
         DialogSettingsState(
+            hideIdenticalComparisons = prefs.hideIdenticalInstallComparisons,
             versionCompareInSingleLine = prefs.versionCompareInSingleLine,
             sdkCompareInMultiLine = prefs.sdkCompareInMultiLine,
             showDialogInstallExtendedMenu = prefs.showDialogInstallExtendedMenu,
@@ -39,6 +40,10 @@ class DialogSettingsViewModel(
 
     fun dispatch(action: DialogSettingsAction) {
         when (action) {
+            is DialogSettingsAction.ChangeHideIdenticalComparisons -> viewModelScope.launch {
+                updateSetting(BooleanSetting.DialogHideIdenticalComparisons, action.hide)
+            }
+
             is DialogSettingsAction.ChangeVersionCompareInSingleLine -> viewModelScope.launch {
                 updateSetting(BooleanSetting.DialogVersionCompareSingleLine, action.compareInSingleLine)
             }

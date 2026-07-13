@@ -177,4 +177,5 @@ class AppInstallerRepositoryImpl(
 
             else -> ProcessAppInstallerRepoImpl(context, reflect, deviceCapabilityProvider, postInstallTaskProvider, taskScope)
         }
+    }
 }

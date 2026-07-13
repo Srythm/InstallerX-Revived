@@ -96,6 +96,7 @@ class InstallerViewModel(
             viewSettings = local.viewSettings.copy(
                 useBlur = prefs.useBlur,
                 closeSessionCountDown = prefs.closeSessionCountDown,
+                hideIdenticalComparisons = prefs.hideIdenticalInstallComparisons,
                 showExtendedMenu = prefs.showDialogInstallExtendedMenu,
                 showSmartSuggestion = prefs.showSmartSuggestion,
                 disableNotificationOnDismiss = prefs.disableNotificationForDialogInstall,
@@ -174,6 +175,7 @@ class InstallerViewModel(
     fun dispatch(action: InstallerViewAction) {
         when (action) {
             is InstallerViewAction.CollectSession -> collectRepo(action.session)
+            is InstallerViewAction.PrepareClose -> session.prepareClose()
             is InstallerViewAction.Close -> {
                 // The install UI must fade out before the activity is torn
                 // down whenever the *current render* is the fullscreen
@@ -691,12 +693,14 @@ class InstallerViewModel(
     // run — the user would see the install UI "snap" away.
     //
     // [requestFullscreenClose] therefore:
-    //   1. flips [_isClosingFullscreen] to true (drives the fade-out in
+    //   1. marks the session as closing so Activity.onStop cannot move it
+    //      into background mode during the exit animation,
+    //   2. flips [_isClosingFullscreen] to true (drives the fade-out in
     //      [PositionFullScreen] via [isClosingFullscreen] state),
-    //   2. waits [FullscreenCloseFadeOutMs] on [viewModelScope] (which is
+    //   3. waits [FullscreenCloseFadeOutMs] on [viewModelScope] (which is
     //      tied to the ViewModel's lifetime, not the composition's, so it
     //      survives any composition churn in the meantime),
-    //   3. then calls [close] which performs the synchronous teardown.
+    //   4. then calls [close] which performs the synchronous teardown.
     //
     // The delay is intentionally a wall-clock wait, not coupled to the
     // animation, so a small drift between the two clocks does not leave a
@@ -713,6 +717,7 @@ class InstallerViewModel(
      */
     fun requestFullscreenClose() {
         if (_isClosingFullscreen.value) return
+        session.prepareClose()
         _isClosingFullscreen.value = true
         viewModelScope.launch {
             delay(FullscreenCloseFadeOutMs)
