@@ -963,8 +963,6 @@
     <string name="install_comparison_show_all_desc">Her zaman eski ve yeni değerleri göster</string>
     <string name="install_comparison_show_differences_only">Sadece farkları göster</string>
     <string name="install_comparison_show_differences_only_desc">Aynı verileri tek bir değer olarak göster</string>
-    <string name="expand_temporary_settings_by_default">Paneli otomatik olarak genişlet</string>
-    <string name="expand_temporary_settings_by_default_desc">Geçici ayarları yükleme penceresi açıldığında genişlet</string>
     <string name="dhizuku_unsupported_desc">Dhizuku desteklenmiyor</string>
     <string name="suggestion_allow_unknown_source">Bu Kaynaktan İzin Ver</string>
     <string name="suggestion_allow_unknown_source_desc">Bu uygulamanın paket detaylarına erişim talebine izin vermek için Android ayarlarını aç</string>

@@ -924,8 +924,6 @@
     <string name="install_comparison_show_all_desc">常に古い値と新しい値の両方を表示します</string>
     <string name="install_comparison_show_differences_only">違いのみを表示</string>
     <string name="install_comparison_show_differences_only_desc">同一のデータを単一の値として表示します</string>
-    <string name="expand_temporary_settings_by_default">デフォルトでパネルを展開</string>
-    <string name="expand_temporary_settings_by_default_desc">インストールダイアログを開く際に、一時設定を展開します</string>
     <string name="unarchive_error_action_required_title">対応が必要です</string>
     <string name="unarchive_error_action_required_message">このアプリを復元するには、追加の手順が必要です</string>
     <string name="unarchive_error_storage_title">ストレージ容量が不足しています</string>
