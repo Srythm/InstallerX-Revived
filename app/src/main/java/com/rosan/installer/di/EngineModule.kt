@@ -88,6 +88,7 @@ val engineModule = module {
             appSettingsRepo = get(),
             postInstallTaskProvider = get(),
             platformInstallPolicyChecker = get(),
+            selfUpdateRecoveryRepository = get(),
             taskScope = get(named("AppScope"))
         )
     }
