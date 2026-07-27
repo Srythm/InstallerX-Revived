@@ -54,7 +54,6 @@ val viewModelModule = module {
             updateRepo = get(),
             systemEnvProvider = get(),
             privilegedProvider = get(),
-            updateSetting = get(),
             setLauncherIcon = get(),
             exportBackup = get(),
             prepareBackupRestore = get(),

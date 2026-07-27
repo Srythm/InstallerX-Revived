@@ -9,8 +9,10 @@ import com.rosan.installer.domain.engine.exception.InstallException
 import com.rosan.installer.domain.engine.model.source.DataType
 import com.rosan.installer.domain.engine.model.install.InstallEntity
 import com.rosan.installer.domain.engine.model.install.InstallMetadata
+import com.rosan.installer.domain.engine.model.install.InstallPhase
 import com.rosan.installer.domain.engine.model.error.InstallErrorType
 import com.rosan.installer.domain.engine.model.install.InstallOption
+import com.rosan.installer.domain.engine.model.install.InstallWriteProgress
 import com.rosan.installer.domain.engine.model.install.sourcePath
 import com.rosan.installer.domain.engine.model.packageinfo.PackageAnalysisResult
 import com.rosan.installer.domain.engine.model.packageinfo.PackageSignatureAnalysis
@@ -102,16 +104,41 @@ class ProcessInstallationUseCase(
 
             // 3. Emit the 'Installing' state BEFORE blocking the thread
             Timber.d("installApp: Starting. AppLabel=$appLabel ($current/$total)")
-            emit(
-                ProgressEntity.Installing(
-                    current = current,
-                    total = total,
-                    appLabel = appLabel
-                )
+            var installingProgress = ProgressEntity.Installing(
+                current = current,
+                total = total,
+                appLabel = appLabel
             )
+            emit(installingProgress)
 
             // 4. Now perform the heavy, blocking installation work
-            installApp(config, analysisResults, selected, metadata)
+            installApp(
+                config = config,
+                analysisResults = analysisResults,
+                selectedEntities = selected,
+                metadata = metadata,
+                onProgress = { writeProgress ->
+                    val fraction = writeProgress.fraction
+                    if (fraction != installingProgress.writeProgress) {
+                        installingProgress = installingProgress.copy(writeProgress = fraction)
+                        emit(installingProgress)
+                    }
+                },
+                onPhaseChanged = { phase ->
+                    val nextProgress = when (phase) {
+                        InstallPhase.WRITING -> installingProgress.copy(
+                            writeProgress = null,
+                            phase = phase
+                        )
+
+                        InstallPhase.INSTALLING -> installingProgress.copy(phase = phase)
+                    }
+                    if (nextProgress != installingProgress) {
+                        installingProgress = nextProgress
+                        emit(installingProgress)
+                    }
+                }
+            )
 
             // 5. Emit success if it is a single task or the last task in a batch
             if (total <= 1) {
@@ -181,6 +208,7 @@ class ProcessInstallationUseCase(
         val selectedResults = results.filter { result -> result.appEntities.any { it.selected } }
 
         for (result in selectedResults) {
+            if (!result.signatureCheckPerformed) continue
             if (!shouldApplySignaturePolicy(result)) continue
 
             val signatureAnalysis = result.appEntities.analyzePackageSignatureSelection(
@@ -250,7 +278,9 @@ class ProcessInstallationUseCase(
         config: ConfigModel,
         analysisResults: List<PackageAnalysisResult>,
         selectedEntities: List<SelectInstallEntity>,
-        metadata: InstallMetadata
+        metadata: InstallMetadata,
+        onProgress: suspend (InstallWriteProgress) -> Unit,
+        onPhaseChanged: suspend (InstallPhase) -> Unit
     ) {
         val prefs = appSettingsRepo.snapshot()
         val blacklist = prefs.managedBlacklistPackages.map { it.packageName }
@@ -279,7 +309,9 @@ class ProcessInstallationUseCase(
                 metadata = metadata,
                 blacklist = blacklist,
                 sharedUidBlacklist = sharedUidBlacklist,
-                sharedUidWhitelist = sharedUidWhitelist
+                sharedUidWhitelist = sharedUidWhitelist,
+                onProgress = onProgress,
+                onPhaseChanged = onPhaseChanged
             )
         }
 
@@ -293,18 +325,38 @@ class ProcessInstallationUseCase(
         metadata: InstallMetadata,
         blacklist: List<String>,
         sharedUidBlacklist: List<String>,
-        sharedUidWhitelist: List<String>
+        sharedUidWhitelist: List<String>,
+        onProgress: suspend (InstallWriteProgress) -> Unit,
+        onPhaseChanged: suspend (InstallPhase) -> Unit
     ): ConfigModel {
         val tryMultipleAuthorizers = appSettingsRepo.snapshot().tryMultipleAuthorizersOnInstall
 
         if (!tryMultipleAuthorizers) {
-            submitInstall(config, installEntities, metadata, blacklist, sharedUidBlacklist, sharedUidWhitelist)
+            submitInstall(
+                config,
+                installEntities,
+                metadata,
+                blacklist,
+                sharedUidBlacklist,
+                sharedUidWhitelist,
+                onProgress,
+                onPhaseChanged
+            )
             return config
         }
 
         val candidates = buildAuthorizerCandidates(config)
         if (candidates.isEmpty()) {
-            submitInstall(config, installEntities, metadata, blacklist, sharedUidBlacklist, sharedUidWhitelist)
+            submitInstall(
+                config,
+                installEntities,
+                metadata,
+                blacklist,
+                sharedUidBlacklist,
+                sharedUidWhitelist,
+                onProgress,
+                onPhaseChanged
+            )
             return config
         }
 
@@ -314,7 +366,16 @@ class ProcessInstallationUseCase(
             Timber.d("Trying install with authorizer: ${attemptConfig.authorizer}")
 
             try {
-                submitInstall(attemptConfig, installEntities, metadata, blacklist, sharedUidBlacklist, sharedUidWhitelist)
+                submitInstall(
+                    attemptConfig,
+                    installEntities,
+                    metadata,
+                    blacklist,
+                    sharedUidBlacklist,
+                    sharedUidWhitelist,
+                    onProgress,
+                    onPhaseChanged
+                )
                 return attemptConfig
             } catch (e: PrivilegedException) {
                 lastAuthorizerFailure = e
@@ -334,7 +395,9 @@ class ProcessInstallationUseCase(
         metadata: InstallMetadata,
         blacklist: List<String>,
         sharedUidBlacklist: List<String>,
-        sharedUidWhitelist: List<String>
+        sharedUidWhitelist: List<String>,
+        onProgress: suspend (InstallWriteProgress) -> Unit,
+        onPhaseChanged: suspend (InstallPhase) -> Unit
     ) {
         appInstaller.doInstallWork(
             config = config,
@@ -342,7 +405,9 @@ class ProcessInstallationUseCase(
             metadata = metadata,
             blacklist = blacklist,
             sharedUserIdBlacklist = sharedUidBlacklist,
-            sharedUserIdExemption = sharedUidWhitelist
+            sharedUserIdExemption = sharedUidWhitelist,
+            onProgress = onProgress,
+            onPhaseChanged = onPhaseChanged
         )
     }
 

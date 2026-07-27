@@ -44,6 +44,13 @@ import com.rosan.installer.ui.util.WindowBlurEffect
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
+private data class FullScreenContentKey(
+    val stageType: Any,
+    val textId: String,
+    val contentId: String,
+    val buttonsId: String
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DialogPage(
@@ -318,7 +325,17 @@ fun DialogPage(
                     PositionFullScreen(
                         onBackRequest = { performBack() },
                         isClosing = isClosingFullscreen,
-                        contentKey = stage,
+                        // Progress-bearing stages are data classes, so using the complete stage
+                        // as the AnimatedContent key restarted the body cross-fade for every file
+                        // read/write progress emission. Keep the key structural instead: progress
+                        // still recomposes its indicator, while the full-screen body only switches
+                        // snapshots when the stage or dialog section actually changes.
+                        contentKey = FullScreenContentKey(
+                            stageType = stage::class,
+                            textId = params.text.id,
+                            contentId = params.content.id,
+                            buttonsId = params.buttons.id
+                        ),
                         centerIcon = dialogInnerWidget(headerParams.icon),
                         centerTitle = dialogInnerWidget(headerParams.title),
                         centerSubtitle = dialogInnerWidget(headerParams.subtitle),

@@ -8,7 +8,6 @@ import androidx.activity.compose.LocalActivity
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.runtime.Composable
@@ -122,7 +121,6 @@ fun InstallerTheme(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun InstallerMaterialExpressiveTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -158,7 +156,7 @@ private fun NavigationBarContrastHandler() {
     DisposableEffect(configuration) {
         val window = activity?.window
         window?.isNavigationBarContrastEnforced = false
-        // Keep empty as we want this behavior to persist
-        onDispose {}
+
+        onDispose { /** Keep empty as we want this behavior to persist **/ }
     }
 }

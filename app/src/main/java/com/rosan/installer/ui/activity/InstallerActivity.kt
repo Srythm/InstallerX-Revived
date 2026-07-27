@@ -133,7 +133,6 @@ class InstallerActivity : ComponentActivity(), KoinComponent {
         // activity transition here. This mirrors the override already in
         // [finish], which disables the matching exit animation.
         overridePendingTransition(0, 0)
-
         lifecycleScope.launch {
             // Re-check after configuration recreation as well: a previous lifecycle coroutine may
             // have been cancelled while waiting for the recovery DataStore transaction.
