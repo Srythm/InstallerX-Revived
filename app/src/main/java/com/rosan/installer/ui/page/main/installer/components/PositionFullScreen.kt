@@ -22,7 +22,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
@@ -64,9 +64,10 @@ import androidx.compose.ui.unit.dp
  *    body to reflow (no flicker). Wrapped in [AnimatedContent] on [contentKey]
  *    change for a same-position cross-fade.
  * 3. **Footer** (buttons) — overlaid on top of the body's bottom edge (just
- *    like the dialog's button row), so its size change doesn't push the body
- *    around. Its own height is animated with `animateDpAsState` so the body's
- *    bottom padding transitions smoothly.
+ *    like the dialog's button row), with one status-bar height of spacing
+ *    above the navigation bar to match the header's extra top spacing. Its
+ *    size change doesn't push the body around. Its own height is animated
+ *    with `animateDpAsState` so the body's bottom padding transitions smoothly.
  *
  * Enter / exit transition:
  * The fullscreen layer is a single alpha-animated surface. On first composition
@@ -203,12 +204,14 @@ fun PositionFullScreen(
             color = containerColor,
             tonalElevation = tonalElevation
         ) {
-            val topInset = WindowInsets.systemBars.asPaddingValues().calculateTopPadding()
+            val statusBarInset = WindowInsets.statusBars.asPaddingValues()
+                .calculateTopPadding()
             val navInset = WindowInsets.navigationBars.asPaddingValues()
                 .calculateBottomPadding()
             // Reserve a full status-bar height above the safe area for the
             // header so the title sits visibly below the system status bar.
-            val headerTopPadding = topInset * 2
+            val contentEdgePadding = statusBarInset
+            val headerTopPadding = statusBarInset + contentEdgePadding
 
             Column(
                 modifier = Modifier
@@ -364,7 +367,7 @@ fun PositionFullScreen(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
-                            .padding(bottom = navInset)
+                            .padding(bottom = navInset + contentEdgePadding)
                             .onSizeChanged { footerHeightPx = it.height }
                     ) {
                         val footerTransitionSpec:
