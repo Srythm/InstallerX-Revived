@@ -13,5 +13,5 @@ data class DialogSettingsState(
     val disableNotificationForDialogInstall: Boolean = false,
     val tapIconToShare: Boolean = false,
     val showFilePath: Boolean = false,
-    val showInstallInitiator: Boolean = false
+    val showInstallInitiator: Boolean = false,
 )

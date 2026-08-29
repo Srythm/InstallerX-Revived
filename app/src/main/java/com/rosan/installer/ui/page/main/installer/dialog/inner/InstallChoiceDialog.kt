@@ -46,11 +46,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
 import com.rosan.installer.data.engine.parser.getDisplayName
 import com.rosan.installer.data.engine.parser.getSplitDisplayName
-import com.rosan.installer.domain.engine.model.packageinfo.AppEntity
-import com.rosan.installer.domain.engine.model.source.DataType
 import com.rosan.installer.domain.engine.model.install.MmzSelectionMode
-import com.rosan.installer.domain.engine.model.packageinfo.PackageAnalysisResult
 import com.rosan.installer.domain.engine.model.install.SessionMode
+import com.rosan.installer.domain.engine.model.packageinfo.AppEntity
+import com.rosan.installer.domain.engine.model.packageinfo.PackageAnalysisResult
+import com.rosan.installer.domain.engine.model.source.DataType
 import com.rosan.installer.domain.session.model.SelectInstallEntity
 import com.rosan.installer.ui.icons.AppIcons
 import com.rosan.installer.ui.page.main.installer.InstallerViewAction
@@ -72,7 +72,7 @@ import com.rosan.installer.ui.util.getSupportTitle
 
 @Composable
 fun installChoiceDialog(
-    viewModel: InstallerViewModel
+    viewModel: InstallerViewModel,
 ): DialogParams {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val config = uiState.config
@@ -121,8 +121,8 @@ fun installChoiceDialog(
                         InstallerViewAction.ToggleSelection(
                             packageName = entity.app.packageName,
                             entity = entity,
-                            isMultiSelect = true
-                        )
+                            isMultiSelect = true,
+                        ),
                     )
                 }
             viewModel.dispatch(InstallerViewAction.SetMmzSelectionMode(MmzSelectionMode.INITIAL_CHOICE))
@@ -147,18 +147,19 @@ fun installChoiceDialog(
                 selectionMode = selectionMode,
                 onSetSelectionMode = { viewModel.dispatch(InstallerViewAction.SetMmzSelectionMode(it)) },
                 errorMessage = errorMessage,
-                totalModuleCount = totalModuleCount
+                totalModuleCount = totalModuleCount,
             )
         },
         buttons = dialogButtons(DialogParamsType.InstallChoice.id) {
             buildList {
                 if ((!isModuleApk && !isMixedModuleZip) ||
                     (isMixedModuleZip && selectionMode == MmzSelectionMode.APK_CHOICE)
-                )
+                ) {
                     add(DialogButton(stringResource(primaryButtonText), onClick = primaryButtonAction))
+                }
                 add(DialogButton(stringResource(cancelOrBackText), onClick = cancelOrBackAction))
             }
-        }
+        },
     )
 }
 
@@ -173,7 +174,7 @@ private fun ChoiceContent(
     selectionMode: MmzSelectionMode,
     onSetSelectionMode: (MmzSelectionMode) -> Unit,
     errorMessage: String?,
-    totalModuleCount: Int
+    totalModuleCount: Int,
 ) {
     Column(
         // Fill the entire body area and centre the choice options
@@ -191,7 +192,7 @@ private fun ChoiceContent(
             InfoTipCard(
                 text = errorMessage ?: "",
                 icon = null,
-                noPadding = false
+                noPadding = false,
             )
         }
         if (isModuleApk) {
@@ -209,9 +210,9 @@ private fun ChoiceContent(
                             description = stringResource(R.string.installer_package_name, baseEntityInfo.packageName),
                             onClick = {
                                 viewModel.dispatch(
-                                    InstallerViewAction.SelectMixedModuleType(installAsModule = false)
+                                    InstallerViewAction.SelectMixedModuleType(installAsModule = false),
                                 )
-                            }
+                            },
                         )
                     }
                 }
@@ -224,9 +225,9 @@ private fun ChoiceContent(
                             description = stringResource(R.string.installer_module_id, moduleEntityInfo.id),
                             onClick = {
                                 viewModel.dispatch(
-                                    InstallerViewAction.SelectMixedModuleType(installAsModule = true)
+                                    InstallerViewAction.SelectMixedModuleType(installAsModule = true),
                                 )
-                            }
+                            },
                         )
                     }
                 }
@@ -246,9 +247,9 @@ private fun ChoiceContent(
                             description = stringResource(R.string.installer_module_id, moduleEntityInfo.id),
                             onClick = {
                                 viewModel.dispatch(
-                                    InstallerViewAction.SelectMixedModuleType(installAsModule = true)
+                                    InstallerViewAction.SelectMixedModuleType(installAsModule = true),
                                 )
-                            }
+                            },
                         )
                     }
                 }
@@ -267,13 +268,13 @@ private fun ChoiceContent(
                                                 InstallerViewAction.ToggleSelection(
                                                     packageName = entity.app.packageName,
                                                     entity = entity,
-                                                    isMultiSelect = true
-                                                )
+                                                    isMultiSelect = true,
+                                                ),
                                             )
                                         }
                                 }
                                 onSetSelectionMode(MmzSelectionMode.APK_CHOICE)
-                            }
+                            },
                         )
                     }
                 }
@@ -285,8 +286,11 @@ private fun ChoiceContent(
                     val apkEntities = pkgResult.appEntities.filter {
                         it.app is AppEntity.BaseEntity || it.app is AppEntity.SplitEntity || it.app is AppEntity.DexMetadataEntity
                     }
-                    if (apkEntities.isEmpty()) null
-                    else pkgResult.copy(appEntities = apkEntities)
+                    if (apkEntities.isEmpty()) {
+                        null
+                    } else {
+                        pkgResult.copy(appEntities = apkEntities)
+                    }
                 }
             } else {
                 analysisResults
@@ -298,7 +302,7 @@ private fun ChoiceContent(
             LazyColumn(
                 modifier = Modifier.heightIn(max = 325.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             ) {
                 itemsIndexed(resultsForList, key = { _, it -> it.packageName }) { index, packageResult ->
                     val shape = when {
@@ -310,7 +314,7 @@ private fun ChoiceContent(
                     MultiApkGroupCard(
                         packageResult = packageResult,
                         viewModel = viewModel,
-                        shape = shape
+                        shape = shape,
                     )
                 }
             }
@@ -339,7 +343,7 @@ private fun ChoiceContent(
             LazyColumn(
                 modifier = Modifier.heightIn(max = 325.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             ) {
                 displayGroups.forEach { (groupTitle, itemsInGroup) ->
                     item {
@@ -347,7 +351,7 @@ private fun ChoiceContent(
                             text = groupTitle,
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(top = 0.dp, bottom = 0.dp, start = 16.dp)
+                            modifier = Modifier.padding(top = 0.dp, bottom = 0.dp, start = 16.dp),
                         )
                     }
 
@@ -367,10 +371,10 @@ private fun ChoiceContent(
                                     InstallerViewAction.ToggleSelection(
                                         packageName = item.app.packageName,
                                         entity = item,
-                                        isMultiSelect = true
-                                    )
+                                        isMultiSelect = true,
+                                    ),
                                 )
-                            }
+                            },
                         )
                     }
                     item { Spacer(modifier = Modifier.height(4.dp)) }
@@ -384,7 +388,7 @@ private fun ChoiceContent(
 private fun MultiApkGroupCard(
     packageResult: PackageAnalysisResult,
     viewModel: InstallerViewModel,
-    shape: Shape
+    shape: Shape,
 ) {
     val itemsInGroup = packageResult.appEntities
 
@@ -415,26 +419,26 @@ private fun MultiApkGroupCard(
                             InstallerViewAction.ToggleSelection(
                                 packageName = packageResult.packageName,
                                 entity = entity,
-                                isMultiSelect = true
-                            )
+                                isMultiSelect = true,
+                            ),
                         )
                     }
                 }
-            }
+            },
         )
     } else {
         val rotation by animateFloatAsState(targetValue = if (isExpanded) 180f else 0f, label = "arrowRotation")
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = shape,
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { isExpanded = !isExpanded }
                     .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -445,20 +449,20 @@ private fun MultiApkGroupCard(
                         modifier = Modifier
                             .basicMarquee(),
                         // Apply dynamic transparent color directly instead of alpha modifier
-                        color = LocalContentColor.current.copy(alpha = 0.7f)
+                        color = LocalContentColor.current.copy(alpha = 0.7f),
                     )
                 }
                 Icon(
                     imageVector = AppIcons.ArrowDropDown,
                     contentDescription = "Expand",
-                    modifier = Modifier.rotate(rotation)
+                    modifier = Modifier.rotate(rotation),
                 )
             }
 
             AnimatedVisibility(visible = isExpanded) {
                 Column(
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     itemsInGroup
                         .sortedByDescending { (it.app as? AppEntity.BaseEntity)?.versionCode ?: 0 }
@@ -470,10 +474,10 @@ private fun MultiApkGroupCard(
                                         InstallerViewAction.ToggleSelection(
                                             packageName = packageResult.packageName,
                                             entity = item,
-                                            isMultiSelect = false
-                                        )
+                                            isMultiSelect = false,
+                                        ),
                                     )
-                                }
+                                },
                             )
                         }
                 }
@@ -486,7 +490,7 @@ private fun MultiApkGroupCard(
 private fun SingleItemCard(
     item: SelectInstallEntity,
     shape: Shape,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     val haptic = LocalHapticFeedback.current
 
@@ -504,20 +508,20 @@ private fun SingleItemCard(
         shape = shape,
         colors = CardDefaults.cardColors(
             containerColor = containerColor,
-            contentColor = contentColor
+            contentColor = contentColor,
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Checkbox(
                 checked = item.selected,
                 onCheckedChange = null,
-                modifier = Modifier.align(Alignment.CenterVertically)
+                modifier = Modifier.align(Alignment.CenterVertically),
             )
             Spacer(modifier = Modifier.width(16.dp))
             ItemContent(app = item.app)
@@ -529,7 +533,7 @@ private fun SingleItemCard(
 private fun SelectableSubCard(
     item: SelectInstallEntity,
     isRadio: Boolean = true,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     val haptic = LocalHapticFeedback.current
 
@@ -546,26 +550,27 @@ private fun SelectableSubCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(
             containerColor = containerColor,
-            contentColor = contentColor
-        )
+            contentColor = contentColor,
+        ),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             if (isRadio) {
                 RadioButton(selected = item.selected, onClick = onClick)
             } else {
                 Checkbox(checked = item.selected, onCheckedChange = { onClick() })
             }
-            if (isRadio)
+            if (isRadio) {
                 (item.app as? AppEntity.BaseEntity)?.let { baseEntity ->
                     MultiApkItemContent(app = baseEntity)
                 }
-            else
+            } else {
                 ItemContent(app = item.app)
+            }
         }
     }
 }
@@ -579,7 +584,7 @@ private fun ItemContent(app: AppEntity) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(end = 12.dp)
+            .padding(end = 12.dp),
     ) {
         when (app) {
             is AppEntity.BaseEntity -> {
@@ -587,18 +592,18 @@ private fun ItemContent(app: AppEntity) {
                     app.label ?: app.packageName,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = contentColor
+                    color = contentColor,
                 )
                 Text(
                     app.packageName,
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.basicMarquee(),
-                    color = variantContentColor
+                    color = variantContentColor,
                 )
                 Text(
                     text = stringResource(R.string.installer_version, app.versionName, app.versionCode),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = variantContentColor
+                    color = variantContentColor,
                 )
             }
 
@@ -607,16 +612,16 @@ private fun ItemContent(app: AppEntity) {
                     text = getSplitDisplayName(
                         type = app.type,
                         configValue = app.configValue,
-                        fallbackName = app.splitName
+                        fallbackName = app.splitName,
                     ),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = contentColor
+                    color = contentColor,
                 )
                 Text(
                     text = stringResource(R.string.installer_file_name, app.name),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = variantContentColor
+                    color = variantContentColor,
                 )
             }
 
@@ -625,13 +630,13 @@ private fun ItemContent(app: AppEntity) {
                     app.dmName,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = contentColor
+                    color = contentColor,
                 )
                 Text(
                     app.packageName,
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.basicMarquee(),
-                    color = variantContentColor
+                    color = variantContentColor,
                 )
             }
 
@@ -640,18 +645,18 @@ private fun ItemContent(app: AppEntity) {
                     app.name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = contentColor
+                    color = contentColor,
                 )
                 Text(
                     stringResource(R.string.installer_module_id, app.id),
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.basicMarquee(),
-                    color = variantContentColor
+                    color = variantContentColor,
                 )
                 Text(
                     text = stringResource(R.string.installer_version_code_label) + app.versionCode,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = variantContentColor
+                    color = variantContentColor,
                 )
             }
         }
@@ -672,21 +677,21 @@ private fun MultiApkItemContent(app: AppEntity.BaseEntity) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(end = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         // Version information (styled as a title)
         Text(
             text = stringResource(R.string.installer_version, app.versionName, app.versionCode),
             style = MaterialTheme.typography.titleSmallEmphasized,
             fontWeight = FontWeight.Bold,
-            color = contentColor
+            color = contentColor,
         )
         // Filename (styled as a smaller body text with marquee)
         Text(
             text = app.data.getSourceTop().toString().removeSuffix("/").substringAfterLast('/'),
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.basicMarquee(),
-            color = variantContentColor
+            color = variantContentColor,
         )
     }
 }

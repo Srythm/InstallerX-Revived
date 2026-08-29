@@ -25,5 +25,5 @@ data class InstallerViewSettings(
     // Lab
     val labTapIconToShare: Boolean = false,
     val labShowFilePath: Boolean = false,
-    val labShowInstallInitiator: Boolean = false
+    val labShowInstallInitiator: Boolean = false,
 )

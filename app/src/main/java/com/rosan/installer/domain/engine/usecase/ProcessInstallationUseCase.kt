@@ -4,21 +4,23 @@ package com.rosan.installer.domain.engine.usecase
 
 import com.rosan.installer.core.bitmask.removeFlag
 import com.rosan.installer.domain.device.provider.DeviceCapabilityProvider
-import com.rosan.installer.domain.engine.model.packageinfo.AppEntity
 import com.rosan.installer.domain.engine.exception.InstallException
-import com.rosan.installer.domain.engine.model.source.DataType
+import com.rosan.installer.domain.engine.model.error.InstallErrorType
 import com.rosan.installer.domain.engine.model.install.InstallEntity
 import com.rosan.installer.domain.engine.model.install.InstallMetadata
-import com.rosan.installer.domain.engine.model.install.InstallPhase
-import com.rosan.installer.domain.engine.model.error.InstallErrorType
 import com.rosan.installer.domain.engine.model.install.InstallOption
+import com.rosan.installer.domain.engine.model.install.InstallPhase
 import com.rosan.installer.domain.engine.model.install.InstallWriteProgress
 import com.rosan.installer.domain.engine.model.install.sourcePath
+import com.rosan.installer.domain.engine.model.packageinfo.AppEntity
 import com.rosan.installer.domain.engine.model.packageinfo.PackageAnalysisResult
 import com.rosan.installer.domain.engine.model.packageinfo.PackageSignatureAnalysis
 import com.rosan.installer.domain.engine.model.packageinfo.SignatureMatchStatus
+import com.rosan.installer.domain.engine.model.packageinfo.SigningBlockCertificateStatus
 import com.rosan.installer.domain.engine.model.packageinfo.analyzePackageSignatureMatch
 import com.rosan.installer.domain.engine.model.packageinfo.analyzePackageSignatureSelection
+import com.rosan.installer.domain.engine.model.packageinfo.selectedSigningBlockCertificateStatus
+import com.rosan.installer.domain.engine.model.source.DataType
 import com.rosan.installer.domain.engine.provider.InstalledPackageSignatureProvider
 import com.rosan.installer.domain.engine.repository.AppInstallerRepository
 import com.rosan.installer.domain.engine.repository.ModuleInstallerRepository
@@ -52,7 +54,7 @@ class ProcessInstallationUseCase(
     private val moduleInstaller: ModuleInstallerRepository,
     private val capabilityProvider: DeviceCapabilityProvider,
     private val installedPackageSignatureProvider: InstalledPackageSignatureProvider,
-    private val recordOperationHistory: RecordOperationHistoryUseCase
+    private val recordOperationHistory: RecordOperationHistoryUseCase,
 ) {
     companion object {
 
@@ -79,7 +81,7 @@ class ProcessInstallationUseCase(
         analysisResults: List<PackageAnalysisResult>,
         metadata: InstallMetadata = InstallMetadata.Empty,
         current: Int = 1,
-        total: Int = 1
+        total: Int = 1,
     ): Flow<ProgressEntity> = flow {
         val selected = analysisResults.flatMap { it.appEntities }.filter { it.selected }
         if (selected.isEmpty()) {
@@ -105,7 +107,7 @@ class ProcessInstallationUseCase(
             var installingProgress = ProgressEntity.Installing(
                 current = current,
                 total = total,
-                appLabel = appLabel
+                appLabel = appLabel,
             )
             emit(installingProgress)
 
@@ -126,7 +128,7 @@ class ProcessInstallationUseCase(
                     val nextProgress = when (phase) {
                         InstallPhase.WRITING -> installingProgress.copy(
                             writeProgress = null,
-                            phase = phase
+                            phase = phase,
                         )
 
                         InstallPhase.INSTALLING -> installingProgress.copy(phase = phase)
@@ -135,7 +137,7 @@ class ProcessInstallationUseCase(
                         installingProgress = nextProgress
                         emit(installingProgress)
                     }
-                }
+                },
             )
 
             // 5. Emit success if it is a single task or the last task in a batch
@@ -145,10 +147,7 @@ class ProcessInstallationUseCase(
         }
     }
 
-    private fun installModule(
-        config: ConfigModel,
-        module: AppEntity.ModuleEntity
-    ): Flow<ProgressEntity> = flow {
+    private fun installModule(config: ConfigModel, module: AppEntity.ModuleEntity): Flow<ProgressEntity> = flow {
         Timber.d("installModule: Starting module installation for ${module.name}")
         val output = mutableListOf<String>()
         val prefs = appSettingsRepo.snapshot()
@@ -170,7 +169,7 @@ class ProcessInstallationUseCase(
             config = config,
             module = module,
             useRoot = systemUseRoot,
-            rootMode = rootImpl
+            rootMode = rootImpl,
         ).collect { line ->
             output.add(line)
             // Interactive module installers use the log itself as their prompt. Publish every
@@ -194,39 +193,55 @@ class ProcessInstallationUseCase(
         val selectedResults = results.filter { result -> result.appEntities.any { it.selected } }
 
         for (result in selectedResults) {
-            if (!result.signatureCheckPerformed) continue
             if (!shouldApplySignaturePolicy(result)) continue
 
+            if (result.selectedSigningBlockCertificateStatus()?.isBlockedByUnknownPolicy(
+                    allowSigUnknown = config.allowSigUnknown,
+                ) == true
+            ) {
+                throwSignatureUnknownBlocked()
+            }
+
+            if (!result.signatureCheckPerformed) continue
+
             val signatureAnalysis = result.appEntities.analyzePackageSignatureSelection(
-                result.installedAppInfo
+                result.installedAppInfo,
             )
             val signatureMatchStatus = result.appEntities.analyzePackageSignatureMatch(
                 installedInfo = result.installedAppInfo,
-                hasSigningCertificate = installedPackageSignatureProvider::hasSigningCertificate
+                hasSigningCertificate = installedPackageSignatureProvider::hasSigningCertificate,
             )
 
             if (!config.allowSigMismatch &&
-                (signatureMatchStatus == SignatureMatchStatus.MISMATCH ||
-                        signatureAnalysis.hasSignatureMismatchPolicyViolation())
+                (
+                    signatureMatchStatus == SignatureMatchStatus.MISMATCH ||
+                        signatureAnalysis.hasSignatureMismatchPolicyViolation()
+                    )
             ) {
-                throw InstallException(
-                    InstallErrorType.BLOCKED_BY_PROFILE_SIGNATURE_MISMATCH,
-                    "Installing apps with a different signature is blocked by this profile"
-                )
+                throwSignatureMismatchBlocked()
             }
 
             if (!config.allowSigUnknown &&
-                (signatureMatchStatus == SignatureMatchStatus.UNKNOWN_ERROR ||
+                (
+                    signatureMatchStatus == SignatureMatchStatus.UNKNOWN_ERROR ||
                         signatureMatchStatus == SignatureMatchStatus.CANDIDATE_ROTATION_UNCONFIRMED ||
-                        signatureAnalysis.hasSignatureUnknownPolicyViolation())
+                        signatureAnalysis.hasSignatureUnknownPolicyViolation()
+                    )
             ) {
-                throw InstallException(
-                    InstallErrorType.BLOCKED_BY_PROFILE_SIGNATURE_UNKNOWN,
-                    "Installing apps with an unverifiable signature is blocked by this profile"
-                )
+                throwSignatureUnknownBlocked()
             }
         }
     }
+
+    private fun throwSignatureMismatchBlocked(): Nothing = throw InstallException(
+        InstallErrorType.BLOCKED_BY_PROFILE_SIGNATURE_MISMATCH,
+        "Installing apps with a different signature is blocked by this profile",
+    )
+
+    private fun throwSignatureUnknownBlocked(): Nothing = throw InstallException(
+        InstallErrorType.BLOCKED_BY_PROFILE_SIGNATURE_UNKNOWN,
+        "Installing apps with an unverifiable signature is blocked by this profile",
+    )
 
     private fun shouldApplySignaturePolicy(result: PackageAnalysisResult): Boolean {
         val selectedApps = result.appEntities.filter { it.selected }.map { it.app }
@@ -246,19 +261,16 @@ class ProcessInstallationUseCase(
         DataType.APKM,
         DataType.XAPK,
         DataType.MULTI_APK,
-        DataType.MULTI_APK_ZIP -> true
+        DataType.MULTI_APK_ZIP,
+        -> true
 
         else -> false
     }
 
-    private fun PackageSignatureAnalysis.hasSignatureMismatchPolicyViolation(): Boolean {
-        return splitSignatureMismatchFiles.isNotEmpty()
-    }
+    private fun PackageSignatureAnalysis.hasSignatureMismatchPolicyViolation(): Boolean = splitSignatureMismatchFiles.isNotEmpty()
 
-    private fun PackageSignatureAnalysis.hasSignatureUnknownPolicyViolation(): Boolean {
-        return verificationFailedFiles.isNotEmpty() ||
-                duplicateSplitNames.isNotEmpty()
-    }
+    private fun PackageSignatureAnalysis.hasSignatureUnknownPolicyViolation(): Boolean = verificationFailedFiles.isNotEmpty() ||
+        duplicateSplitNames.isNotEmpty()
 
     private suspend fun installApp(
         config: ConfigModel,
@@ -266,7 +278,7 @@ class ProcessInstallationUseCase(
         selectedEntities: List<SelectInstallEntity>,
         metadata: InstallMetadata,
         onProgress: suspend (InstallWriteProgress) -> Unit,
-        onPhaseChanged: suspend (InstallPhase) -> Unit
+        onPhaseChanged: suspend (InstallPhase) -> Unit,
     ) {
         val prefs = appSettingsRepo.snapshot()
         val blacklist = prefs.managedBlacklistPackages.map { it.packageName }
@@ -283,7 +295,7 @@ class ProcessInstallationUseCase(
                 arch = it.app.arch,
                 data = it.app.data,
                 sourceType = it.app.sourceType!!,
-                installLocation = (it.app as? AppEntity.BaseEntity)?.installLocation
+                installLocation = (it.app as? AppEntity.BaseEntity)?.installLocation,
             )
         }
 
@@ -297,7 +309,7 @@ class ProcessInstallationUseCase(
                 sharedUidBlacklist = sharedUidBlacklist,
                 sharedUidWhitelist = sharedUidWhitelist,
                 onProgress = onProgress,
-                onPhaseChanged = onPhaseChanged
+                onPhaseChanged = onPhaseChanged,
             )
         }
 
@@ -313,7 +325,7 @@ class ProcessInstallationUseCase(
         sharedUidBlacklist: List<String>,
         sharedUidWhitelist: List<String>,
         onProgress: suspend (InstallWriteProgress) -> Unit,
-        onPhaseChanged: suspend (InstallPhase) -> Unit
+        onPhaseChanged: suspend (InstallPhase) -> Unit,
     ): ConfigModel {
         val tryMultipleAuthorizers = appSettingsRepo.snapshot().tryMultipleAuthorizersOnInstall
 
@@ -326,7 +338,7 @@ class ProcessInstallationUseCase(
                 sharedUidBlacklist,
                 sharedUidWhitelist,
                 onProgress,
-                onPhaseChanged
+                onPhaseChanged,
             )
             return config
         }
@@ -341,7 +353,7 @@ class ProcessInstallationUseCase(
                 sharedUidBlacklist,
                 sharedUidWhitelist,
                 onProgress,
-                onPhaseChanged
+                onPhaseChanged,
             )
             return config
         }
@@ -360,7 +372,7 @@ class ProcessInstallationUseCase(
                     sharedUidBlacklist,
                     sharedUidWhitelist,
                     onProgress,
-                    onPhaseChanged
+                    onPhaseChanged,
                 )
                 return attemptConfig
             } catch (e: PrivilegedException) {
@@ -371,7 +383,7 @@ class ProcessInstallationUseCase(
 
         throw InstallException(
             InstallErrorType.ALL_AUTHORIZERS_FAILED,
-            "All authorizers failed: ${lastAuthorizerFailure?.message.orEmpty()}"
+            "All authorizers failed: ${lastAuthorizerFailure?.message.orEmpty()}",
         )
     }
 
@@ -383,7 +395,7 @@ class ProcessInstallationUseCase(
         sharedUidBlacklist: List<String>,
         sharedUidWhitelist: List<String>,
         onProgress: suspend (InstallWriteProgress) -> Unit,
-        onPhaseChanged: suspend (InstallPhase) -> Unit
+        onPhaseChanged: suspend (InstallPhase) -> Unit,
     ) {
         appInstaller.doInstallWork(
             config = config,
@@ -393,7 +405,7 @@ class ProcessInstallationUseCase(
             sharedUserIdBlacklist = sharedUidBlacklist,
             sharedUserIdExemption = sharedUidWhitelist,
             onProgress = onProgress,
-            onPhaseChanged = onPhaseChanged
+            onPhaseChanged = onPhaseChanged,
         )
     }
 
@@ -407,7 +419,7 @@ class ProcessInstallationUseCase(
             addAll(fallbackAuthorizers)
         }.filter { authorizer ->
             authorizer != Authorizer.Global &&
-                    (authorizer != Authorizer.Customize || config.customizeAuthorizer.isNotBlank())
+                (authorizer != Authorizer.Customize || config.customizeAuthorizer.isNotBlank())
         }.distinct()
     }
 
@@ -421,7 +433,7 @@ class ProcessInstallationUseCase(
         return copy(
             installFlags = flags,
             forAllUser = false,
-            allowAllRequestedPermissions = false
+            allowAllRequestedPermissions = false,
         )
     }
 
@@ -430,7 +442,7 @@ class ProcessInstallationUseCase(
         analysisResults: List<PackageAnalysisResult>,
         selectedEntities: List<SelectInstallEntity>,
         metadata: InstallMetadata,
-        result: Result<Unit>
+        result: Result<Unit>,
     ) {
         val installerPackageName = runCatching {
             appInstaller.resolveInstallerPackageName(config)
@@ -475,12 +487,20 @@ class ProcessInstallationUseCase(
                             installMode = config.installMode,
                             errorSummary = result.exceptionOrNull()?.historyErrorSummary(),
                             errorType = result.exceptionOrNull()?.historyErrorType(),
-                            operationSessionKey = metadata.operationSessionKey
-                        )
+                            operationSessionKey = metadata.operationSessionKey,
+                        ),
                     )
                 }.onFailure { e ->
                     Timber.e(e, "Failed to record install history for $packageName")
                 }
             }
     }
+}
+
+internal fun SigningBlockCertificateStatus.isBlockedByUnknownPolicy(allowSigUnknown: Boolean): Boolean = when (this) {
+    SigningBlockCertificateStatus.UNKNOWN -> !allowSigUnknown
+
+    SigningBlockCertificateStatus.MATCH,
+    SigningBlockCertificateStatus.NOT_INSTALLED,
+    -> false
 }

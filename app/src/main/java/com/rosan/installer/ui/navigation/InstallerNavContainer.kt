@@ -29,6 +29,7 @@ import com.rosan.installer.ui.page.main.settings.preferred.installer.authorizer.
 import com.rosan.installer.ui.page.main.settings.preferred.installer.dialog.DialogSettingsPage
 import com.rosan.installer.ui.page.main.settings.preferred.installer.notification.NotificationSettingsPage
 import com.rosan.installer.ui.page.main.settings.preferred.lab.LabPage
+import com.rosan.installer.ui.page.main.settings.preferred.network.NetworkPage
 import com.rosan.installer.ui.page.main.settings.preferred.theme.ThemeSettingsPage
 import com.rosan.installer.ui.page.main.settings.preferred.uninstaller.UninstallerGlobalSettingsPage
 import com.rosan.installer.ui.util.rememberDeviceCornerRadius
@@ -42,7 +43,7 @@ import top.yukonga.miuix.kmp.nav.transition.NavSwipeDirection
 @Composable
 fun InstallerNavContainer(uiState: ThemeState) {
     val sharedViewModel: SettingsSharedViewModel = koinViewModel(
-        viewModelStoreOwner = LocalActivity.current as ComponentActivity
+        viewModelStoreOwner = LocalActivity.current as ComponentActivity,
     )
 
     val backStack = rememberNavBackStack<Route>(Route.Main)
@@ -122,6 +123,11 @@ fun InstallerNavContainer(uiState: ThemeState) {
                     ThemeSettingsPage()
                 }
             }
+            entry<Route.Network>(swipeDismiss = swipeBackDirection) {
+                InstallerNavEntry(interceptPredictiveBack, onBack) {
+                    NetworkPage(useBlur)
+                }
+            }
             entry<Route.InstallerGlobal>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
                     InstallerGlobalSettingsPage(useBlur)
@@ -167,11 +173,7 @@ fun InstallerNavContainer(uiState: ThemeState) {
 }
 
 @Composable
-private fun InstallerNavEntry(
-    interceptPredictiveBack: Boolean,
-    onBack: () -> Unit,
-    content: @Composable () -> Unit,
-) {
+private fun InstallerNavEntry(interceptPredictiveBack: Boolean, onBack: () -> Unit, content: @Composable () -> Unit) {
     val navigationEventState = rememberNavigationEventState(NavigationEventInfo.None)
     NavigationBackHandler(
         state = navigationEventState,

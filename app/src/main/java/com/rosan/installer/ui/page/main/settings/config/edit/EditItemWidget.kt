@@ -13,6 +13,7 @@ import androidx.compose.material.icons.twotone.Edit
 import androidx.compose.material.icons.twotone.Memory
 import androidx.compose.material.icons.twotone.Speed
 import androidx.compose.material.icons.twotone.Terminal
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenuPopup
@@ -26,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -55,11 +57,7 @@ import com.rosan.installer.ui.util.isSystemPackageInstallerActive
 import org.koin.compose.koinInject
 
 @Composable
-fun DataNameWidget(
-    state: EditViewState,
-    dispatch: (EditViewAction) -> Unit,
-    trailingContent: @Composable (() -> Unit) = {}
-) {
+fun DataNameWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit, trailingContent: @Composable (() -> Unit) = {}) {
     BaseItemContainer {
         // Since the container no longer dictates the layout,
         // we explicitly define a Column here to stack the input and trailing content.
@@ -78,7 +76,7 @@ fun DataNameWidget(
                 value = state.data.name,
                 onValueChange = { dispatch(EditViewAction.ChangeDataName(it)) },
                 singleLine = true,
-                isError = state.data.errorName
+                isError = state.data.errorName,
             )
 
             trailingContent()
@@ -105,10 +103,7 @@ fun DataDescriptionWidget(state: EditViewState, dispatch: (EditViewAction) -> Un
     )
 }
 
-fun SegmentedColumnScope.dataAuthorizerWidget(
-    state: EditViewState,
-    dispatch: (EditViewAction) -> Unit,
-) {
+fun SegmentedColumnScope.dataAuthorizerWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit) {
     // Read states outside the Composable scope is fine
     val stateAuthorizer = state.data.authorizer
     val globalAuthorizer = state.globalAuthorizer
@@ -132,7 +127,7 @@ fun SegmentedColumnScope.dataAuthorizerWidget(
                         Authorizer.Shizuku,
                         Authorizer.Dhizuku,
                         Authorizer.Customize,
-                    )
+                    ),
                 )
             }
 
@@ -168,7 +163,10 @@ fun SegmentedColumnScope.dataAuthorizerWidget(
                         globalAuthorizer == Authorizer.Customize &&
                         state.globalCustomizeAuthorizer.isNotBlank()
                     ) {
-                        "$description\n${stringResource(R.string.config_authorizer_command_desc, state.globalCustomizeAuthorizer)}"
+                        "$description\n${stringResource(
+                            R.string.config_authorizer_command_desc,
+                            state.globalCustomizeAuthorizer,
+                        )}"
                     } else {
                         description
                     }
@@ -204,10 +202,10 @@ fun SegmentedColumnScope.dataAuthorizerWidget(
                     value = customizeAuthorizer,
                     onValueChange = { dispatch(EditViewAction.ChangeDataCustomizeAuthorizer(it)) },
                     maxLines = 8,
-                    isError = state.data.errorCustomizeAuthorizer
+                    isError = state.data.errorCustomizeAuthorizer,
                 )
             }
-        }
+        },
     )
 }
 
@@ -236,11 +234,7 @@ fun DataInstallModeWidget(state: EditViewState, dispatch: (EditViewAction) -> Un
 }
 
 @Composable
-fun DataAutoApproveSessionWidget(
-    state: EditViewState,
-    dispatch: (EditViewAction) -> Unit,
-    onEnableRequest: () -> Unit
-) {
+fun DataAutoApproveSessionWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit, onEnableRequest: () -> Unit) {
     val isDhizuku = state.isDhizukuAuthorizerActive
     val enabled = !isDhizuku && !state.labRespectPlatformInstallPolicy
     SwitchWidget(
@@ -252,8 +246,8 @@ fun DataAutoApproveSessionWidget(
                     R.string.config_auto_approve_session_disabled_desc
                 } else {
                     R.string.config_auto_approve_session_desc
-                }
-            )
+                },
+            ),
         ),
         enabled = enabled,
         checked = state.data.autoApproveSession,
@@ -263,20 +257,17 @@ fun DataAutoApproveSessionWidget(
             } else {
                 dispatch(EditViewAction.ChangeDataAutoApproveSession(false))
             }
-        }
+        },
     )
 }
 
 @Composable
-fun DataToastModeWidget(
-    state: EditViewState,
-    dispatch: (EditViewAction) -> Unit
-) {
+fun DataToastModeWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit) {
     val currentMode = state.data.toastMode
     val data = mapOf(
         ToastMode.Disable to stringResource(R.string.config_toast_mode_disable),
         ToastMode.BackgroundOnly to stringResource(R.string.config_toast_mode_background_only),
-        ToastMode.Always to stringResource(R.string.config_toast_mode_always)
+        ToastMode.Always to stringResource(R.string.config_toast_mode_always),
     )
 
     DropDownMenuWidget(
@@ -314,13 +305,13 @@ fun SegmentedColumnScope.dataInstallReasonWidget(state: EditViewState, dispatch:
                         R.string.config_customize_install_reason_desc
                     } else {
                         R.string.config_customize_install_reason_disabled_desc
-                    }
+                    },
                 ),
                 enabled = enabled,
                 checked = expanded,
                 onCheckedChange = {
                     dispatch(EditViewAction.ChangeDataEnableCustomizeInstallReason(it))
-                }
+                },
             )
         },
         bottomContent = {
@@ -329,7 +320,7 @@ fun SegmentedColumnScope.dataInstallReasonWidget(state: EditViewState, dispatch:
                 InstallReason.POLICY to stringResource(R.string.config_install_reason_policy),
                 InstallReason.DEVICE_RESTORE to stringResource(R.string.config_install_reason_device_restore),
                 InstallReason.DEVICE_SETUP to stringResource(R.string.config_install_reason_device_setup),
-                InstallReason.USER to stringResource(R.string.config_install_reason_user)
+                InstallReason.USER to stringResource(R.string.config_install_reason_user),
             )
 
             DropDownMenuWidget(
@@ -343,14 +334,14 @@ fun SegmentedColumnScope.dataInstallReasonWidget(state: EditViewState, dispatch:
                     dispatch(EditViewAction.ChangeDataInstallReason(reason))
                 }
             }
-        }
+        },
     )
 }
 
 fun SegmentedColumnScope.dataPackageSourceWidget(
     state: EditViewState,
     dispatch: (EditViewAction) -> Unit,
-    visible: Boolean = true
+    visible: Boolean = true,
 ) {
     val enableCustomizePackageSource = state.data.enableCustomizePackageSource
     val currentSource = state.data.packageSource
@@ -363,6 +354,7 @@ fun SegmentedColumnScope.dataPackageSourceWidget(
             val description = when {
                 state.labRespectPlatformInstallPolicy ->
                     stringResource(R.string.config_customize_package_source_disabled_desc)
+
                 else -> stringResource(id = R.string.config_customize_package_source_desc)
             }
             SwitchWidget(
@@ -373,7 +365,7 @@ fun SegmentedColumnScope.dataPackageSourceWidget(
                 enabled = enabled,
                 onCheckedChange = {
                     dispatch(EditViewAction.ChangeDataEnableCustomizePackageSource(it))
-                }
+                },
             )
         },
         bottomContent = {
@@ -395,14 +387,14 @@ fun SegmentedColumnScope.dataPackageSourceWidget(
                     dispatch(EditViewAction.ChangeDataPackageSource(source))
                 }
             }
-        }
+        },
     )
 }
 
 fun SegmentedColumnScope.dataInstallRequesterWidget(
     state: EditViewState,
     dispatch: (EditViewAction) -> Unit,
-    visible: Boolean = true
+    visible: Boolean = true,
 ) {
     val stateData = state.data
     val currentMode = stateData.installRequesterMode
@@ -419,11 +411,14 @@ fun SegmentedColumnScope.dataInstallRequesterWidget(
             val data = mapOf(
                 InstallRequesterMode.Disable to stringResource(R.string.config_install_requester_mode_disable),
                 InstallRequesterMode.Initiator to stringResource(R.string.config_installer_mode_initiator),
-                InstallRequesterMode.Custom to stringResource(R.string.config_installer_mode_custom)
+                InstallRequesterMode.Custom to stringResource(R.string.config_installer_mode_custom),
             )
             val description = if (currentMode == InstallRequesterMode.Custom) {
-                if (isError) stringResource(R.string.config_declare_install_requester_error_desc)
-                else stringResource(R.string.config_declare_install_requester_desc)
+                if (isError) {
+                    stringResource(R.string.config_declare_install_requester_error_desc)
+                } else {
+                    stringResource(R.string.config_declare_install_requester_desc)
+                }
             } else {
                 data[currentMode]
             }
@@ -433,7 +428,7 @@ fun SegmentedColumnScope.dataInstallRequesterWidget(
                 description = description,
                 choice = data.keys.toList().indexOf(currentMode),
                 data = data.values.toList(),
-                isError = isError
+                isError = isError,
             ) { index ->
                 data.keys.toList().getOrNull(index)?.let { mode ->
                     dispatch(EditViewAction.ChangeDataInstallRequesterMode(mode))
@@ -460,21 +455,21 @@ fun SegmentedColumnScope.dataInstallRequesterWidget(
                             if (uid != null) {
                                 Text(
                                     text = "UID: $uid",
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.primary,
                                 )
                             } else {
                                 Text(
                                     text = stringResource(R.string.config_error_package_not_found),
-                                    color = MaterialTheme.colorScheme.error
+                                    color = MaterialTheme.colorScheme.error,
                                 )
                             }
                         } else {
                             Text(text = stringResource(R.string.config_error_package_name_empty))
                         }
-                    }
+                    },
                 )
             }
-        }
+        },
     )
 }
 
@@ -493,7 +488,7 @@ fun SegmentedColumnScope.dataDeclareInstallerWidget(state: EditViewState, dispat
             val data = mapOf(
                 InstallerMode.Self to stringResource(R.string.config_installer_mode_self),
                 InstallerMode.Initiator to stringResource(R.string.config_installer_mode_initiator),
-                InstallerMode.Custom to stringResource(R.string.config_installer_mode_custom)
+                InstallerMode.Custom to stringResource(R.string.config_installer_mode_custom),
             )
 
             val description = state.dhizukuAwareDescription(
@@ -503,7 +498,7 @@ fun SegmentedColumnScope.dataDeclareInstallerWidget(state: EditViewState, dispat
                             isSystemPackageInstallerActive(
                                 stateAuthorizer = stateAuthorizer,
                                 globalAuthorizer = globalAuthorizer,
-                                isSystemApp = capabilityProvider.isSystemApp
+                                isSystemApp = capabilityProvider.isSystemApp,
                             )
                         ) {
                             R.string.config_declare_installer_system_default_desc
@@ -512,9 +507,11 @@ fun SegmentedColumnScope.dataDeclareInstallerWidget(state: EditViewState, dispat
                         }
                         stringResource(descRes)
                     }
+
                     InstallerMode.Initiator -> stringResource(R.string.config_installer_mode_initiator)
+
                     InstallerMode.Custom -> stringResource(R.string.config_installer_mode_custom)
-                }
+                },
             )
 
             DropDownMenuWidget(
@@ -534,7 +531,7 @@ fun SegmentedColumnScope.dataDeclareInstallerWidget(state: EditViewState, dispat
         },
         bottomContent = {
             DataInstallerWidget(state, dispatch)
-        }
+        },
     )
 }
 
@@ -556,7 +553,7 @@ fun DataInstallerWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit
             onExpandedChange = { expanded = !expanded },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp, horizontal = 16.dp)
+                .padding(vertical = 8.dp, horizontal = 16.dp),
         ) {
             OutlinedTextField(
                 modifier = Modifier
@@ -580,7 +577,7 @@ fun DataInstallerWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit
                     }
                 },
                 singleLine = true,
-                isError = stateData.errorInstaller
+                isError = stateData.errorInstaller,
             )
 
             DropdownMenuPopup(
@@ -589,18 +586,18 @@ fun DataInstallerWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit
                 modifier = Modifier.exposedDropdownSize(),
                 properties = PopupProperties(
                     focusable = true,
-                    clippingEnabled = false
-                )
+                    clippingEnabled = false,
+                ),
             ) {
                 DropdownMenuGroup(
-                    shapes = MenuDefaults.groupShapes()
+                    shapes = MenuDefaults.groupShapes(),
                 ) {
                     if (managedPackages.isEmpty()) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.config_no_managed_packages_to_suggest)) },
                             onClick = { expanded = false },
                             enabled = false,
-                            shape = MenuDefaults.standaloneItemShape
+                            shape = MenuDefaults.standaloneItemShape,
                         )
                     } else {
                         val count = managedPackages.size
@@ -613,7 +610,7 @@ fun DataInstallerWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit
                                     expanded = false
                                 },
                                 text = { Text("${item.name} (${item.packageName})") },
-                                shapes = MenuDefaults.itemShape(index = index, count = count)
+                                shapes = MenuDefaults.itemShape(index = index, count = count),
                             )
                         }
                     }
@@ -636,13 +633,13 @@ fun SegmentedColumnScope.dataUserWidget(state: EditViewState, dispatch: (EditVie
                 icon = AppIcons.InstallUser,
                 title = stringResource(id = R.string.config_customize_user),
                 description = stringResource(
-                    id = state.dhizukuAwareDescriptionRes(R.string.config_customize_user_desc)
+                    id = state.dhizukuAwareDescriptionRes(R.string.config_customize_user_desc),
                 ),
                 checked = enableCustomizeUser,
                 enabled = !isDhizuku,
                 onCheckedChange = {
                     dispatch(EditViewAction.ChangeDataCustomizeUser(it))
-                }
+                },
             )
         },
         bottomContent = {
@@ -657,7 +654,7 @@ fun SegmentedColumnScope.dataUserWidget(state: EditViewState, dispatch: (EditVie
                     dispatch(EditViewAction.ChangeDataTargetUserId(it))
                 }
             }
-        }
+        },
     )
 }
 
@@ -672,13 +669,13 @@ fun SegmentedColumnScope.dataManualDexoptWidget(state: EditViewState, dispatch: 
             icon = Icons.TwoTone.Speed,
             title = stringResource(id = R.string.config_manual_dexopt),
             description = stringResource(
-                id = state.dhizukuAwareDescriptionRes(R.string.config_manual_dexopt_desc)
+                id = state.dhizukuAwareDescriptionRes(R.string.config_manual_dexopt_desc),
             ),
             checked = expanded,
             enabled = !isDhizuku,
             onCheckedChange = {
                 dispatch(EditViewAction.ChangeDataEnableManualDexopt(it))
-            }
+            },
         )
     }
 
@@ -686,7 +683,7 @@ fun SegmentedColumnScope.dataManualDexoptWidget(state: EditViewState, dispatch: 
         animatedVisibility = showDexoptOptions,
         topPadding = 1.dp,
         forceFlatTop = true,
-        forceFlatBottom = true
+        forceFlatBottom = true,
     ) {
         SwitchWidget(
             title = stringResource(id = R.string.config_force_dexopt),
@@ -694,7 +691,7 @@ fun SegmentedColumnScope.dataManualDexoptWidget(state: EditViewState, dispatch: 
             checked = state.data.forceDexopt,
             onCheckedChange = {
                 dispatch(EditViewAction.ChangeDataForceDexopt(it))
-            }
+            },
         )
     }
 
@@ -703,7 +700,7 @@ fun SegmentedColumnScope.dataManualDexoptWidget(state: EditViewState, dispatch: 
     item(
         animatedVisibility = showDexoptOptions,
         topPadding = 1.dp,
-        forceFlatTop = true
+        forceFlatTop = true,
     ) {
         val data = mapOf(
             DexoptMode.Verify to stringResource(R.string.config_dexopt_mode_verify),
@@ -735,7 +732,7 @@ fun SegmentedColumnScope.dataAutoDeleteWidget(state: EditViewState, dispatch: (E
                 title = stringResource(id = R.string.config_auto_delete),
                 description = stringResource(id = R.string.config_auto_delete_desc),
                 checked = expanded,
-                onCheckedChange = { dispatch(EditViewAction.ChangeDataAutoDelete(it)) }
+                onCheckedChange = { dispatch(EditViewAction.ChangeDataAutoDelete(it)) },
             )
         },
         bottomContent = {
@@ -745,9 +742,9 @@ fun SegmentedColumnScope.dataAutoDeleteWidget(state: EditViewState, dispatch: (E
                 checked = state.data.autoDeleteZip,
                 onCheckedChange = {
                     dispatch(EditViewAction.ChangeDataZipAutoDelete(it))
-                }
+                },
             )
-        }
+        },
     )
 }
 
@@ -758,7 +755,7 @@ fun DisplaySdkWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit) {
         title = stringResource(id = R.string.config_display_sdk_version),
         description = stringResource(id = R.string.config_display_sdk_version_desc),
         checked = state.data.displaySdk,
-        onCheckedChange = { dispatch(EditViewAction.ChangeDisplaySdk(it)) }
+        onCheckedChange = { dispatch(EditViewAction.ChangeDisplaySdk(it)) },
     )
 }
 
@@ -769,7 +766,7 @@ fun DisplaySizeWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit) 
         title = stringResource(id = R.string.config_display_size),
         description = stringResource(id = R.string.config_display_size_desc),
         checked = state.data.displaySize,
-        onCheckedChange = { dispatch(EditViewAction.ChangeDisplaySize(it)) }
+        onCheckedChange = { dispatch(EditViewAction.ChangeDisplaySize(it)) },
     )
 }
 
@@ -780,7 +777,7 @@ fun DataForAllUserWidget(state: EditViewState, dispatch: (EditViewAction) -> Uni
         title = stringResource(id = R.string.config_all_users),
         description = stringResource(id = R.string.config_all_users_desc),
         checked = state.data.forAllUser,
-        onCheckedChange = { dispatch(EditViewAction.ChangeDataForAllUser(it)) }
+        onCheckedChange = { dispatch(EditViewAction.ChangeDataForAllUser(it)) },
     )
 }
 
@@ -791,11 +788,11 @@ fun DataAllowTestOnlyWidget(state: EditViewState, dispatch: (EditViewAction) -> 
         icon = AppIcons.BugReport,
         title = stringResource(id = R.string.config_allow_test),
         description = stringResource(
-            id = state.dhizukuAwareDescriptionRes(R.string.config_allow_test_desc)
+            id = state.dhizukuAwareDescriptionRes(R.string.config_allow_test_desc),
         ),
         enabled = !isDhizuku,
         checked = state.data.allowTestOnly,
-        onCheckedChange = { dispatch(EditViewAction.ChangeDataAllowTestOnly(it)) }
+        onCheckedChange = { dispatch(EditViewAction.ChangeDataAllowTestOnly(it)) },
     )
 }
 
@@ -806,11 +803,11 @@ fun DataAllowDowngradeWidget(state: EditViewState, dispatch: (EditViewAction) ->
         icon = AppIcons.InstallAllowDowngrade,
         title = stringResource(id = R.string.config_allow_downgrade),
         description = stringResource(
-            id = state.dhizukuAwareDescriptionRes(R.string.config_allow_downgrade_desc)
+            id = state.dhizukuAwareDescriptionRes(R.string.config_allow_downgrade_desc),
         ),
         enabled = !isDhizuku,
         checked = state.data.allowDowngrade,
-        onCheckedChange = { dispatch(EditViewAction.ChangeDataAllowDowngrade(it)) }
+        onCheckedChange = { dispatch(EditViewAction.ChangeDataAllowDowngrade(it)) },
     )
 }
 
@@ -821,11 +818,11 @@ fun DataBypassLowTargetSdkWidget(state: EditViewState, dispatch: (EditViewAction
         icon = AppIcons.InstallBypassLowTargetSdk,
         title = stringResource(id = R.string.config_bypass_low_target_sdk),
         description = stringResource(
-            id = state.dhizukuAwareDescriptionRes(R.string.config_bypass_low_target_sdk_desc)
+            id = state.dhizukuAwareDescriptionRes(R.string.config_bypass_low_target_sdk_desc),
         ),
         enabled = !isDhizuku,
         checked = state.data.bypassLowTargetSdk,
-        onCheckedChange = { dispatch(EditViewAction.ChangeDataBypassLowTargetSdk(it)) }
+        onCheckedChange = { dispatch(EditViewAction.ChangeDataBypassLowTargetSdk(it)) },
     )
 }
 
@@ -836,18 +833,25 @@ fun DataAllowSigMismatchWidget(state: EditViewState, dispatch: (EditViewAction) 
         title = stringResource(id = R.string.config_allow_sig_mismatch),
         description = stringResource(id = R.string.config_allow_sig_mismatch_desc),
         checked = !state.data.allowSigMismatch,
-        onCheckedChange = { dispatch(EditViewAction.ChangeDataAllowSigMismatch(!it)) }
+        onCheckedChange = { dispatch(EditViewAction.ChangeDataAllowSigMismatch(!it)) },
     )
 }
 
 @Composable
 fun DataAllowSigUnknownWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit) {
+    val description = buildString {
+        append(stringResource(id = R.string.config_allow_sig_unknown_desc))
+        if (state.allowInternetAccess) {
+            append('\n')
+            append(stringResource(id = R.string.config_allow_sig_unknown_http_lightweight_desc))
+        }
+    }
     SwitchWidget(
         icon = AppIcons.InstallAllowSigUnknown,
         title = stringResource(id = R.string.config_allow_sig_unknown),
-        description = stringResource(id = R.string.config_allow_sig_unknown_desc),
+        description = description,
         checked = !state.data.allowSigUnknown,
-        onCheckedChange = { dispatch(EditViewAction.ChangeDataAllowSigUnknown(!it)) }
+        onCheckedChange = { dispatch(EditViewAction.ChangeDataAllowSigUnknown(!it)) },
     )
 }
 
@@ -858,11 +862,11 @@ fun DataAllowAllRequestedPermissionsWidget(state: EditViewState, dispatch: (Edit
         icon = AppIcons.InstallAllowAllRequestedPermissions,
         title = stringResource(id = R.string.config_grant_all_permissions),
         description = stringResource(
-            id = state.dhizukuAwareDescriptionRes(R.string.config_grant_all_permissions_desc)
+            id = state.dhizukuAwareDescriptionRes(R.string.config_grant_all_permissions_desc),
         ),
         enabled = !isDhizuku,
         checked = state.data.allowAllRequestedPermissions,
-        onCheckedChange = { dispatch(EditViewAction.ChangeDataAllowAllRequestedPermissions(it)) }
+        onCheckedChange = { dispatch(EditViewAction.ChangeDataAllowAllRequestedPermissions(it)) },
     )
 }
 
@@ -873,11 +877,11 @@ fun DataRequestUpdateOwnershipWidget(state: EditViewState, dispatch: (EditViewAc
         icon = AppIcons.InstallRequestUpdateOwnership,
         title = stringResource(id = R.string.config_request_update_ownership),
         description = stringResource(
-            id = state.dhizukuAwareDescriptionRes(R.string.config_request_update_ownership_desc)
+            id = state.dhizukuAwareDescriptionRes(R.string.config_request_update_ownership_desc),
         ),
         enabled = !isDhizuku,
         checked = state.data.requestUpdateOwnership,
-        onCheckedChange = { dispatch(EditViewAction.ChangeDataRequestUpdateOwnership(it)) }
+        onCheckedChange = { dispatch(EditViewAction.ChangeDataRequestUpdateOwnership(it)) },
     )
 }
 
@@ -888,7 +892,7 @@ fun DataSplitChooseAllWidget(state: EditViewState, dispatch: (EditViewAction) ->
         title = stringResource(id = R.string.config_split_choose_all),
         description = stringResource(id = R.string.config_split_choose_all_desc),
         checked = state.data.splitChooseAll,
-        onCheckedChange = { dispatch(EditViewAction.ChangeSplitChooseAll(it)) }
+        onCheckedChange = { dispatch(EditViewAction.ChangeSplitChooseAll(it)) },
     )
 }
 
@@ -899,7 +903,7 @@ fun DataApkChooseAllWidget(state: EditViewState, dispatch: (EditViewAction) -> U
         title = stringResource(id = R.string.config_apk_choose_all),
         description = stringResource(id = R.string.config_apk_choose_all_desc),
         checked = state.data.apkChooseAll,
-        onCheckedChange = { dispatch(EditViewAction.ChangeApkChooseAll(it)) }
+        onCheckedChange = { dispatch(EditViewAction.ChangeApkChooseAll(it)) },
     )
 }
 
@@ -910,6 +914,6 @@ fun DataRequireBiometricAuthWidget(state: EditViewState, dispatch: (EditViewActi
         title = stringResource(id = R.string.installer_settings_require_biometric_auth),
         description = stringResource(id = R.string.installer_settings_require_biometric_auth_desc),
         checked = state.data.requireBiometricAuth,
-        onCheckedChange = { dispatch(EditViewAction.ChangeRequireBiometricAuth(it)) }
+        onCheckedChange = { dispatch(EditViewAction.ChangeRequireBiometricAuth(it)) },
     )
 }

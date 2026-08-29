@@ -27,6 +27,7 @@ import android.os.IBinder
 import android.os.IUserManager
 import android.os.Parcel
 import android.os.ParcelFileDescriptor
+import android.os.Process as AndroidProcess
 import android.os.RemoteException
 import android.os.ResultReceiver
 import android.provider.Settings
@@ -41,18 +42,17 @@ import com.rosan.installer.core.reflection.invokeStatic
 import com.rosan.installer.framework.privileged.core.context.hook.resolveSettingsBinder
 import com.rosan.installer.util.deletePaths
 import com.rosan.installer.util.pm.REASON_REMIND_OWNERSHIP
-import org.koin.core.component.inject
-import timber.log.Timber
 import java.io.File
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
-import android.os.Process as AndroidProcess
+import org.koin.core.component.inject
+import timber.log.Timber
 
 @SuppressLint("PrivateApi")
-class DefaultPrivilegedService private constructor(
-    private val runtime: PrivilegedRuntime
-) : BasePrivilegedService(), PrivilegedOperations {
+class DefaultPrivilegedService private constructor(private val runtime: PrivilegedRuntime) :
+    BasePrivilegedService(),
+    PrivilegedOperations {
     companion object {
         private const val TAG = "PrivilegedService"
 
@@ -67,11 +67,7 @@ class DefaultPrivilegedService private constructor(
 
         fun shizukuHook() = DefaultPrivilegedService(PrivilegedRuntime.ShizukuHooked)
 
-        fun binderWrapped(
-            name: String,
-            useAppCallerPackage: Boolean,
-            binderWrapper: (IBinder) -> IBinder
-        ) = DefaultPrivilegedService(PrivilegedRuntime.BinderWrapped(name, useAppCallerPackage, binderWrapper))
+        fun binderWrapped(name: String, useAppCallerPackage: Boolean, binderWrapper: (IBinder) -> IBinder) = DefaultPrivilegedService(PrivilegedRuntime.BinderWrapped(name, useAppCallerPackage, binderWrapper))
     }
 
     private val reflect by inject<ReflectionProvider>()
@@ -104,37 +100,24 @@ class DefaultPrivilegedService private constructor(
         runtime.appOpsManager(context, reflect)
     }
 
-    private fun getApplicationInfo(
-        packageName: String,
-        flags: Long,
-        userId: Int
-    ): ApplicationInfo? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    private fun getApplicationInfo(packageName: String, flags: Long, userId: Int): ApplicationInfo? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         iPackageManager.getApplicationInfo(packageName, flags, userId)
     } else {
         iPackageManager.getApplicationInfo(packageName, flags.toInt(), userId)
     }
 
-    private fun getPackageInfo(
-        packageName: String,
-        flags: Long,
-        userId: Int
-    ): PackageInfo? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    private fun getPackageInfo(packageName: String, flags: Long, userId: Int): PackageInfo? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         iPackageManager.getPackageInfo(packageName, flags, userId)
     } else {
         iPackageManager.getPackageInfo(packageName, flags.toInt(), userId)
     }
 
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    private fun getUpdateOwnerPackageName(packageName: String, userId: Int): String? =
-        iPackageManager.getInstallSourceInfo(packageName, userId).updateOwnerPackageName
+    private fun getUpdateOwnerPackageName(packageName: String, userId: Int): String? = iPackageManager.getInstallSourceInfo(packageName, userId).updateOwnerPackageName
 
-    override fun delete(paths: Array<out String>) = deletePaths(paths.toList())
+    override fun delete(paths: Array<out String>) = deletePaths(context, paths.toList())
 
-    override fun performDexOpt(
-        packageName: String,
-        compilerFilter: String,
-        force: Boolean
-    ): Boolean {
+    override fun performDexOpt(packageName: String, compilerFilter: String, force: Boolean): Boolean {
         Timber.tag(TAG).d("performDexOpt: $packageName, filter=$compilerFilter, force=$force")
 
         return try {
@@ -154,7 +137,7 @@ class DefaultPrivilegedService private constructor(
             // Do not call ServiceManager.getService("package") again here.
             sendPackageShellCommandOneway(
                 binder = iPackageManager.asBinder(),
-                args = args
+                args = args,
             )
 
             Timber.tag(TAG).d("Dexopt command dispatched: ${args.joinToString(" ")}")
@@ -174,7 +157,7 @@ class DefaultPrivilegedService private constructor(
             component.flattenToShortString(),
             enable,
             userId,
-            canCallSystemRestrictedPreferredApis
+            canCallSystemRestrictedPreferredApis,
         )
 
         // Reset state for our own package
@@ -182,7 +165,7 @@ class DefaultPrivilegedService private constructor(
         clearPackageActivities(
             packageName = component.packageName,
             userId = userId,
-            canCallSystemRestrictedPreferredApis = canCallSystemRestrictedPreferredApis
+            canCallSystemRestrictedPreferredApis = canCallSystemRestrictedPreferredApis,
         )
 
         if (!enable) {
@@ -200,7 +183,7 @@ class DefaultPrivilegedService private constructor(
                 addCategory(Intent.CATEGORY_DEFAULT)
                 setDataAndType(
                     "content://storage/emulated/0/test.apk".toUri(),
-                    "application/vnd.android.package-archive"
+                    "application/vnd.android.package-archive",
                 )
             }
 
@@ -209,7 +192,7 @@ class DefaultPrivilegedService private constructor(
                 intent,
                 "application/vnd.android.package-archive",
                 PackageManager.MATCH_DEFAULT_ONLY,
-                userId
+                userId,
             )
 
             val names = mutableListOf<ComponentName>()
@@ -224,7 +207,7 @@ class DefaultPrivilegedService private constructor(
                     clearPackageActivities(
                         packageName = infoPackageName,
                         userId = userId,
-                        canCallSystemRestrictedPreferredApis = canCallSystemRestrictedPreferredApis
+                        canCallSystemRestrictedPreferredApis = canCallSystemRestrictedPreferredApis,
                     )
                 }
 
@@ -251,7 +234,7 @@ class DefaultPrivilegedService private constructor(
                 component = component,
                 userId = userId,
                 removeExisting = true,
-                canCallSystemRestrictedPreferredApis = canCallSystemRestrictedPreferredApis
+                canCallSystemRestrictedPreferredApis = canCallSystemRestrictedPreferredApis,
             )
         }
 
@@ -259,21 +242,19 @@ class DefaultPrivilegedService private constructor(
     }
 
     @Throws(RemoteException::class)
-    override fun execArr(command: Array<String>): String {
-        return try {
-            // Execute shell command
-            val process = Runtime.getRuntime().exec(command)
-            // Read execution result
-            readResult(process)
-        } catch (e: IOException) {
-            // Wrap IOException in RemoteException and throw
-            throw RemoteException(e.message)
-        } catch (e: InterruptedException) {
-            // Restore thread's interrupted status
-            Thread.currentThread().interrupt()
-            // Wrap InterruptedException in RemoteException and throw
-            throw RemoteException(e.message)
-        }
+    override fun execArr(command: Array<String>): String = try {
+        // Execute shell command
+        val process = Runtime.getRuntime().exec(command)
+        // Read execution result
+        readResult(process)
+    } catch (e: IOException) {
+        // Wrap IOException in RemoteException and throw
+        throw RemoteException(e.message)
+    } catch (e: InterruptedException) {
+        // Restore thread's interrupted status
+        Thread.currentThread().interrupt()
+        // Wrap InterruptedException in RemoteException and throw
+        throw RemoteException(e.message)
     }
 
     @Throws(RemoteException::class)
@@ -337,7 +318,6 @@ class DefaultPrivilegedService private constructor(
 
             // Notify client that the process is complete
             listener.onComplete(if (processFinished) process.exitValue() else -1)
-
         } catch (e: Exception) {
             // If process creation itself fails
             val errorMessage = "Failed to execute command: ${e.message}"
@@ -401,7 +381,6 @@ class DefaultPrivilegedService private constructor(
 
                 val result = Settings.Global.putInt(targetResolver, key, targetValue)
                 Timber.tag(TAG).i("Set $key to $targetValue. Result: $result")
-
             } catch (e: Exception) {
                 Timber.tag(TAG).e(e, "Failed to putInt for ADB verify")
             } finally {
@@ -428,7 +407,6 @@ class DefaultPrivilegedService private constructor(
             iPackageManager.grantRuntimePermission(packageName, permission, userId)
 
             Timber.tag(TAG).i("Successfully granted $permission to $packageName")
-
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "ERROR granting permission")
             throw RemoteException("Failed to grant permission via system API: ${e.message}")
@@ -471,7 +449,7 @@ class DefaultPrivilegedService private constructor(
                 0,
                 null as ProfilerInfo?,
                 null as Bundle?,
-                userId
+                userId,
             )
 
             // A result code >= 0 indicates success.
@@ -509,7 +487,7 @@ class DefaultPrivilegedService private constructor(
                 null,
                 false,
                 false,
-                userId
+                userId,
             )
             return true
         } catch (e: SecurityException) {
@@ -608,7 +586,7 @@ class DefaultPrivilegedService private constructor(
         // STRATEGY 2.5: System App Direct File Access
         // ---------------------------------------------------------
         if (path == null && runtime == PrivilegedRuntime.SystemApp) {
-            val sessionDir = File("/data/app/vmdl${sessionId}.tmp")
+            val sessionDir = File("/data/app/vmdl$sessionId.tmp")
             if (sessionDir.exists() && sessionDir.isDirectory) {
                 val apkFiles = sessionDir.listFiles { _, name -> name.endsWith(".apk", true) }
                 if (!apkFiles.isNullOrEmpty()) {
@@ -673,7 +651,7 @@ class DefaultPrivilegedService private constructor(
                 sessionInfo,
                 "isPreApprovalRequested",
                 sessionInfo::class.java,
-                emptyArray()
+                emptyArray(),
             ) == true
         }.getOrDefault(false)
         var sourceAppLabel: CharSequence? = null
@@ -690,8 +668,10 @@ class DefaultPrivilegedService private constructor(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 val pendingReasonResult = runCatching {
                     val pendingReason = reflect.invoke<Int>(
-                        sessionInfo, "getPendingUserActionReason",
-                        sessionInfo::class.java, emptyArray()
+                        sessionInfo,
+                        "getPendingUserActionReason",
+                        sessionInfo::class.java,
+                        emptyArray(),
                     ) ?: 0
                     isOwnershipConflict = (pendingReason == REASON_REMIND_OWNERSHIP)
                 }
@@ -744,7 +724,7 @@ class DefaultPrivilegedService private constructor(
             resolvedLabel?.let { putCharSequence("appLabel", it) }
             putString("packageName", packageName)
             putString("installerPackageName", sessionInfo.installerPackageName)
-            putInt("installerUid", sessionInfo.installerUid)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) putInt("installerUid", sessionInfo.installerUid)
             path?.let { putString("resolvedBaseCodePath", it) }
             putBoolean("isUpdate", isUpdate)
             putBoolean("isOwnershipConflict", isOwnershipConflict)
@@ -765,7 +745,9 @@ class DefaultPrivilegedService private constructor(
             val userManagerInstance = this.iUserManager
 
             val usersList: List<UserInfo>? =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && Build.VERSION.SDK_INT_FULL <= Build.VERSION_CODES_FULL.BAKLAVA) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                    Build.VERSION.SDK_INT_FULL <= Build.VERSION_CODES_FULL.BAKLAVA
+                ) {
                     userManagerInstance.getUsers(false, false, false)
                 } else {
                     userManagerInstance.getUsers(false)
@@ -797,11 +779,15 @@ class DefaultPrivilegedService private constructor(
 
             // The integer 3 actually means FIREWALL_CHAIN_POWERSAVE (Whitelist mode).
             // We must use 9, which represents FIREWALL_CHAIN_OEM_DENY_3 (Blacklist mode).
-            val chain = 9
+            val chain = IConnectivityManager.FIREWALL_CHAIN_OEM_DENY_3
 
             // FIREWALL_RULE_DEFAULT = 0, FIREWALL_RULE_ALLOW = 1, FIREWALL_RULE_DENY = 2
             // For a DENY chain, use DENY (2) to block, and DEFAULT (0) to remove the block.
-            val rule = if (enabled) 0 else 2
+            val rule = if (enabled) {
+                IConnectivityManager.FIREWALL_RULE_DEFAULT
+            } else {
+                IConnectivityManager.FIREWALL_RULE_DENY
+            }
 
             if (!enabled) {
                 // Block network: Ensure the chain is enabled, then apply DENY rule to the UID
@@ -836,7 +822,7 @@ class DefaultPrivilegedService private constructor(
                 uid,
                 packageName,
                 null,
-                "Started package installation activity"
+                "Started package installation activity",
             )
         } else {
             @Suppress("Deprecation")
@@ -852,32 +838,29 @@ class DefaultPrivilegedService private constructor(
                 String::class.java,
                 Int::class.javaPrimitiveType!!,
                 String::class.java,
-                Int::class.javaPrimitiveType!!
+                Int::class.javaPrimitiveType!!,
             )?.invoke(appOpsManager, op, uid, packageName, AppOpsManager.MODE_ERRORED)
         }
 
         return mode
     }
 
-    private fun sendPackageShellCommandOneway(
-        binder: IBinder,
-        args: Array<String>
-    ) {
+    private fun sendPackageShellCommandOneway(binder: IBinder, args: Array<String>) {
         val data = Parcel.obtain()
 
         val stdin = ParcelFileDescriptor.open(
             File("/dev/null"),
-            ParcelFileDescriptor.MODE_READ_ONLY
+            ParcelFileDescriptor.MODE_READ_ONLY,
         )
 
         val stdout = ParcelFileDescriptor.open(
             File("/dev/null"),
-            ParcelFileDescriptor.MODE_WRITE_ONLY
+            ParcelFileDescriptor.MODE_WRITE_ONLY,
         )
 
         val stderr = ParcelFileDescriptor.open(
             File("/dev/null"),
-            ParcelFileDescriptor.MODE_WRITE_ONLY
+            ParcelFileDescriptor.MODE_WRITE_ONLY,
         )
 
         try {
@@ -895,7 +878,7 @@ class DefaultPrivilegedService private constructor(
                 SHELL_COMMAND_TRANSACTION,
                 data,
                 null,
-                FLAG_ONEWAY
+                FLAG_ONEWAY,
             )
         } finally {
             data.recycle()
@@ -911,7 +894,7 @@ class DefaultPrivilegedService private constructor(
         val method = shellCallbackClass.getDeclaredMethod(
             "writeToParcel",
             shellCallbackClass,
-            Parcel::class.java
+            Parcel::class.java,
         )
 
         method.invoke(null, null, parcel)
@@ -921,11 +904,7 @@ class DefaultPrivilegedService private constructor(
      * Clears both preferred and persistent preferred activities for a specific package.
      * Includes error handling to prevent crashes on restricted environments.
      */
-    private fun clearPackageActivities(
-        packageName: String,
-        userId: Int,
-        canCallSystemRestrictedPreferredApis: Boolean
-    ) {
+    private fun clearPackageActivities(packageName: String, userId: Int, canCallSystemRestrictedPreferredApis: Boolean) {
         // 1. Clear standard preferred activities (Always try)
         try {
             Timber.tag(TAG).d("Clearing standard preferred activities for $packageName")
@@ -961,7 +940,7 @@ class DefaultPrivilegedService private constructor(
         component: ComponentName,
         userId: Int,
         removeExisting: Boolean,
-        canCallSystemRestrictedPreferredApis: Boolean
+        canCallSystemRestrictedPreferredApis: Boolean,
     ) {
         // 1. Add standard preferred activity
         try {
@@ -994,7 +973,7 @@ class DefaultPrivilegedService private constructor(
         intent: Intent,
         resolvedType: String?,
         flags: Int,
-        userId: Int
+        userId: Int,
     ): List<ResolveInfo> = try {
         val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             iPackageManager.queryIntentActivities(intent, resolvedType, flags.toLong(), userId)

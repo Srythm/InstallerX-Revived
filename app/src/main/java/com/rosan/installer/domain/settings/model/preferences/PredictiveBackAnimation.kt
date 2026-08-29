@@ -9,7 +9,8 @@ enum class PredictiveBackAnimation(val value: String) {
     None("none"),
     AOSP("aosp"),
     Scale("scale"),
-    Classic("ksu_classic");
+    Classic("ksu_classic"),
+    ;
 
     companion object {
         fun fromValueOrDefault(value: String) = entries.find { it.value == value } ?: AOSP

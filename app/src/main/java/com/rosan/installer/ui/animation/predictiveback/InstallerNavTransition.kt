@@ -6,10 +6,7 @@ import com.rosan.installer.domain.settings.model.preferences.PredictiveBackAnima
 import com.rosan.installer.domain.settings.model.preferences.PredictiveBackExitDirection
 import top.yukonga.miuix.kmp.nav.transition.NavTransition
 
-fun installerNavTransition(
-    animation: PredictiveBackAnimation,
-    exitDirection: PredictiveBackExitDirection,
-): NavTransition = when (animation) {
+fun installerNavTransition(animation: PredictiveBackAnimation, exitDirection: PredictiveBackExitDirection): NavTransition = when (animation) {
     PredictiveBackAnimation.None -> NoPredictiveBackTransition
     PredictiveBackAnimation.AOSP -> AospNavTransition
     PredictiveBackAnimation.Scale -> scaleNavTransition(exitDirection)

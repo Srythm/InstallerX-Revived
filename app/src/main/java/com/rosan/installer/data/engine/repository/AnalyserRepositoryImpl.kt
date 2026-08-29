@@ -2,42 +2,43 @@
 // Copyright (C) 2023-2026 iamr0s InstallerX Revived contributors
 package com.rosan.installer.data.engine.repository
 
-import com.rosan.installer.data.engine.parser.FileTypeDetector
 import com.rosan.installer.data.engine.parser.CommonsZipException
+import com.rosan.installer.data.engine.parser.FileTypeDetector
 import com.rosan.installer.data.engine.parser.PackagePreprocessor
 import com.rosan.installer.data.engine.parser.UnifiedContainerAnalyser
 import com.rosan.installer.data.engine.signature.PackageSignatureAnalyzer
 import com.rosan.installer.domain.engine.exception.AnalyseException
 import com.rosan.installer.domain.engine.model.AnalyseExtraEntity
+import com.rosan.installer.domain.engine.model.install.SessionMode
 import com.rosan.installer.domain.engine.model.packageinfo.AppEntity
+import com.rosan.installer.domain.engine.model.packageinfo.PackageAnalysisResult
 import com.rosan.installer.domain.engine.model.packageinfo.PackageSignatureAnalysis
+import com.rosan.installer.domain.engine.model.packageinfo.SignatureMatchStatus
+import com.rosan.installer.domain.engine.model.packageinfo.SignatureVerificationStatus
 import com.rosan.installer.domain.engine.model.source.DataEntity
 import com.rosan.installer.domain.engine.model.source.DataType
-import com.rosan.installer.domain.engine.model.packageinfo.PackageAnalysisResult
-import com.rosan.installer.domain.engine.model.packageinfo.SignatureMatchStatus
-import com.rosan.installer.domain.engine.model.install.SessionMode
 import com.rosan.installer.domain.engine.repository.AnalyserRepository
 import com.rosan.installer.domain.engine.usecase.SelectOptimalSplitsUseCase
 import com.rosan.installer.domain.settings.model.config.ConfigModel
 import kotlinx.coroutines.CancellationException
+import java.util.zip.ZipException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import timber.log.Timber
-import java.util.zip.ZipException
 
 class AnalyserRepositoryImpl(
     private val fileTypeDetector: FileTypeDetector,
     private val unifiedContainerAnalyser: UnifiedContainerAnalyser,
     private val packagePreprocessor: PackagePreprocessor,
     private val packageSignatureAnalyzer: PackageSignatureAnalyzer,
-    private val selectOptimalSplitsUseCase: SelectOptimalSplitsUseCase
+    private val selectOptimalSplitsUseCase: SelectOptimalSplitsUseCase,
 ) : AnalyserRepository {
     override suspend fun doWork(
         config: ConfigModel,
         data: List<DataEntity>,
-        extra: AnalyseExtraEntity
+        extra: AnalyseExtraEntity,
     ): List<PackageAnalysisResult> = coroutineScope {
         if (data.isEmpty()) return@coroutineScope emptyList()
 
@@ -48,7 +49,11 @@ class AnalyserRepositoryImpl(
             async(Dispatchers.IO) {
                 Timber.d("AnalyserRepo: analyzing source -> ${entity.source}")
                 val result = analyzeSingleSource(config, entity, extra)
-                Timber.d("AnalyserRepo: source result -> ${entity.source} yielded ${result.size} entities: ${result.map { it.packageName }}") // [Log 2] 该文件解析出了什么
+                Timber.d(
+                    "AnalyserRepo: source result -> ${entity.source} yielded ${result.size} entities: ${result.map {
+                        it.packageName
+                    }}",
+                ) // [Log 2] 该文件解析出了什么
                 result
             }
         }.awaitAll().flatten()
@@ -64,9 +69,7 @@ class AnalyserRepositoryImpl(
         }
 
         // Step 2: Group, Deduplicate
-        val includeSignature = rawEntities.any { entity ->
-            extra.shouldCheckAppSignatures(entity.sourceType)
-        }
+        val includeSignature = shouldLoadInstalledSignatures(rawEntities, extra)
         val processedGroups = packagePreprocessor.process(rawEntities, includeSignature = includeSignature)
 
         Timber.d("AnalyserRepo: Step 2 Processed. Groups count: ${processedGroups.size}")
@@ -80,7 +83,7 @@ class AnalyserRepositoryImpl(
 
         val hasMixedModuleAndApkInAnyGroup = processedGroups.any { group ->
             group.entities.any { it is AppEntity.ModuleEntity } &&
-                    group.entities.any { it !is AppEntity.ModuleEntity }
+                group.entities.any { it !is AppEntity.ModuleEntity }
         }
 
         val detectedMode = if (
@@ -104,10 +107,12 @@ class AnalyserRepositoryImpl(
                 apkChooseAll = config.apkChooseAll,
                 entities = group.entities,
                 sessionType = sessionDataType.sessionType,
-                sessionMode = detectedMode
+                sessionMode = detectedMode,
             )
 
-            Timber.d("AnalyserRepo: Step 4 Strategy for ${group.packageName} -> Input: ${group.entities.size}, Selected: ${selectableEntities.size}")
+            Timber.d(
+                "AnalyserRepo: Step 4 Strategy for ${group.packageName} -> Input: ${group.entities.size}, Selected: ${selectableEntities.size}",
+            )
 
             if (selectableEntities.isEmpty()) {
                 Timber.w("AnalyserRepo: WARNING! ${group.packageName} has 0 entities after selection!")
@@ -124,12 +129,14 @@ class AnalyserRepositoryImpl(
                 .filter { it.selected }
                 .map { it.app }
                 .filter { it is AppEntity.BaseEntity || it is AppEntity.SplitEntity }
-                .any { entity -> extra.shouldCheckAppSignatures(entity.sourceType) }
+                .any { entity ->
+                    extra.shouldCheckAppSignatures(entity.sourceType) && entity.hasSignatureAnalysisResult()
+                }
 
             val signatureStatus = if (signatureCheckPerformed) {
                 packageSignatureAnalyzer.match(
                     selectedBaseEntity,
-                    group.installedInfo
+                    group.installedInfo,
                 )
             } else {
                 SignatureMatchStatus.NOT_INSTALLED
@@ -138,7 +145,7 @@ class AnalyserRepositoryImpl(
             val signatureAnalysis = if (signatureCheckPerformed) {
                 packageSignatureAnalyzer.analyzeSelection(
                     selectableEntities,
-                    group.installedInfo
+                    group.installedInfo,
                 )
             } else {
                 PackageSignatureAnalysis()
@@ -148,7 +155,7 @@ class AnalyserRepositoryImpl(
             val identityStatus = packagePreprocessor.checkPackageIdentity(
                 baseEntity,
                 group.installedInfo,
-                sessionDataType.sessionType
+                sessionDataType.sessionType,
             )
 
             PackageAnalysisResult(
@@ -159,7 +166,7 @@ class AnalyserRepositoryImpl(
                 signatureMatchStatus = signatureStatus,
                 signatureAnalysis = signatureAnalysis,
                 identityStatus = identityStatus,
-                sessionMode = detectedMode
+                sessionMode = detectedMode,
             )
         }
 
@@ -194,4 +201,26 @@ class AnalyserRepositoryImpl(
             if (e is AnalyseException || e is CommonsZipException || e is ZipException) throw e
             emptyList()
         }
+}
+
+internal fun shouldLoadInstalledSignatures(entities: List<AppEntity>, extra: AnalyseExtraEntity): Boolean = entities.any { entity ->
+    extra.shouldCheckAppSignatures(entity.sourceType) && entity.hasSignatureMetadata()
+}
+
+private fun AppEntity.hasSignatureMetadata(): Boolean = when (this) {
+    is AppEntity.BaseEntity -> signatureInfo != null
+    is AppEntity.SplitEntity -> signatureInfo != null
+    else -> false
+}
+
+private fun AppEntity.hasSignatureAnalysisResult(): Boolean = when (this) {
+    is AppEntity.BaseEntity ->
+        signatureInfo != null &&
+            signatureInfo.verificationStatus != SignatureVerificationStatus.SIGNING_BLOCK_ONLY
+
+    is AppEntity.SplitEntity ->
+        signatureInfo != null &&
+            signatureInfo.verificationStatus != SignatureVerificationStatus.SIGNING_BLOCK_ONLY
+
+    else -> false
 }
