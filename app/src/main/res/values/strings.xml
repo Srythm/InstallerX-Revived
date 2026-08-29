@@ -759,6 +759,8 @@
     <string name="installer_show_oem_special">Show OEM extra info</string>
     <string name="installer_show_oem_special_desc">Analyse and show some specific value for oem apk(s) on install dialog</string>
     <string name="reboot">Reboot</string>
+    <string name="module_reboot_confirm_title">Reboot device?</string>
+    <string name="module_reboot_confirm_desc">The module has been installed. The device will restart immediately to apply it.</string>
     <string name="reboot_userspace">Reboot userspace</string>
     <string name="reboot_recovery">Reboot to Recovery</string>
     <string name="reboot_bootloader">Reboot to Bootloader</string>

@@ -33,6 +33,7 @@ import com.rosan.installer.ui.page.main.installer.components.PositionDialog
 import com.rosan.installer.ui.page.main.installer.components.PositionFullScreen
 import com.rosan.installer.ui.page.main.installer.components.workingIcon
 import com.rosan.installer.ui.page.main.installer.dialog.inner.ModuleInstallSheetContent
+import com.rosan.installer.ui.page.main.installer.dialog.inner.ModuleInstallFullScreenContent
 import com.rosan.installer.ui.page.main.installer.dialog.inner.installInfoDialog
 import com.rosan.installer.ui.page.main.installer.dialog.inner.uninstallInfoDialog
 import com.rosan.installer.ui.page.main.widget.util.InstallerEventCollector
@@ -102,8 +103,37 @@ fun DialogPage(
             compatStatusBarColor = false
         ) {
             val colorScheme = InstallerTheme.colorScheme
-            // Handle InstallingModule state: Show ModalBottomSheet
-            if (stage is InstallerStage.InstallingModule) {
+            // Keep module flashing inside the selected presentation mode. Full-screen installs
+            // remain edge-to-edge; dialog/notification flows retain the module bottom sheet.
+            if (stage is InstallerStage.InstallingModule && installMode == InstallMode.FullScreen) {
+                val headerParams = installInfoDialog(viewModel)
+                PositionFullScreen(
+                    onBackRequest = {
+                        if (viewModel.uiState.value.isDismissible) {
+                            viewModel.requestFullscreenClose()
+                        }
+                    },
+                    isClosing = isClosingFullscreen,
+                    contentKey = FullScreenContentKey(
+                        stageType = stage::class,
+                        textId = "module",
+                        contentId = "module_log",
+                        buttonsId = "module"
+                    ),
+                    centerIcon = dialogInnerWidget(headerParams.icon),
+                    centerTitle = dialogInnerWidget(headerParams.title),
+                    centerSubtitle = dialogInnerWidget(headerParams.subtitle),
+                    centerContent = {
+                        ModuleInstallFullScreenContent(
+                            outputLines = stage.output,
+                            isFinished = stage.isFinished,
+                            colorScheme = colorScheme,
+                            onReboot = { viewModel.dispatch(InstallerViewAction.Reboot("")) },
+                            onClose = { viewModel.dispatch(InstallerViewAction.Close) }
+                        )
+                    }
+                )
+            } else if (stage is InstallerStage.InstallingModule) {
                 // Do NOT create a local variable for isDismissible here.
                 // Capturing a changing local variable causes the lambda below to change,
                 // which forces rememberModalBottomSheetState to recreate the state, resetting the sheet.

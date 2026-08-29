@@ -8,16 +8,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -25,7 +21,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalViewConfiguration
@@ -39,8 +34,7 @@ fun dialogButtons(
 ) = DialogInnerParams(id) {
     val buttons = content.invoke()
     Column(
-        modifier = Modifier.clip(RoundedCornerShape(12.dp)),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         val single = if (buttons.size > 2) buttons.size % 2 else buttons.size
 
@@ -53,7 +47,7 @@ fun dialogButtons(
         for (i in single until buttons.size step 2) {
             Box {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     // Force the Row to be as tall as its tallest child
                     modifier = Modifier.height(IntrinsicSize.Max)
                 ) {
@@ -104,7 +98,7 @@ private fun InnerButton(
         }
     }
 
-    TextButton(
+    Button(
         enabled = button.enabled,
         onClick = {
             // Only trigger normal click if long press didn't happen
@@ -113,12 +107,6 @@ private fun InnerButton(
             }
         },
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(4.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-        ),
-        contentPadding = PaddingValues(16.dp),
         interactionSource = interactionSource // Bind the interaction source
     ) {
         Text(button.text)

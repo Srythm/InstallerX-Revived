@@ -55,8 +55,6 @@ class ProcessInstallationUseCase(
     private val recordOperationHistory: RecordOperationHistoryUseCase
 ) {
     companion object {
-        private const val MODULE_LOG_BATCH_SIZE = 50
-        private const val MODULE_LOG_BATCH_INTERVAL_MS = 200L
 
         private const val MODULE_INSTALL_BANNER = """
               ___           _        _ _         __  __ 
@@ -168,9 +166,6 @@ class ProcessInstallationUseCase(
         val rootImpl = prefs.labRootMode
         val systemUseRoot = capabilityProvider.isSystemApp && prefs.alwaysUseRootInSystem
 
-        var lastEmittedCount = output.size
-        var lastEmitTime = System.currentTimeMillis()
-
         moduleInstaller.doInstallWork(
             config = config,
             module = module,
@@ -178,18 +173,9 @@ class ProcessInstallationUseCase(
             rootMode = rootImpl
         ).collect { line ->
             output.add(line)
-            val now = System.currentTimeMillis()
-            if (output.size - lastEmittedCount >= MODULE_LOG_BATCH_SIZE ||
-                now - lastEmitTime >= MODULE_LOG_BATCH_INTERVAL_MS
-            ) {
-                emit(ProgressEntity.InstallingModule(output.toList()))
-                lastEmittedCount = output.size
-                lastEmitTime = now
-            }
-        }
-
-        // Emit any trailing lines that did not reach the batch threshold.
-        if (lastEmittedCount < output.size) {
+            // Interactive module installers use the log itself as their prompt. Publish every
+            // line in order so the answer to one volume-key choice is visible before the next
+            // choice is presented.
             emit(ProgressEntity.InstallingModule(output.toList()))
         }
 

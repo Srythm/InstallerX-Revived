@@ -739,6 +739,8 @@
     <string name="installer_show_oem_special">展示 OEM 附加信息</string>
     <string name="installer_show_oem_special_desc">分析并在安装对话框展示 OEM 的 apk 附加信息</string>
     <string name="reboot">重启</string>
+    <string name="module_reboot_confirm_title">要重启设备吗？</string>
+    <string name="module_reboot_confirm_desc">模块已安装。设备将立即重启以应用模块。</string>
     <string name="reboot_userspace">用户空间重启</string>
     <string name="reboot_recovery">重启到 Recovery</string>
     <string name="reboot_bootloader">重启到 Bootloader</string>
