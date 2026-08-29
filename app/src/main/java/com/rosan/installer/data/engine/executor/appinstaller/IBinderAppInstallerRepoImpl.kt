@@ -56,7 +56,7 @@ abstract class IBinderAppInstallerRepoImpl(
     protected val reflect: ReflectionProvider,
     protected val capabilityProvider: DeviceCapabilityProvider,
     protected val postInstallTaskProvider: PostInstallTaskProvider,
-    protected val taskScope: CoroutineScope
+    protected val taskScope: CoroutineScope,
 ) : AppInstallerRepository {
     private companion object {
         const val INSTALL_FLAGS_TAG = "InstallFlags"

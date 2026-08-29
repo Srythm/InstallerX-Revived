@@ -40,25 +40,32 @@ val LocalInstallerColorScheme = staticCompositionLocalOf<ColorScheme> { error("N
 
 object InstallerTheme {
     val colorScheme: ColorScheme
-        @Composable @ReadOnlyComposable get() = LocalInstallerColorScheme.current
+        @Composable @ReadOnlyComposable
+        get() = LocalInstallerColorScheme.current
 
     val isDark: Boolean
-        @Composable @ReadOnlyComposable get() = LocalIsDark.current
+        @Composable @ReadOnlyComposable
+        get() = LocalIsDark.current
 
     val seedColor: Color
-        @Composable @ReadOnlyComposable get() = LocalSeedColor.current
+        @Composable @ReadOnlyComposable
+        get() = LocalSeedColor.current
 
     val paletteStyle: PaletteStyle
-        @Composable @ReadOnlyComposable get() = LocalPaletteStyle.current
+        @Composable @ReadOnlyComposable
+        get() = LocalPaletteStyle.current
 
     val colorSpec: ThemeColorSpec
-        @Composable @ReadOnlyComposable get() = LocalThemeColorSpec.current
+        @Composable @ReadOnlyComposable
+        get() = LocalThemeColorSpec.current
 
     val themeMode: ThemeMode
-        @Composable @ReadOnlyComposable get() = LocalThemeMode.current
+        @Composable @ReadOnlyComposable
+        get() = LocalThemeMode.current
 
     val useDynamicColor: Boolean
-        @Composable @ReadOnlyComposable get() = LocalUseDynamicColor.current
+        @Composable @ReadOnlyComposable
+        get() = LocalUseDynamicColor.current
 }
 
 @Composable
@@ -68,7 +75,7 @@ fun InstallerTheme(
     colorSpec: ThemeColorSpec,
     useDynamicColor: Boolean,
     seedColor: Color,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     val preservedContent = remember {
         movableContentOf<@Composable () -> Unit> { targetContent ->
@@ -82,9 +89,11 @@ fun InstallerTheme(
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
 
-    val keyColor = if (useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+    val keyColor = if (useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         colorResource(id = android.R.color.system_accent1_500)
-    else seedColor
+    } else {
+        seedColor
+    }
 
     // 1. Generate the base scheme with spec support
     val baseColorScheme = remember(keyColor, isDark, paletteStyle, colorSpec) {
@@ -92,7 +101,7 @@ fun InstallerTheme(
             keyColor = keyColor,
             isDark = isDark,
             style = paletteStyle,
-            colorSpec = colorSpec
+            colorSpec = colorSpec,
         )
     }
 
@@ -106,15 +115,16 @@ fun InstallerTheme(
         LocalInstallerColorScheme provides animatedColorScheme,
         LocalThemeMode provides themeMode,
         LocalUseDynamicColor provides useDynamicColor,
-        LocalThemeColorSpec provides colorSpec
+        LocalThemeColorSpec provides colorSpec,
     ) {
         // Disable navigation bar contrast enforced for Android 10 and above
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             NavigationBarContrastHandler()
+        }
 
         InstallerMaterialExpressiveTheme(
             darkTheme = isDark,
-            colorScheme = animatedColorScheme
+            colorScheme = animatedColorScheme,
         ) {
             preservedContent(content)
         }
@@ -126,7 +136,7 @@ fun InstallerMaterialExpressiveTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     colorScheme: ColorScheme,
     compatStatusBarColor: Boolean = true,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     if (compatStatusBarColor) {
         val view = LocalView.current
@@ -143,7 +153,7 @@ fun InstallerMaterialExpressiveTheme(
         colorScheme = colorScheme,
         motionScheme = MotionScheme.expressive(),
         typography = Typography,
-        content = content
+        content = content,
     )
 }
 

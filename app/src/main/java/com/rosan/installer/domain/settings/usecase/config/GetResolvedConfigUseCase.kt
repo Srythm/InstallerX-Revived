@@ -17,7 +17,7 @@ class GetResolvedConfigUseCase(
     private val context: Context,
     private val appSettingsRepo: AppSettingsRepository,
     private val configRepo: ConfigRepository,
-    private val appRepo: AppRepository
+    private val appRepo: AppRepository,
 ) {
     suspend operator fun invoke(packageName: String? = null): ConfigModel = withContext(Dispatchers.IO) {
         var model = getByPackageNameInner(packageName)
@@ -26,7 +26,7 @@ class GetResolvedConfigUseCase(
             val globalAuthorizer = getGlobalAuthorizer()
             model = model.copy(
                 authorizer = globalAuthorizer,
-                customizeAuthorizer = getGlobalCustomizeAuthorizer()
+                customizeAuthorizer = getGlobalCustomizeAuthorizer(),
             )
         }
 
@@ -38,9 +38,11 @@ class GetResolvedConfigUseCase(
 
         val targetUid = when (model.installRequesterMode) {
             InstallRequesterMode.Disable -> null
+
             InstallRequesterMode.Initiator -> packageName?.let { initiatorPkg ->
                 runCatching { context.packageManager.getPackageUid(initiatorPkg, 0) }.getOrNull()
             }
+
             InstallRequesterMode.Custom -> model.installRequester?.let { requesterPkg ->
                 runCatching { context.packageManager.getPackageUid(requesterPkg, 0) }.getOrNull()
             }

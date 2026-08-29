@@ -25,7 +25,8 @@ enum class InstallMode(val value: String) {
     Notification("notification"),
     AutoNotification("auto_notification"),
     FullScreen("full_screen"),
-    Ignore("ignore");
+    Ignore("ignore"),
+    ;
 
     /**
      * True for install modes that drive a background install and surface

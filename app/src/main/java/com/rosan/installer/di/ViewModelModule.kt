@@ -46,7 +46,7 @@ val viewModelModule = module {
             deleteConfigWithScopes = get(),
             restoreDeletedConfigSnapshot = get(),
             appSettingsRepo = get(),
-            ioDispatcher = get(named("IoDispatcher"))
+            ioDispatcher = get(named("IoDispatcher")),
         )
     }
 
@@ -61,7 +61,7 @@ val viewModelModule = module {
             exportBackup = get(),
             prepareBackupRestore = get(),
             restoreBackup = get(),
-            ioDispatcher = get(named("IoDispatcher"))
+            ioDispatcher = get(named("IoDispatcher")),
         )
     }
 
@@ -89,7 +89,7 @@ val viewModelModule = module {
             getAppIcon = get(),
             clearAppIconCache = get(),
             defaultDispatcher = get(named("DefaultDispatcher")),
-            ioDispatcher = get(named("IoDispatcher"))
+            ioDispatcher = get(named("IoDispatcher")),
         )
     }
 
@@ -101,7 +101,7 @@ val viewModelModule = module {
             saveConfig = get(),
             getAvailableUsers = get(),
             getPackageUid = get(),
-            ioDispatcher = get(named("IoDispatcher"))
+            ioDispatcher = get(named("IoDispatcher")),
         )
     }
 }

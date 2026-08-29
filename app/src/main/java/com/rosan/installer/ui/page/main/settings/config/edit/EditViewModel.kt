@@ -43,7 +43,7 @@ class EditViewModel(
     private val saveConfig: SaveConfigUseCase,
     private val getAvailableUsers: GetAvailableUsersUseCase,
     private val getPackageUid: GetPackageUidUseCase,
-    private val ioDispatcher: CoroutineDispatcher
+    private val ioDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
 
     // Separate mutable states for editable data to combine later
@@ -78,7 +78,7 @@ class EditViewModel(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = EditViewState()
+        initialValue = EditViewState(),
     )
 
     private val _eventFlow = MutableSharedFlow<EditViewEvent>()

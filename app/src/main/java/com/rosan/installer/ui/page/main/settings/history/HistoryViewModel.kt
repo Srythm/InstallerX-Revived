@@ -32,7 +32,7 @@ class HistoryViewModel(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = HistoryViewState(isLoading = true)
+            initialValue = HistoryViewState(isLoading = true),
         )
 
     fun dispatch(action: HistoryViewAction) {

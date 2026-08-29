@@ -56,8 +56,8 @@ fun InstallerNavContainer(uiState: ThemeState) {
     ) {
         val navCornerRadius = rememberDeviceCornerRadius(defaultRadius = 0.dp)
         val roundAllCorners = uiState.predictiveBackAnimation == PredictiveBackAnimation.AOSP ||
-                uiState.predictiveBackAnimation == PredictiveBackAnimation.Scale ||
-                uiState.predictiveBackAnimation == PredictiveBackAnimation.Classic
+            uiState.predictiveBackAnimation == PredictiveBackAnimation.Scale ||
+            uiState.predictiveBackAnimation == PredictiveBackAnimation.Classic
         val backdropColor = MaterialTheme.colorScheme.surfaceContainer
         val effects = remember(navCornerRadius, roundAllCorners, backdropColor) {
             NavDisplayEffects(
@@ -98,7 +98,7 @@ fun InstallerNavContainer(uiState: ThemeState) {
                     val id = key.id
                     EditPage(
                         id = if (id != -1L) id else null,
-                        useBlur = useBlur
+                        useBlur = useBlur,
                     )
                 }
             }

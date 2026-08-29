@@ -33,7 +33,7 @@ import com.rosan.installer.ui.page.main.installer.dialog.dialogButtons
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun installingDialog(
-    viewModel: InstallerViewModel
+    viewModel: InstallerViewModel,
 ): DialogParams {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val stage = uiState.stage
@@ -42,13 +42,13 @@ fun installingDialog(
 
     // Call InstallInfoDialog for base structure (icon, title, subtitle with new version)
     val baseParams = installInfoDialog(
-        viewModel = viewModel
+        viewModel = viewModel,
     )
 
     // Override text and buttons
     return baseParams.copy(
         text = DialogInnerParams(
-            DialogParamsType.InstallerInstalling.id
+            DialogParamsType.InstallerInstalling.id,
         ) {
             Column {
                 if (installingStage != null) {
@@ -57,14 +57,14 @@ fun installingDialog(
                             R.string.installing_progress_text,
                             installingStage.appLabel ?: "Unknown",
                             installingStage.current,
-                            installingStage.total
+                            installingStage.total,
                         )
                     } else {
                         stringResource(
                             when (installingStage.phase) {
                                 InstallPhase.WRITING -> R.string.installer_writing
                                 InstallPhase.INSTALLING -> R.string.installer_installing
-                            }
+                            },
                         )
                     }
 
@@ -74,21 +74,21 @@ fun installingDialog(
                         textAlign = TextAlign.Center,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 8.dp)
+                            .padding(bottom = 8.dp),
                     )
                 }
                 // --- M3E ---
                 val determinateProgress = installingStage?.let { installing ->
                     installing.progress.takeIf { progress ->
                         progress > 0f &&
-                                (installing.total > 1 || installing.phase == InstallPhase.WRITING)
+                            (installing.total > 1 || installing.phase == InstallPhase.WRITING)
                     }
                 }
                 if (determinateProgress != null) {
                     val animatedProgress by animateFloatAsState(
                         targetValue = determinateProgress,
                         animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
-                        label = "ProgressBarAnimation"
+                        label = "ProgressBarAnimation",
                     )
                     LinearWavyProgressIndicator(
                         progress = { animatedProgress },
@@ -101,7 +101,7 @@ fun installingDialog(
                     // indeterminate indicator while PackageInstaller verifies and commits it.
                     LinearWavyProgressIndicator(
                         modifier = Modifier.fillMaxWidth(),
-                        amplitude = 0f // not wavy
+                        amplitude = 0f, // not wavy
                     )
                 }
             }
@@ -111,8 +111,8 @@ fun installingDialog(
             listOf(
                 DialogButton(stringResource(R.string.installer_move_to_background)) {
                     viewModel.dispatch(InstallerViewAction.Background)
-                }
+                },
             )
-        }
+        },
     )
 }

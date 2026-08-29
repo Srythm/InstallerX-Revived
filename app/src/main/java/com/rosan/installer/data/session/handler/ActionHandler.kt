@@ -452,7 +452,7 @@ class ActionHandler(override val scope: CoroutineScope, override val session: In
      * @throws AuthenticationFailedException Thrown if the user fails or cancels biometric authentication.
      */
     private suspend fun requestUserBiometricAuthentication(
-        isInstall: Boolean
+        isInstall: Boolean,
     ) {
         val prefs = appSettingsRepo.snapshot()
         val requireBiometricAuth = if (isInstall) {

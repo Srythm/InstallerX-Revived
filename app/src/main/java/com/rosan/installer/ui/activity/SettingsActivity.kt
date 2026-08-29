@@ -32,18 +32,19 @@ import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
-class SettingsActivity : ComponentActivity(), KoinComponent {
+class SettingsActivity :
+    ComponentActivity(),
+    KoinComponent {
     companion object {
         // InstallerActivity is singleInstance, so recover into the reusable normal app task
         // before removing the temporary package-update task.
-        fun createSelfUpdateRecoveryIntent(context: Context) =
-            Intent(context, SettingsActivity::class.java).apply {
-                addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK or
-                            Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                            Intent.FLAG_ACTIVITY_SINGLE_TOP
-                )
-            }
+        fun createSelfUpdateRecoveryIntent(context: Context) = Intent(context, SettingsActivity::class.java).apply {
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP,
+            )
+        }
     }
 
     private val themeStateProvider by inject<ThemeStateProvider>()
@@ -70,20 +71,20 @@ class SettingsActivity : ComponentActivity(), KoinComponent {
             val layoutInfo = rememberWindowLayoutInfo()
 
             CompositionLocalProvider(
-                LocalWindowLayoutInfo provides layoutInfo
+                LocalWindowLayoutInfo provides layoutInfo,
             ) {
                 InstallerTheme(
                     themeMode = uiState.themeMode,
                     paletteStyle = uiState.paletteStyle,
                     colorSpec = uiState.colorSpec,
                     useDynamicColor = uiState.useDynamicColor,
-                    seedColor = androidx.compose.ui.graphics.Color(uiState.seedColor)
+                    seedColor = androidx.compose.ui.graphics.Color(uiState.seedColor),
                 ) {
                     val backgroundColor = MaterialTheme.colorScheme.surfaceContainer
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(backgroundColor)
+                            .background(backgroundColor),
                     ) {
                         InstallerNavContainer(uiState)
                     }

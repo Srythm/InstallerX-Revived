@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
@@ -66,6 +68,12 @@ import com.rosan.installer.ui.library.liquid.lens
 import com.rosan.installer.ui.library.liquid.rememberCombinedBackdrop
 import com.rosan.installer.ui.library.liquid.vibrancy
 import com.rosan.installer.ui.theme.InstallerTheme
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.sign
+import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
@@ -79,14 +87,6 @@ import top.yukonga.miuix.kmp.blur.highlight.LightSource
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.blur.sensor.rememberDeviceTilt
-import kotlin.math.PI
-import kotlin.math.abs
-import kotlin.math.cos
-import kotlin.math.sign
-import kotlin.math.sin
-import kotlin.math.sqrt
-import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.MaterialTheme
 
 val LocalFloatingBottomBarContentColor = staticCompositionLocalOf { Color.Unspecified }
 val LocalFloatingBottomBarTabScale = staticCompositionLocalOf { { 1f } }
@@ -97,7 +97,7 @@ class FloatingBottomBarColors(
     val containerColor: Color,
     val indicatorColor: Color,
     val contentColor: Color,
-    val activeContentColor: Color
+    val activeContentColor: Color,
 )
 
 // Defaults object for creating the Colors instance
@@ -107,19 +107,19 @@ object FloatingBottomBarDefaults {
         containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
         indicatorColor: Color = MaterialTheme.colorScheme.primary,
         contentColor: Color = MaterialTheme.colorScheme.onSurface,
-        activeContentColor: Color = indicatorColor
+        activeContentColor: Color = indicatorColor,
     ): FloatingBottomBarColors = FloatingBottomBarColors(
         containerColor = containerColor,
         indicatorColor = indicatorColor,
         contentColor = contentColor,
-        activeContentColor = activeContentColor
+        activeContentColor = activeContentColor,
     )
 }
 
 enum class FloatingBottomBarMode {
     LiquidGlass,
     Blur,
-    None
+    None,
 }
 
 private val iosIndicatorSpecular: Highlight = Highlight(
@@ -188,7 +188,7 @@ private fun rememberGravityRotatedHighlight(
 fun RowScope.FloatingBottomBarItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     val scale = LocalFloatingBottomBarTabScale.current
     // Read the dynamic color from the bottom bar layer
@@ -201,7 +201,7 @@ fun RowScope.FloatingBottomBarItem(
                 interactionSource = null,
                 indication = null,
                 role = Role.Tab,
-                onClick = onClick
+                onClick = onClick,
             )
             .fillMaxHeight()
             .weight(1f)
@@ -211,11 +211,11 @@ fun RowScope.FloatingBottomBarItem(
                 scaleY = s
             },
         verticalArrangement = Arrangement.spacedBy(1.dp, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         // Provide the color to nested components seamlessly
         CompositionLocalProvider(
-            LocalContentColor provides contentColor
+            LocalContentColor provides contentColor,
         ) {
             content()
         }
@@ -231,7 +231,7 @@ fun FloatingBottomBar(
     tabsCount: Int,
     mode: FloatingBottomBarMode = FloatingBottomBarMode.LiquidGlass,
     colors: FloatingBottomBarColors = FloatingBottomBarDefaults.colors(),
-    content: @Composable RowScope.() -> Unit
+    content: @Composable RowScope.() -> Unit,
 ) {
     val isInDark = InstallerTheme.isDark
     val pillShape = remember { CircleShape }
@@ -304,13 +304,13 @@ fun FloatingBottomBar(
                 if (tabWidthPx > 0) {
                     updateValue(
                         (targetValue + dragAmount.x / tabWidthPx * if (isLtr) 1f else -1f)
-                            .fastCoerceIn(0f, (tabsCount - 1).toFloat())
+                            .fastCoerceIn(0f, (tabsCount - 1).toFloat()),
                     )
                     animationScope.launch {
                         offsetAnimation.snapTo(offsetAnimation.value + dragAmount.x)
                     }
                 }
-            }
+            },
         ).also { holder.instance = it }
     }
 
@@ -334,11 +334,14 @@ fun FloatingBottomBar(
                     animationScope = animationScope,
                     position = { size, _ ->
                         Offset(
-                            if (isLtr) (dampedDragAnimation.value + 0.5f) * tabWidthPx + panelOffset
-                            else size.width - (dampedDragAnimation.value + 0.5f) * tabWidthPx + panelOffset,
-                            size.height / 2f
+                            if (isLtr) {
+                                (dampedDragAnimation.value + 0.5f) * tabWidthPx + panelOffset
+                            } else {
+                                size.width - (dampedDragAnimation.value + 0.5f) * tabWidthPx + panelOffset
+                            },
+                            size.height / 2f,
                         )
-                    }
+                    },
                 )
             }
         } else {
@@ -352,7 +355,7 @@ fun FloatingBottomBar(
 
     Box(
         modifier = modifier.width(IntrinsicSize.Min),
-        contentAlignment = Alignment.CenterStart
+        contentAlignment = Alignment.CenterStart,
     ) {
         // Base layer (Unselected state)
         // Provide the default content color to this layer
@@ -376,7 +379,7 @@ fun FloatingBottomBar(
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                        onClick = {}
+                        onClick = {},
                     )
                     .then(
                         if (isLiquidGlassMode) {
@@ -413,13 +416,13 @@ fun FloatingBottomBar(
                             )
                         } else {
                             Modifier.background(containerColor, pillShape)
-                        }
+                        },
                     )
                     .then(if (isLiquidGlassMode && interactiveHighlight != null) interactiveHighlight.modifier else Modifier)
                     .height(64.dp)
                     .padding(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                content = content
+                content = content,
             )
         }
 
@@ -428,7 +431,7 @@ fun FloatingBottomBar(
                 LocalFloatingBottomBarTabScale provides {
                     lerp(1f, 1.2f, dampedDragAnimation.pressProgress)
                 },
-                LocalFloatingBottomBarContentColor provides colors.activeContentColor
+                LocalFloatingBottomBarContentColor provides colors.activeContentColor,
             ) {
                 Row(
                     Modifier
@@ -508,7 +511,7 @@ fun FloatingBottomBar(
                             )
                         }
                         .height(56.dp)
-                        .width(tabWidthDp)
+                        .width(tabWidthDp),
                 )
             } else {
                 Box(
@@ -524,7 +527,7 @@ fun FloatingBottomBar(
                         .height(56.dp)
                         .width(tabWidthDp),
                     // Force start alignment for the Box container to prevent centering
-                    contentAlignment = Alignment.CenterStart
+                    contentAlignment = Alignment.CenterStart,
                 ) {
                     // Provide the active content color to the non-blur active layer
                     CompositionLocalProvider(LocalFloatingBottomBarContentColor provides colors.activeContentColor) {
@@ -539,7 +542,7 @@ fun FloatingBottomBar(
                                     translationX = if (isLtr) -progressOffset else progressOffset
                                 },
                             verticalAlignment = Alignment.CenterVertically,
-                            content = content
+                            content = content,
                         )
                     }
                 }

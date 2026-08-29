@@ -30,11 +30,11 @@ import kotlinx.coroutines.delay
 @Composable
 fun dialogButtons(
     id: String,
-    content: (@Composable () -> List<DialogButton>)
+    content: (@Composable () -> List<DialogButton>),
 ) = DialogInnerParams(id) {
     val buttons = content.invoke()
     Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         val single = if (buttons.size > 2) buttons.size % 2 else buttons.size
 
@@ -49,14 +49,14 @@ fun dialogButtons(
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     // Force the Row to be as tall as its tallest child
-                    modifier = Modifier.height(IntrinsicSize.Max)
+                    modifier = Modifier.height(IntrinsicSize.Max),
                 ) {
                     buttons[i].let {
                         InnerButton(
                             it,
                             Modifier
                                 .weight(it.weight)
-                                .fillMaxHeight() // Stretch to fill the parent Row's height
+                                .fillMaxHeight(), // Stretch to fill the parent Row's height
                         )
                     }
                     buttons[i + 1].let {
@@ -64,7 +64,7 @@ fun dialogButtons(
                             it,
                             Modifier
                                 .weight(it.weight)
-                                .fillMaxHeight() // Stretch here too
+                                .fillMaxHeight(), // Stretch here too
                         )
                     }
                 }
@@ -75,7 +75,8 @@ fun dialogButtons(
 
 @Composable
 private fun InnerButton(
-    button: DialogButton, modifier: Modifier = Modifier
+    button: DialogButton,
+    modifier: Modifier = Modifier,
 ) {
     // Track the press interaction state for the button
     val interactionSource = remember { MutableInteractionSource() }
@@ -107,7 +108,7 @@ private fun InnerButton(
             }
         },
         modifier = modifier.fillMaxWidth(),
-        interactionSource = interactionSource // Bind the interaction source
+        interactionSource = interactionSource, // Bind the interaction source
     ) {
         Text(button.text)
     }

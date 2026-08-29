@@ -20,8 +20,8 @@ import com.rosan.installer.domain.engine.model.source.DataType
 import com.rosan.installer.domain.engine.repository.AnalyserRepository
 import com.rosan.installer.domain.engine.usecase.SelectOptimalSplitsUseCase
 import com.rosan.installer.domain.settings.model.config.ConfigModel
-import kotlinx.coroutines.CancellationException
 import java.util.zip.ZipException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -178,29 +178,28 @@ class AnalyserRepositoryImpl(
     private suspend fun analyzeSingleSource(
         config: ConfigModel,
         data: DataEntity,
-        extra: AnalyseExtraEntity
-    ): List<AppEntity> =
-        try {
-            // Detect type efficiently
-            fileTypeDetector.detectWithArchive(data, extra).use { detected ->
-                val fileType = detected.type
-                Timber.d("AnalyserRepo: FileType -> $fileType")
-                if (fileType == DataType.NONE) return emptyList()
-                unifiedContainerAnalyser.analyzeWithArchive(
-                    config = config,
-                    data = data,
-                    type = fileType,
-                    archive = detected.archive,
-                    extra = extra.copy(dataType = fileType)
-                )
-            }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Timber.e(e, "Fatal error analyzing source: ${data.source}")
-            if (e is AnalyseException || e is CommonsZipException || e is ZipException) throw e
-            emptyList()
+        extra: AnalyseExtraEntity,
+    ): List<AppEntity> = try {
+        // Detect type efficiently
+        fileTypeDetector.detectWithArchive(data, extra).use { detected ->
+            val fileType = detected.type
+            Timber.d("AnalyserRepo: FileType -> $fileType")
+            if (fileType == DataType.NONE) return emptyList()
+            unifiedContainerAnalyser.analyzeWithArchive(
+                config = config,
+                data = data,
+                type = fileType,
+                archive = detected.archive,
+                extra = extra.copy(dataType = fileType),
+            )
         }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Timber.e(e, "Fatal error analyzing source: ${data.source}")
+        if (e is AnalyseException || e is CommonsZipException || e is ZipException) throw e
+        emptyList()
+    }
 }
 
 internal fun shouldLoadInstalledSignatures(entities: List<AppEntity>, extra: AnalyseExtraEntity): Boolean = entities.any { entity ->

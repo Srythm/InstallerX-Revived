@@ -186,7 +186,7 @@ private fun ChoiceContent(
         // body Box keeps the visual balance with the title above and the
         // buttons below, regardless of how many options there are.
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         AnimatedVisibility(visible = errorMessage != null) {
             InfoTipCard(

@@ -30,7 +30,7 @@ class LabSettingsViewModel(appSettingsRepo: AppSettingsRepository, private val u
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = LabSettingsState()
+        initialValue = LabSettingsState(),
     )
 
     fun dispatch(action: LabSettingsAction) {

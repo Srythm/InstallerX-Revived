@@ -163,7 +163,7 @@ class AppSettingsRepositoryImpl(
                 false
             },
             predictiveBackAnimation = PredictiveBackAnimation.fromValueOrDefault(
-                prefs[AppDataStore.PREDICTIVE_BACK_ANIMATION] ?: PredictiveBackAnimation.AOSP.value
+                prefs[AppDataStore.PREDICTIVE_BACK_ANIMATION] ?: PredictiveBackAnimation.AOSP.value,
             ),
             predictiveBackExitDirection = PredictiveBackExitDirection.fromValueOrDefault(
                 prefs[AppDataStore.PREDICTIVE_BACK_EXIT_DIRECTION] ?: PredictiveBackExitDirection.ALWAYS_RIGHT.value,
@@ -236,59 +236,58 @@ class AppSettingsRepositoryImpl(
         IntSetting.UninstallFlags -> AppDataStore.UNINSTALL_FLAGS
     }
 
-    private fun booleanKey(setting: BooleanSetting): Preferences.Key<Boolean> =
-        when (setting) {
-            BooleanSetting.AllowInternetAccess -> AppDataStore.ALLOW_INTERNET_ACCESS
-            BooleanSetting.NetworkSourceModeWarningAcknowledged -> AppDataStore.NETWORK_SOURCE_MODE_WARNING_ACKNOWLEDGED
-            BooleanSetting.UiUseBlur -> AppDataStore.UI_USE_BLUR
-            BooleanSetting.ThemeUseDynamicColor -> AppDataStore.THEME_USE_DYNAMIC_COLOR
-            BooleanSetting.UiUseAppleFloatingBar -> AppDataStore.UI_USE_APPLE_FLOATING_BAR
-            BooleanSetting.UiDynColorFollowPkgIcon -> AppDataStore.UI_DYN_COLOR_FOLLOW_PKG_ICON
-            BooleanSetting.LiveActivityDynColorFollowPkgIcon -> AppDataStore.LIVE_ACTIVITY_DYN_COLOR_FOLLOW_PKG_ICON
-            BooleanSetting.ShowLiveActivity -> AppDataStore.SHOW_LIVE_ACTIVITY
-            BooleanSetting.ShowMiIsland -> AppDataStore.SHOW_MI_ISLAND
-            BooleanSetting.ShowMiIslandBypassRestriction -> AppDataStore.SHOW_MI_ISLAND_BYPASS_RESTRICTION
-            BooleanSetting.ShowMiIslandOuterGlow -> AppDataStore.SHOW_MI_ISLAND_OUTER_GLOW
-            BooleanSetting.AlwaysUseRootInSystem -> AppDataStore.ALWAYS_USE_ROOT_IN_SYSTEM
-            BooleanSetting.UninstallerRequireBiometricAuth -> AppDataStore.UNINSTALLER_REQUIRE_BIOMETRIC_AUTH
-            BooleanSetting.ShowLauncherIcon -> AppDataStore.SHOW_LAUNCHER_ICON
-            BooleanSetting.OperationHistoryEnabled -> AppDataStore.OPERATION_HISTORY_ENABLED
-            BooleanSetting.OperationHistoryIndicatorsEnabled -> AppDataStore.OPERATION_HISTORY_INDICATORS_ENABLED
-            BooleanSetting.PreferSystemIconForInstall -> AppDataStore.PREFER_SYSTEM_ICON_FOR_INSTALL
-            BooleanSetting.ShowDialogWhenPressingNotification -> AppDataStore.SHOW_DIALOG_WHEN_PRESSING_NOTIFICATION
-            BooleanSetting.UserReadScopeTips -> AppDataStore.USER_READ_SCOPE_TIPS
-            BooleanSetting.ApplyOrderInReverse -> AppDataStore.APPLY_ORDER_IN_REVERSE
-            BooleanSetting.ApplySelectedFirst -> AppDataStore.APPLY_SELECTED_FIRST
-            BooleanSetting.ApplyShowSystemApp -> AppDataStore.APPLY_SHOW_SYSTEM_APP
-            BooleanSetting.ApplyShowPackageName -> AppDataStore.APPLY_SHOW_PACKAGE_NAME
-            BooleanSetting.DialogHideIdenticalComparisons -> AppDataStore.DIALOG_HIDE_IDENTICAL_COMPARISONS
-            BooleanSetting.DialogVersionCompareSingleLine -> AppDataStore.DIALOG_VERSION_COMPARE_SINGLE_LINE
-            BooleanSetting.DialogSdkCompareMultiLine -> AppDataStore.DIALOG_SDK_COMPARE_MULTI_LINE
-            BooleanSetting.DialogShowExtendedMenu -> AppDataStore.DIALOG_SHOW_EXTENDED_MENU
-            BooleanSetting.DialogShowIntelligentSuggestion -> AppDataStore.DIALOG_SHOW_INTELLIGENT_SUGGESTION
-            BooleanSetting.DialogDisableNotificationOnDismiss -> AppDataStore.DIALOG_DISABLE_NOTIFICATION_ON_DISMISS
-            BooleanSetting.DialogShowOppoSpecial -> AppDataStore.DIALOG_SHOW_OPPO_SPECIAL
-            BooleanSetting.CheckAppSignature -> AppDataStore.CHECK_APP_SIGNATURE
-            BooleanSetting.CheckSplitPackageSignatures -> AppDataStore.CHECK_SPLIT_PACKAGE_SIGNATURES
-            BooleanSetting.ShowSignatureInfoOnMatch -> AppDataStore.SHOW_SIGNATURE_INFO_ON_MATCH
-            BooleanSetting.ShowSignatureDetails -> AppDataStore.SHOW_SIGNATURE_DETAILS
-            BooleanSetting.DialogAutoSilentInstall -> AppDataStore.DIALOG_AUTO_SILENT_INSTALL
-            BooleanSetting.DialogLongClickBackgroundInstall -> AppDataStore.DIALOG_LONG_CLICK_BACKGROUND_INSTALL
-            BooleanSetting.TryMultipleAuthorizersOnInstall -> AppDataStore.TRY_MULTIPLE_AUTHORIZERS_ON_INSTALL
-            BooleanSetting.LabEnableModuleFlash -> AppDataStore.LAB_ENABLE_MODULE_FLASH
-            BooleanSetting.LabModuleFlashShowArt -> AppDataStore.LAB_MODULE_FLASH_SHOW_ART
-            BooleanSetting.LabHttpSaveFile -> AppDataStore.LAB_HTTP_SAVE_FILE
-            BooleanSetting.LabSetInstallRequester -> AppDataStore.LAB_SET_INSTALL_REQUESTER
-            BooleanSetting.LabTapIconToShare -> AppDataStore.LAB_TAP_ICON_TO_SHARE
-            BooleanSetting.LabShowFilePath -> AppDataStore.LAB_SHOW_FILE_PATH
-            BooleanSetting.LabShowInstallInitiator -> AppDataStore.LAB_SHOW_INSTALL_INITIATOR
-            BooleanSetting.LabInstallWithoutUserAction -> AppDataStore.LAB_INSTALL_WITHOUT_USER_ACTION
-            BooleanSetting.LabRespectPlatformInstallPolicy -> AppDataStore.LAB_RESPECT_PLATFORM_INSTALL_POLICY
-            BooleanSetting.DetectXposedModule -> AppDataStore.DETECT_XPOSED_MODULE
-            BooleanSetting.QuickOpenLSPosed -> AppDataStore.QUICK_OPEN_LSPOSED
-            BooleanSetting.EnableFileLogging -> AppDataStore.ENABLE_FILE_LOGGING
-            BooleanSetting.UserSetLSPosedActive -> AppDataStore.USER_SET_LSPOSED_ACTIVE
-        }
+    private fun booleanKey(setting: BooleanSetting): Preferences.Key<Boolean> = when (setting) {
+        BooleanSetting.AllowInternetAccess -> AppDataStore.ALLOW_INTERNET_ACCESS
+        BooleanSetting.NetworkSourceModeWarningAcknowledged -> AppDataStore.NETWORK_SOURCE_MODE_WARNING_ACKNOWLEDGED
+        BooleanSetting.UiUseBlur -> AppDataStore.UI_USE_BLUR
+        BooleanSetting.ThemeUseDynamicColor -> AppDataStore.THEME_USE_DYNAMIC_COLOR
+        BooleanSetting.UiUseAppleFloatingBar -> AppDataStore.UI_USE_APPLE_FLOATING_BAR
+        BooleanSetting.UiDynColorFollowPkgIcon -> AppDataStore.UI_DYN_COLOR_FOLLOW_PKG_ICON
+        BooleanSetting.LiveActivityDynColorFollowPkgIcon -> AppDataStore.LIVE_ACTIVITY_DYN_COLOR_FOLLOW_PKG_ICON
+        BooleanSetting.ShowLiveActivity -> AppDataStore.SHOW_LIVE_ACTIVITY
+        BooleanSetting.ShowMiIsland -> AppDataStore.SHOW_MI_ISLAND
+        BooleanSetting.ShowMiIslandBypassRestriction -> AppDataStore.SHOW_MI_ISLAND_BYPASS_RESTRICTION
+        BooleanSetting.ShowMiIslandOuterGlow -> AppDataStore.SHOW_MI_ISLAND_OUTER_GLOW
+        BooleanSetting.AlwaysUseRootInSystem -> AppDataStore.ALWAYS_USE_ROOT_IN_SYSTEM
+        BooleanSetting.UninstallerRequireBiometricAuth -> AppDataStore.UNINSTALLER_REQUIRE_BIOMETRIC_AUTH
+        BooleanSetting.ShowLauncherIcon -> AppDataStore.SHOW_LAUNCHER_ICON
+        BooleanSetting.OperationHistoryEnabled -> AppDataStore.OPERATION_HISTORY_ENABLED
+        BooleanSetting.OperationHistoryIndicatorsEnabled -> AppDataStore.OPERATION_HISTORY_INDICATORS_ENABLED
+        BooleanSetting.PreferSystemIconForInstall -> AppDataStore.PREFER_SYSTEM_ICON_FOR_INSTALL
+        BooleanSetting.ShowDialogWhenPressingNotification -> AppDataStore.SHOW_DIALOG_WHEN_PRESSING_NOTIFICATION
+        BooleanSetting.UserReadScopeTips -> AppDataStore.USER_READ_SCOPE_TIPS
+        BooleanSetting.ApplyOrderInReverse -> AppDataStore.APPLY_ORDER_IN_REVERSE
+        BooleanSetting.ApplySelectedFirst -> AppDataStore.APPLY_SELECTED_FIRST
+        BooleanSetting.ApplyShowSystemApp -> AppDataStore.APPLY_SHOW_SYSTEM_APP
+        BooleanSetting.ApplyShowPackageName -> AppDataStore.APPLY_SHOW_PACKAGE_NAME
+        BooleanSetting.DialogHideIdenticalComparisons -> AppDataStore.DIALOG_HIDE_IDENTICAL_COMPARISONS
+        BooleanSetting.DialogVersionCompareSingleLine -> AppDataStore.DIALOG_VERSION_COMPARE_SINGLE_LINE
+        BooleanSetting.DialogSdkCompareMultiLine -> AppDataStore.DIALOG_SDK_COMPARE_MULTI_LINE
+        BooleanSetting.DialogShowExtendedMenu -> AppDataStore.DIALOG_SHOW_EXTENDED_MENU
+        BooleanSetting.DialogShowIntelligentSuggestion -> AppDataStore.DIALOG_SHOW_INTELLIGENT_SUGGESTION
+        BooleanSetting.DialogDisableNotificationOnDismiss -> AppDataStore.DIALOG_DISABLE_NOTIFICATION_ON_DISMISS
+        BooleanSetting.DialogShowOppoSpecial -> AppDataStore.DIALOG_SHOW_OPPO_SPECIAL
+        BooleanSetting.CheckAppSignature -> AppDataStore.CHECK_APP_SIGNATURE
+        BooleanSetting.CheckSplitPackageSignatures -> AppDataStore.CHECK_SPLIT_PACKAGE_SIGNATURES
+        BooleanSetting.ShowSignatureInfoOnMatch -> AppDataStore.SHOW_SIGNATURE_INFO_ON_MATCH
+        BooleanSetting.ShowSignatureDetails -> AppDataStore.SHOW_SIGNATURE_DETAILS
+        BooleanSetting.DialogAutoSilentInstall -> AppDataStore.DIALOG_AUTO_SILENT_INSTALL
+        BooleanSetting.DialogLongClickBackgroundInstall -> AppDataStore.DIALOG_LONG_CLICK_BACKGROUND_INSTALL
+        BooleanSetting.TryMultipleAuthorizersOnInstall -> AppDataStore.TRY_MULTIPLE_AUTHORIZERS_ON_INSTALL
+        BooleanSetting.LabEnableModuleFlash -> AppDataStore.LAB_ENABLE_MODULE_FLASH
+        BooleanSetting.LabModuleFlashShowArt -> AppDataStore.LAB_MODULE_FLASH_SHOW_ART
+        BooleanSetting.LabHttpSaveFile -> AppDataStore.LAB_HTTP_SAVE_FILE
+        BooleanSetting.LabSetInstallRequester -> AppDataStore.LAB_SET_INSTALL_REQUESTER
+        BooleanSetting.LabTapIconToShare -> AppDataStore.LAB_TAP_ICON_TO_SHARE
+        BooleanSetting.LabShowFilePath -> AppDataStore.LAB_SHOW_FILE_PATH
+        BooleanSetting.LabShowInstallInitiator -> AppDataStore.LAB_SHOW_INSTALL_INITIATOR
+        BooleanSetting.LabInstallWithoutUserAction -> AppDataStore.LAB_INSTALL_WITHOUT_USER_ACTION
+        BooleanSetting.LabRespectPlatformInstallPolicy -> AppDataStore.LAB_RESPECT_PLATFORM_INSTALL_POLICY
+        BooleanSetting.DetectXposedModule -> AppDataStore.DETECT_XPOSED_MODULE
+        BooleanSetting.QuickOpenLSPosed -> AppDataStore.QUICK_OPEN_LSPOSED
+        BooleanSetting.EnableFileLogging -> AppDataStore.ENABLE_FILE_LOGGING
+        BooleanSetting.UserSetLSPosedActive -> AppDataStore.USER_SET_LSPOSED_ACTIVE
+    }
 
     private fun namedPackageListKey(setting: NamedPackageListSetting): Preferences.Key<String> = when (setting) {
         NamedPackageListSetting.ManagedInstallerPackages -> AppDataStore.MANAGED_INSTALLER_PACKAGES_LIST

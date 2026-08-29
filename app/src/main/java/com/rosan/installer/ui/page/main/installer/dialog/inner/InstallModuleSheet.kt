@@ -8,8 +8,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
@@ -59,7 +59,7 @@ fun ModuleInstallSheetContent(
     onReboot: () -> Unit,
     onSoftReboot: () -> Unit,
     onClose: () -> Unit,
-    colorScheme: ColorScheme
+    colorScheme: ColorScheme,
 ) {
     var showRebootConfirmation by rememberSaveable { mutableStateOf(false) }
 
@@ -72,14 +72,17 @@ fun ModuleInstallSheetContent(
             .padding(horizontal = 16.dp)
             .padding(bottom = 24.dp), // Bottom padding for navigation bar/visual balance
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // Title
         Text(
-            text = if (isFinished) stringResource(R.string.installer_install_complete)
-            else stringResource(R.string.installer_installing_module),
+            text = if (isFinished) {
+                stringResource(R.string.installer_install_complete)
+            } else {
+                stringResource(R.string.installer_installing_module)
+            },
             style = MaterialTheme.typography.titleLarge,
-            color = colorScheme.onSurface
+            color = colorScheme.onSurface,
         )
 
         // Terminal Log Container
@@ -92,7 +95,7 @@ fun ModuleInstallSheetContent(
                 // fill = false allows it to be smaller than the available space if log content is short.
                 .weight(1f, fill = false)
                 .heightIn(min = 300.dp),
-            colorScheme = colorScheme
+            colorScheme = colorScheme,
         )
 
         // Action Button
@@ -100,7 +103,7 @@ fun ModuleInstallSheetContent(
             Column {
                 Button(
                     onClick = { showRebootConfirmation = true },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.reboot))
                 }
@@ -113,7 +116,7 @@ fun ModuleInstallSheetContent(
                     }*/
                 Button(
                     onClick = onClose,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.close))
                 }
@@ -122,13 +125,13 @@ fun ModuleInstallSheetContent(
             Button(
                 enabled = false, // Disabled while installing
                 onClick = {},
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
                         strokeWidth = 2.dp,
-                        color = colorScheme.onSurface.copy(alpha = 0.38f)
+                        color = colorScheme.onSurface.copy(alpha = 0.38f),
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(stringResource(R.string.installer_installing))
@@ -143,7 +146,7 @@ fun ModuleInstallSheetContent(
         onConfirm = {
             showRebootConfirmation = false
             onReboot()
-        }
+        },
     )
 }
 
@@ -157,7 +160,7 @@ fun ModuleInstallFullScreenContent(
     isFinished: Boolean,
     colorScheme: ColorScheme,
     onReboot: () -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
 ) {
     var showRebootConfirmation by rememberSaveable { mutableStateOf(false) }
 
@@ -173,26 +176,29 @@ fun ModuleInstallFullScreenContent(
             .fillMaxSize()
             .padding(horizontal = 16.dp)
             .padding(bottom = navigationBarPadding + 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             if (!isFinished) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(18.dp),
                     strokeWidth = 2.dp,
-                    color = colorScheme.primary
+                    color = colorScheme.primary,
                 )
                 Spacer(modifier = Modifier.width(12.dp))
             }
             Text(
-                text = if (isFinished) stringResource(R.string.installer_install_complete)
-                else stringResource(R.string.installer_installing_module),
+                text = if (isFinished) {
+                    stringResource(R.string.installer_install_complete)
+                } else {
+                    stringResource(R.string.installer_installing_module)
+                },
                 style = MaterialTheme.typography.titleMedium,
-                color = colorScheme.onSurface
+                color = colorScheme.onSurface,
             )
         }
 
@@ -203,23 +209,23 @@ fun ModuleInstallFullScreenContent(
                 .fillMaxWidth()
                 .weight(1f),
             colorScheme = colorScheme,
-            shape = RoundedCornerShape(24.dp)
+            shape = RoundedCornerShape(24.dp),
         )
 
         if (isFinished) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Button(
                     onClick = { showRebootConfirmation = true },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.reboot))
                 }
                 Button(
                     onClick = onClose,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.close))
                 }
@@ -233,7 +239,7 @@ fun ModuleInstallFullScreenContent(
         onConfirm = {
             showRebootConfirmation = false
             onReboot()
-        }
+        },
     )
 }
 
@@ -241,7 +247,7 @@ fun ModuleInstallFullScreenContent(
 private fun RebootConfirmationDialog(
     show: Boolean,
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
 ) {
     if (!show) return
 
@@ -258,7 +264,7 @@ private fun RebootConfirmationDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.cancel))
             }
-        }
+        },
     )
 }
 
@@ -266,9 +272,9 @@ private fun RebootConfirmationDialog(
 private fun ModuleInstallLog(
     outputLines: List<String>,
     isFinished: Boolean,
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     colorScheme: ColorScheme,
-    shape: RoundedCornerShape = RoundedCornerShape(12.dp)
+    shape: RoundedCornerShape = RoundedCornerShape(12.dp),
 ) {
     val lazyListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
 
@@ -283,15 +289,15 @@ private fun ModuleInstallLog(
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(
-            containerColor = colorScheme.surfaceContainerHigh
+            containerColor = colorScheme.surfaceContainerHigh,
         ),
-        shape = shape
+        shape = shape,
     ) {
         LazyColumn(
             state = lazyListState,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(16.dp),
         ) {
             items(outputLines) { line ->
                 Text(
@@ -303,7 +309,7 @@ private fun ModuleInstallLog(
                         colorScheme.error
                     } else {
                         colorScheme.onSurfaceVariant
-                    }
+                    },
                 )
             }
         }

@@ -128,7 +128,7 @@ fun PositionFullScreen(
     rightContent: @Composable (() -> Unit)? = null,
     leftButton: @Composable (() -> Unit)? = null,
     centerButton: @Composable (() -> Unit)? = null,
-    rightButton: @Composable (() -> Unit)? = null
+    rightButton: @Composable (() -> Unit)? = null,
 ) {
     // Layer alpha — animates the whole fullscreen layer in and out.
     // enter: 0 → 1 (EnterExitDurationMs)
@@ -193,7 +193,7 @@ fun PositionFullScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .alpha(uiAlpha.value)
+            .alpha(uiAlpha.value),
     ) {
         // Surface (and therefore the container color) extends edge-to-edge.
         // The shape defaults to RectangleShape so the blur is not exposed in
@@ -202,7 +202,7 @@ fun PositionFullScreen(
             modifier = modifier.fillMaxSize(),
             shape = shape,
             color = containerColor,
-            tonalElevation = tonalElevation
+            tonalElevation = tonalElevation,
         ) {
             val statusBarInset = WindowInsets.statusBars.asPaddingValues()
                 .calculateTopPadding()
@@ -216,34 +216,38 @@ fun PositionFullScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = headerTopPadding)
+                    .padding(top = headerTopPadding),
             ) {
                 // ---- Stable header (icon, title, subtitle) ----
                 // Rendered once and not animated; the caller passes composables
                 // that are stable across the install flow (e.g. based on the
                 // current package, not the current stage).
                 PositionChildWidget(
-                    leftIcon, centerIcon, rightIcon
+                    leftIcon,
+                    centerIcon,
+                    rightIcon,
                 ) { icon ->
                     CompositionLocalProvider(LocalContentColor provides iconContentColor) {
                         Box(
                             modifier = Modifier
                                 .padding(IconPadding)
-                                .align(Alignment.CenterHorizontally)
+                                .align(Alignment.CenterHorizontally),
                         ) {
                             icon?.invoke()
                         }
                     }
                 }
                 PositionChildWidget(
-                    leftTitle, centerTitle, rightTitle
+                    leftTitle,
+                    centerTitle,
+                    rightTitle,
                 ) { title ->
                     CompositionLocalProvider(LocalContentColor provides titleContentColor) {
                         ProvideTextStyle(MaterialTheme.typography.headlineSmall) {
                             Box(
                                 modifier = Modifier
                                     .padding(TitlePadding)
-                                    .align(Alignment.CenterHorizontally)
+                                    .align(Alignment.CenterHorizontally),
                             ) {
                                 title?.invoke()
                             }
@@ -251,14 +255,16 @@ fun PositionFullScreen(
                     }
                 }
                 PositionChildWidget(
-                    leftSubtitle, centerSubtitle, rightSubtitle
+                    leftSubtitle,
+                    centerSubtitle,
+                    rightSubtitle,
                 ) { subtitle ->
                     CompositionLocalProvider(LocalContentColor provides titleContentColor) {
                         ProvideTextStyle(MaterialTheme.typography.bodyMedium) {
                             Box(
                                 modifier = Modifier
                                     .padding(SubtitlePadding)
-                                    .align(Alignment.CenterHorizontally)
+                                    .align(Alignment.CenterHorizontally),
                             ) {
                                 subtitle?.invoke()
                             }
@@ -283,15 +289,15 @@ fun PositionFullScreen(
                     targetValue = footerHeight,
                     animationSpec = spring(
                         dampingRatio = Spring.DampingRatioLowBouncy,
-                        stiffness = Spring.StiffnessMediumLow
+                        stiffness = Spring.StiffnessMediumLow,
                     ),
-                    label = "fs_footer_height"
+                    label = "fs_footer_height",
                 )
 
                 Box(
                     modifier = Modifier
                         .weight(weight = 1f, fill = true)
-                        .fillMaxWidth()
+                        .fillMaxWidth(),
                 ) {
                     // Body fills the entire body+footer area minus the
                     // (animated) footer height. The bottom padding change
@@ -300,37 +306,37 @@ fun PositionFullScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(bottom = animatedFooterHeight.coerceAtLeast(0.dp))
+                            .padding(bottom = animatedFooterHeight.coerceAtLeast(0.dp)),
                     ) {
                         val bodyTransitionSpec:
-                                AnimatedContentTransitionScope<Any?>.() -> androidx.compose.animation.ContentTransform = {
-                            // Same-position cross-fade. SizeTransform is
-                            // included so any size delta between the two
-                            // body snapshots is animated too, instead of
-                            // producing a one-frame visual jump.
-                            fadeIn(animationSpec = tween(durationMillis = 220)) togetherWith
+                            AnimatedContentTransitionScope<Any?>.() -> androidx.compose.animation.ContentTransform = {
+                                // Same-position cross-fade. SizeTransform is
+                                // included so any size delta between the two
+                                // body snapshots is animated too, instead of
+                                // producing a one-frame visual jump.
+                                fadeIn(animationSpec = tween(durationMillis = 220)) togetherWith
                                     fadeOut(animationSpec = tween(durationMillis = 180)) using
                                     androidx.compose.animation.SizeTransform(
-                                        clip = false
+                                        clip = false,
                                     ) { _, _ -> tween(durationMillis = 220) }
-                        }
+                            }
                         if (contentKey != null) {
                             AnimatedContent(
                                 targetState = contentKey,
                                 transitionSpec = bodyTransitionSpec,
-                                label = "FullScreenBodyTransition"
+                                label = "FullScreenBodyTransition",
                             ) { _ ->
                                 PositionChildWidget(
                                     if (contentMode) leftContent else leftText,
                                     if (contentMode) centerContent else centerText,
-                                    if (contentMode) rightContent else rightText
+                                    if (contentMode) rightContent else rightText,
                                 ) { text ->
                                     CompositionLocalProvider(LocalContentColor provides textContentColor) {
                                         ProvideTextStyle(MaterialTheme.typography.bodyMedium) {
                                             Box(
                                                 modifier = Modifier
                                                     .padding(if (contentMode) ContentPadding else TextPadding)
-                                                    .fillMaxWidth()
+                                                    .fillMaxWidth(),
                                             ) {
                                                 text?.invoke()
                                             }
@@ -342,14 +348,14 @@ fun PositionFullScreen(
                             PositionChildWidget(
                                 if (contentMode) leftContent else leftText,
                                 if (contentMode) centerContent else centerText,
-                                if (contentMode) rightContent else rightText
+                                if (contentMode) rightContent else rightText,
                             ) { text ->
                                 CompositionLocalProvider(LocalContentColor provides textContentColor) {
                                     ProvideTextStyle(MaterialTheme.typography.bodyMedium) {
                                         Box(
                                             modifier = Modifier
                                                 .padding(if (contentMode) ContentPadding else TextPadding)
-                                                .fillMaxWidth()
+                                                .fillMaxWidth(),
                                         ) {
                                             text?.invoke()
                                         }
@@ -368,27 +374,29 @@ fun PositionFullScreen(
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
                             .padding(bottom = navInset + contentEdgePadding)
-                            .onSizeChanged { footerHeightPx = it.height }
+                            .onSizeChanged { footerHeightPx = it.height },
                     ) {
                         val footerTransitionSpec:
-                                AnimatedContentTransitionScope<Any?>.() -> androidx.compose.animation.ContentTransform = {
-                            // Buttons row is small enough that a plain
-                            // cross-fade + matching SizeTransform is enough
-                            // — it never needs to "slide in" from anywhere.
-                            fadeIn(animationSpec = tween(durationMillis = 200)) togetherWith
+                            AnimatedContentTransitionScope<Any?>.() -> androidx.compose.animation.ContentTransform = {
+                                // Buttons row is small enough that a plain
+                                // cross-fade + matching SizeTransform is enough
+                                // — it never needs to "slide in" from anywhere.
+                                fadeIn(animationSpec = tween(durationMillis = 200)) togetherWith
                                     fadeOut(animationSpec = tween(durationMillis = 160)) using
                                     androidx.compose.animation.SizeTransform(
-                                        clip = false
+                                        clip = false,
                                     ) { _, _ -> tween(durationMillis = 200) }
-                        }
+                            }
                         if (contentKey != null) {
                             AnimatedContent(
                                 targetState = contentKey,
                                 transitionSpec = footerTransitionSpec,
-                                label = "FullScreenFooterTransition"
+                                label = "FullScreenFooterTransition",
                             ) { _ ->
                                 PositionChildWidget(
-                                    leftButton, centerButton, rightButton
+                                    leftButton,
+                                    centerButton,
+                                    rightButton,
                                 ) { button ->
                                     CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.primary) {
                                         ProvideTextStyle(MaterialTheme.typography.labelLarge) {
@@ -401,7 +409,9 @@ fun PositionFullScreen(
                             }
                         } else {
                             PositionChildWidget(
-                                leftButton, centerButton, rightButton
+                                leftButton,
+                                centerButton,
+                                rightButton,
                             ) { button ->
                                 CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.primary) {
                                     ProvideTextStyle(MaterialTheme.typography.labelLarge) {
@@ -434,5 +444,5 @@ private val ContentPadding = PaddingValues.Absolute(bottom = 8.dp)
 private val ButtonPadding = PaddingValues(
     start = DialogSinglePadding,
     end = DialogSinglePadding,
-    bottom = 0.dp
+    bottom = 0.dp,
 )

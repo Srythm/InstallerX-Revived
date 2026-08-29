@@ -102,7 +102,7 @@ val engineModule = module {
             postInstallTaskProvider = get(),
             platformInstallPolicyChecker = get(),
             selfUpdateRecoveryRepository = get(),
-            taskScope = get(named("AppScope"))
+            taskScope = get(named("AppScope")),
         )
     }
     singleOf(::ModuleInstallerRepositoryImpl) { bind<ModuleInstallerRepository>() }

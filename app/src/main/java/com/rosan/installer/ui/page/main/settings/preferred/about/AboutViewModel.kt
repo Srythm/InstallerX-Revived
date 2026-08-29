@@ -60,7 +60,7 @@ class AboutViewModel(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = AboutState()
+        initialValue = AboutState(),
     )
 
     init {

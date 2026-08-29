@@ -30,8 +30,8 @@ import com.rosan.installer.domain.settings.model.config.ConfigModel
 import com.rosan.installer.domain.settings.repository.AppSettingsRepository
 import com.rosan.installer.domain.settings.repository.BooleanSetting
 import java.io.File
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
 
@@ -43,7 +43,7 @@ class AppInstallerRepositoryImpl(
     private val postInstallTaskProvider: PostInstallTaskProvider,
     private val platformInstallPolicyChecker: PlatformInstallPolicyChecker,
     private val taskScope: CoroutineScope,
-    private val selfUpdateRecoveryRepository: SelfUpdateRecoveryRepository
+    private val selfUpdateRecoveryRepository: SelfUpdateRecoveryRepository,
 ) : AppInstallerRepository {
     override suspend fun resolveInstallerPackageName(config: ConfigModel): String? = executeWithRepo(config) { repo ->
         repo.resolveInstallerPackageName(config)
@@ -229,25 +229,25 @@ class AppInstallerRepositoryImpl(
         reflect,
         deviceCapabilityProvider,
         postInstallTaskProvider,
-        taskScope
+        taskScope,
     )
 
     /**
      * Resolve the InstallerRepo based on the provided
      */
-    private fun resolveRepo(config: ConfigModel): AppInstallerRepository {
-        return when (config.authorizer) {
-            Authorizer.Shizuku -> ShizukuAppInstallerRepoImpl(context, reflect, deviceCapabilityProvider, postInstallTaskProvider, taskScope)
-            Authorizer.Dhizuku -> DhizukuAppInstallerRepoImpl(context, reflect, deviceCapabilityProvider, postInstallTaskProvider, taskScope)
-            Authorizer.None -> {
-                if (deviceCapabilityProvider.isSystemApp) {
-                    createSystemAppRepo()
-                } else {
-                    NoneAppInstallerRepoImpl(context, reflect, postInstallTaskProvider, taskScope)
-                }
-            }
+    private fun resolveRepo(config: ConfigModel): AppInstallerRepository = when (config.authorizer) {
+        Authorizer.Shizuku -> ShizukuAppInstallerRepoImpl(context, reflect, deviceCapabilityProvider, postInstallTaskProvider, taskScope)
 
-            else -> ProcessAppInstallerRepoImpl(context, reflect, deviceCapabilityProvider, postInstallTaskProvider, taskScope)
+        Authorizer.Dhizuku -> DhizukuAppInstallerRepoImpl(context, reflect, deviceCapabilityProvider, postInstallTaskProvider, taskScope)
+
+        Authorizer.None -> {
+            if (deviceCapabilityProvider.isSystemApp) {
+                createSystemAppRepo()
+            } else {
+                NoneAppInstallerRepoImpl(context, reflect, postInstallTaskProvider, taskScope)
+            }
         }
+
+        else -> ProcessAppInstallerRepoImpl(context, reflect, deviceCapabilityProvider, postInstallTaskProvider, taskScope)
     }
 }

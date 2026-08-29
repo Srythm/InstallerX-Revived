@@ -178,15 +178,16 @@ fun OpenSourceLicensePage(useBlur: Boolean) {
                                 icon = AppIcons.License,
                                 text = stringResource(
                                     R.string.license,
-                                    library.licenses.joinToString(separator = ", ") { it.name }),
+                                    library.licenses.joinToString(separator = ", ") { it.name },
+                                ),
                                 modifier = Modifier.fillMaxWidth(),
-                                noPadding = true
+                                noPadding = true,
                             )
                         }
 
                         items(
                             items = library.licenses.toList(),
-                            key = { it.name }
+                            key = { it.name },
                         ) { license ->
                             OutlinedCard(
                                 modifier = Modifier.fillMaxWidth(),

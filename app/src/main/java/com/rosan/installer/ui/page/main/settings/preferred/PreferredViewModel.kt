@@ -43,7 +43,7 @@ class PreferredViewModel(
     private val exportBackup: ExportBackupUseCase,
     private val prepareBackupRestore: PrepareBackupRestoreUseCase,
     private val restoreBackup: RestoreBackupUseCase,
-    private val ioDispatcher: CoroutineDispatcher
+    private val ioDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
 
     private val _uiEvents = MutableSharedFlow<PreferredViewEvent>(
@@ -81,7 +81,7 @@ class PreferredViewModel(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = PreferredViewState()
+        initialValue = PreferredViewState(),
     )
 
     init {

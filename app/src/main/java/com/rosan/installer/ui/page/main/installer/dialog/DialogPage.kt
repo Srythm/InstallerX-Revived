@@ -32,8 +32,8 @@ import com.rosan.installer.ui.page.main.installer.InstallerViewModel
 import com.rosan.installer.ui.page.main.installer.components.PositionDialog
 import com.rosan.installer.ui.page.main.installer.components.PositionFullScreen
 import com.rosan.installer.ui.page.main.installer.components.workingIcon
-import com.rosan.installer.ui.page.main.installer.dialog.inner.ModuleInstallSheetContent
 import com.rosan.installer.ui.page.main.installer.dialog.inner.ModuleInstallFullScreenContent
+import com.rosan.installer.ui.page.main.installer.dialog.inner.ModuleInstallSheetContent
 import com.rosan.installer.ui.page.main.installer.dialog.inner.installInfoDialog
 import com.rosan.installer.ui.page.main.installer.dialog.inner.uninstallInfoDialog
 import com.rosan.installer.ui.page.main.widget.util.InstallerEventCollector
@@ -50,14 +50,14 @@ private data class FullScreenContentKey(
     val stageType: Any,
     val textId: String,
     val contentId: String,
-    val buttonsId: String
+    val buttonsId: String,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DialogPage(
     session: InstallerSessionRepository,
-    viewModel: InstallerViewModel = koinViewModel { parametersOf(session) }
+    viewModel: InstallerViewModel = koinViewModel { parametersOf(session) },
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val stage = uiState.stage
@@ -83,7 +83,7 @@ fun DialogPage(
                 keyColor = it,
                 isDark = isDark,
                 style = paletteStyle,
-                colorSpec = colorSpec
+                colorSpec = colorSpec,
             )
         } ?: globalColorScheme
     }
@@ -95,12 +95,12 @@ fun DialogPage(
     InstallerEventCollector(viewModel)
 
     CompositionLocalProvider(
-        LocalInstallerColorScheme provides activeColorScheme
+        LocalInstallerColorScheme provides activeColorScheme,
     ) {
         InstallerMaterialExpressiveTheme(
             colorScheme = activeColorScheme,
             darkTheme = isDark,
-            compatStatusBarColor = false
+            compatStatusBarColor = false,
         ) {
             val colorScheme = InstallerTheme.colorScheme
             // Keep module flashing inside the selected presentation mode. Full-screen installs
@@ -118,7 +118,7 @@ fun DialogPage(
                         stageType = stage::class,
                         textId = "module",
                         contentId = "module_log",
-                        buttonsId = "module"
+                        buttonsId = "module",
                     ),
                     centerIcon = dialogInnerWidget(headerParams.icon),
                     centerTitle = dialogInnerWidget(headerParams.title),
@@ -129,9 +129,9 @@ fun DialogPage(
                             isFinished = stage.isFinished,
                             colorScheme = colorScheme,
                             onReboot = { viewModel.dispatch(InstallerViewAction.Reboot("")) },
-                            onClose = { viewModel.dispatch(InstallerViewAction.Close) }
+                            onClose = { viewModel.dispatch(InstallerViewAction.Close) },
                         )
-                    }
+                    },
                 )
             } else if (stage is InstallerStage.InstallingModule) {
                 // Do NOT create a local variable for isDismissible here.
@@ -142,7 +142,7 @@ fun DialogPage(
                     initialValue = SheetValue.Hidden,
                     enabledValues = setOf(
                         SheetValue.Hidden,
-                        SheetValue.Expanded
+                        SheetValue.Expanded,
                     ),
                     confirmValueChange = { sheetValue ->
                         if (sheetValue == SheetValue.Hidden) {
@@ -150,7 +150,7 @@ fun DialogPage(
                         } else {
                             true
                         }
-                    }
+                    },
                 )
 
                 ModalBottomSheet(
@@ -161,7 +161,7 @@ fun DialogPage(
                     },
                     sheetState = sheetState,
                     containerColor = colorScheme.surfaceContainer,
-                    contentColor = colorScheme.onSurface
+                    contentColor = colorScheme.onSurface,
                 ) {
                     WindowNavigationEventBridge()
                     val blurRadius = if (sheetState.targetValue == SheetValue.Expanded) 30 else 0
@@ -176,7 +176,7 @@ fun DialogPage(
                         onReboot = { viewModel.dispatch(InstallerViewAction.Reboot("")) },
                         onSoftReboot = { viewModel.dispatch(InstallerViewAction.Reboot("ksud_soft_reboot")) },
                         onClose = { viewModel.dispatch(InstallerViewAction.Close) },
-                        colorScheme = colorScheme
+                        colorScheme = colorScheme,
                     )
                 }
             }
@@ -268,7 +268,7 @@ fun DialogPage(
 
                         is InstallerStage.InstallConfirm -> {
                             viewModel.dispatch(
-                                InstallerViewAction.ApproveSession(currentStage.sessionId, false)
+                                InstallerViewAction.ApproveSession(currentStage.sessionId, false),
                             )
                         }
 
@@ -322,7 +322,8 @@ fun DialogPage(
                         is InstallerStage.UninstallResolveFailed,
                         is InstallerStage.Uninstalling,
                         is InstallerStage.UninstallSuccess,
-                        is InstallerStage.UninstallFailed ->
+                        is InstallerStage.UninstallFailed,
+                        ->
                             uninstallInfoDialog(viewModel, showTitleExtra = false)
 
                         else -> installInfoDialog(viewModel)
@@ -339,13 +340,13 @@ fun DialogPage(
                             {
                                 Column(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalAlignment = Alignment.CenterHorizontally
+                                    horizontalAlignment = Alignment.CenterHorizontally,
                                 ) {
                                     workingIcon()
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Text(
                                         text = stringResource(R.string.installer_analysing),
-                                        style = MaterialTheme.typography.bodyLarge
+                                        style = MaterialTheme.typography.bodyLarge,
                                     )
                                 }
                             }
@@ -366,14 +367,14 @@ fun DialogPage(
                             stageType = stage::class,
                             textId = params.text.id,
                             contentId = params.content.id,
-                            buttonsId = params.buttons.id
+                            buttonsId = params.buttons.id,
                         ),
                         centerIcon = dialogInnerWidget(headerParams.icon),
                         centerTitle = dialogInnerWidget(headerParams.title),
                         centerSubtitle = dialogInnerWidget(headerParams.subtitle),
                         centerContent = bodyContent,
                         centerText = bodyText,
-                        centerButton = dialogInnerWidget(params.buttons)
+                        centerButton = dialogInnerWidget(params.buttons),
                     )
                 } else {
                     PositionDialog(
@@ -384,7 +385,7 @@ fun DialogPage(
                         centerSubtitle = dialogInnerWidget(params.subtitle),
                         centerText = dialogInnerWidget(params.text),
                         centerContent = dialogInnerWidget(params.content),
-                        centerButton = dialogInnerWidget(params.buttons)
+                        centerButton = dialogInnerWidget(params.buttons),
                     )
                 }
             }

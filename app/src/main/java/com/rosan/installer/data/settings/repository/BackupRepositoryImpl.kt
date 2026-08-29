@@ -6,6 +6,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.room3.withWriteTransaction
 import com.rosan.installer.BuildConfig
 import com.rosan.installer.R
 import com.rosan.installer.data.settings.local.datastore.AppDataStore
@@ -17,7 +18,6 @@ import com.rosan.installer.data.settings.local.room.dao.OperationHistoryDao
 import com.rosan.installer.data.settings.local.room.entity.AppEntity
 import com.rosan.installer.data.settings.local.room.entity.ConfigEntity
 import com.rosan.installer.data.settings.local.room.entity.OperationHistoryEntity
-import androidx.room3.withWriteTransaction
 import com.rosan.installer.domain.history.model.InstallMethod
 import com.rosan.installer.domain.history.model.OperationStatus
 import com.rosan.installer.domain.history.model.OperationType

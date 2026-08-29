@@ -48,7 +48,7 @@ data class InstallerState(
     val uiUninstallInfo: UninstallInfo? = null,
 
     // Error State
-    val error: Throwable = Throwable()
+    val error: Throwable = Throwable(),
 ) {
     /**
      * Determines if the dialog can be dismissed by tapping the scrim.
@@ -62,13 +62,17 @@ data class InstallerState(
             is InstallerStage.InstallChoice,
             is InstallerStage.Uninstalling,
             is InstallerStage.InstallConfirm,
-            is InstallerStage.Unarchiving -> false
+            is InstallerStage.Unarchiving,
+            -> false
 
             is InstallerStage.InstallingModule -> stage.isFinished
+
             is InstallerStage.InstallPrepare -> true
+
             is InstallerStage.Preparing,
             is InstallerStage.InstallWaitingUnknownSource,
-            is InstallerStage.Installing -> !viewSettings.disableNotificationOnDismiss
+            is InstallerStage.Installing,
+            -> !viewSettings.disableNotificationOnDismiss
 
             else -> true
         }

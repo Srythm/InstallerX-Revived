@@ -32,7 +32,7 @@ class NoneAppInstallerRepoImpl(
     private val context: Context,
     private val reflect: ReflectionProvider,
     private val postInstallTaskProvider: PostInstallTaskProvider,
-    private val taskScope: CoroutineScope
+    private val taskScope: CoroutineScope,
 ) : AppInstallerRepository {
 
     override suspend fun resolveInstallerPackageName(config: ConfigModel): String = context.packageName
