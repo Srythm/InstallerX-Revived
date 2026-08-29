@@ -929,4 +929,7 @@
     <string name="install_comparison_show_all_desc">一律顯示新舊資料的值</string>
     <string name="install_comparison_show_differences_only">僅顯示差異項目</string>
     <string name="install_comparison_show_differences_only_desc">相同資料僅顯示單一數值</string>
+    <string name="config_check_split_package_signatures_desc">分析 APKS、APKM 與 XAPK 套件中的 APK 簽章。這可能會顯著增加分析時間</string>
+    <string name="installer_writing">寫入中…</string>
+    <string name="config_check_split_package_signatures">檢查分割套件簽章</string>
 </resources>

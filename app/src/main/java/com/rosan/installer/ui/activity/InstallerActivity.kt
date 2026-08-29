@@ -34,6 +34,7 @@ import com.rosan.installer.domain.device.provider.PermissionChecker
 import com.rosan.installer.domain.engine.exception.InstallException
 import com.rosan.installer.domain.session.model.ConfirmationRequestType
 import com.rosan.installer.domain.session.model.ProgressEntity
+import com.rosan.installer.domain.session.model.sessionIdOrNull
 import com.rosan.installer.domain.session.repository.InstallerSessionManager
 import com.rosan.installer.domain.session.repository.InstallerSessionRepository
 import com.rosan.installer.domain.settings.model.config.Authorizer
@@ -58,6 +59,7 @@ class InstallerActivity : ComponentActivity(), KoinComponent {
     companion object {
         private const val KEY_RETURN_INSTALL_RESULT_REQUESTED = "return_install_result_requested"
         private const val KEY_RESULT_ALREADY_FINISHED = "result_already_finished"
+        private const val KEY_CONFIRM_CALLER_UID = "confirm_caller_uid"
     }
 
     private enum class IncomingInstallPolicy {
@@ -78,6 +80,7 @@ class InstallerActivity : ComponentActivity(), KoinComponent {
     private var latestInstallResultProgress: ProgressEntity? = null
     private var returnInstallResultRequested = false
     private var resultAlreadyFinished = false
+    private var confirmCallerUid = Process.INVALID_UID
 
     private val deviceCapabilityProvider: DeviceCapabilityProvider by inject()
     private val permissionChecker: PermissionChecker by inject()
@@ -146,6 +149,14 @@ class InstallerActivity : ComponentActivity(), KoinComponent {
             savedInstanceState != null -> {
                 returnInstallResultRequested = savedInstanceState.getBoolean(KEY_RETURN_INSTALL_RESULT_REQUESTED)
                 resultAlreadyFinished = savedInstanceState.getBoolean(KEY_RESULT_ALREADY_FINISHED)
+                confirmCallerUid = savedInstanceState.getInt(
+                    KEY_CONFIRM_CALLER_UID,
+                    Process.INVALID_UID
+                )
+            }
+
+            intent.isSystemConfirmAction() -> {
+                confirmCallerUid = launchedFromUid
             }
 
             !intent.isSystemConfirmAction() -> {
@@ -174,7 +185,10 @@ class InstallerActivity : ComponentActivity(), KoinComponent {
         }
 
         restoreInstaller(savedInstanceState)
-        if (originalSessionId == null) {
+        if (intent.isSystemConfirmAction()) {
+            Timber.d("onCreate: Resolving system confirmation intent after session restore.")
+            checkPermissionsAndStartProcess()
+        } else if (originalSessionId == null) {
             Timber.d("onCreate: This is a fresh launch (originalId is null). Starting permission and resolve process.")
             checkPermissionsAndStartProcess()
         } else {
@@ -194,7 +208,7 @@ class InstallerActivity : ComponentActivity(), KoinComponent {
             ?.takeIf { it.scheme == "android-app" }
             ?.host
         val recovered = selfUpdateRecoveryManager.consumeSystemUiRecovery(
-            launchedFromUid = launchedFromUidCompat(),
+            launchedFromUid = launchedFromUid,
             platformReferrerPackage = platformReferrerPackage,
             intentFlags = intent.flags
         )
@@ -204,12 +218,6 @@ class InstallerActivity : ComponentActivity(), KoinComponent {
         startActivity(SettingsActivity.createSelfUpdateRecoveryIntent(this))
         finishAndRemoveTask()
         return true
-    }
-
-    @Suppress("DEPRECATION")
-    private fun launchedFromUidCompat(): Int {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN) return Process.INVALID_UID
-        return launchedFromUid
     }
 
     private fun checkPermissionsAndStartProcess() {
@@ -226,7 +234,10 @@ class InstallerActivity : ComponentActivity(), KoinComponent {
                 when (intent.action) {
                     PackageInstallerHidden.ACTION_CONFIRM_INSTALL,
                     PackageInstallerHidden.ACTION_CONFIRM_PERMISSIONS,
-                    PackageInstallerHidden.ACTION_CONFIRM_PRE_APPROVAL -> resolveConfirm(intent)
+                    PackageInstallerHidden.ACTION_CONFIRM_PRE_APPROVAL -> resolveConfirm(
+                        intent,
+                        confirmCallerUid
+                    )
 
                     else -> {
                         Timber.d("onCreate: Dispatching resolveInstall")
@@ -259,6 +270,7 @@ class InstallerActivity : ComponentActivity(), KoinComponent {
         outState.putString(KEY_INSTALLER_ID, currentId)
         outState.putBoolean(KEY_RETURN_INSTALL_RESULT_REQUESTED, returnInstallResultRequested)
         outState.putBoolean(KEY_RESULT_ALREADY_FINISHED, resultAlreadyFinished)
+        outState.putInt(KEY_CONFIRM_CALLER_UID, confirmCallerUid)
         Timber.d("onSaveInstanceState: Saving id: $currentId")
         super.onSaveInstanceState(outState)
     }
@@ -269,27 +281,60 @@ class InstallerActivity : ComponentActivity(), KoinComponent {
             logIntentDetails("onNewIntent", intent)
 
         val isSystemConfirmAction = intent.isSystemConfirmAction()
+        val incomingCallerUid = if (isSystemConfirmAction) currentCallerUid() else Process.INVALID_UID
 
         super.onNewIntent(intent)
 
         if (isSystemConfirmAction) {
-            this.intent = intent
             val sysSessionId = intent.getIntExtra(PackageInstaller.EXTRA_SESSION_ID, -1)
 
             if (sysSessionId != -1) {
+                val currentSession = this.session
+                val activeConfirmationId = currentSession?.confirmationState?.value?.sessionIdOrNull()
+                val isOwnPlatformSession = currentSession != null &&
+                        sysSessionId in currentSession.activePlatformSessionIds.value
+                val shouldDefer = !isOwnPlatformSession &&
+                        if (activeConfirmationId != null) {
+                            activeConfirmationId != sysSessionId
+                        } else {
+                            latestProgress.isActiveInstallProgress()
+                        }
+                if (shouldDefer) {
+                    sessionManager.enqueueForegroundConfirmation(
+                        Intent(intent).apply { removeExtra(KEY_INSTALLER_ID) },
+                        incomingCallerUid
+                    )
+                    Timber.d(
+                        "onNewIntent: Deferred platform confirmation $sysSessionId while " +
+                                "session ${currentSession?.id} is active."
+                    )
+                    return
+                }
+
+                this.intent = intent
+                confirmCallerUid = incomingCallerUid
                 val requestType = intent.confirmationRequestType()
                 // Route the system confirmation request to the currently active session if one exists.
                 // This bridges the gap between the suspended commit coroutine and the system UI request.
-                val currentSession = this.session
                 if (currentSession != null) {
                     Timber.d("onNewIntent: Sending confirm request to ACTIVE session [id=${currentSession.id}]")
-                    currentSession.resolveConfirmInstall(this, sysSessionId, requestType)
+                    currentSession.resolveConfirmInstall(
+                        this,
+                        sysSessionId,
+                        requestType,
+                        incomingCallerUid
+                    )
                 } else {
                     // Fallback: Restore or create a new session if this confirmation was triggered
                     // without an active foreground installation process (e.g., silent background trigger).
                     Timber.d("onNewIntent: No active session found. Restoring for system confirm.")
                     restoreInstaller()
-                    session?.resolveConfirmInstall(this, sysSessionId, requestType)
+                    session?.resolveConfirmInstall(
+                        this,
+                        sysSessionId,
+                        requestType,
+                        incomingCallerUid
+                    )
                 }
             } else {
                 Timber.e("onNewIntent: ${intent.action} intent missing EXTRA_SESSION_ID")
@@ -354,6 +399,14 @@ class InstallerActivity : ComponentActivity(), KoinComponent {
                 if (currentProgress is ProgressEntity.InstallConfirming) {
                     val details = session.confirmationDetails.value
                     if (details != null) {
+                        if (!details.isCallerVerified) {
+                            Timber.w(
+                                "onStop: Closing unverified confirmation UI without rejecting " +
+                                        "system session ${details.sessionId}."
+                            )
+                            session.close()
+                            return
+                        }
                         Timber.d(
                             "onStop: User left install confirmation. Denying system session ${details.sessionId}, " +
                                     "requestType=${details.requestType}, source=${details.sourceAppLabel}"
@@ -454,7 +507,10 @@ class InstallerActivity : ComponentActivity(), KoinComponent {
                         if (shouldReturnInstallResult()) {
                             sessionManager.clearForegroundInstallQueue()
                             finishWithInstallResultIfRequested()
-                        } else if (!launchNextPendingInstall() && !this@InstallerActivity.isFinishing) {
+                        } else if (!launchNextPendingConfirmation() &&
+                            !launchNextPendingInstall() &&
+                            !this@InstallerActivity.isFinishing
+                        ) {
                             this@InstallerActivity.finish()
                         }
                     }
@@ -473,7 +529,7 @@ class InstallerActivity : ComponentActivity(), KoinComponent {
                             Timber.d("[id=${session.id}] Result-bound install is backgrounded. Waiting for final result.")
                             return@collect
                         }
-                        if (launchNextPendingInstall()) {
+                        if (launchNextPendingConfirmation() || launchNextPendingInstall()) {
                             Timber.d("[id=${session.id}] Background mode released foreground slot for deferred install.")
                             return@collect
                         }
@@ -510,6 +566,17 @@ class InstallerActivity : ComponentActivity(), KoinComponent {
         return true
     }
 
+    private fun launchNextPendingConfirmation(): Boolean {
+        val (nextIntent, callerUid) =
+            sessionManager.takeNextForegroundConfirmation() ?: return false
+        Timber.d("Launching deferred platform confirmation.")
+        intent = nextIntent
+        confirmCallerUid = callerUid
+        restoreInstaller()
+        checkPermissionsAndStartProcess()
+        return true
+    }
+
     private fun ProgressEntity.isActiveInstallProgress(): Boolean =
         this is ProgressEntity.InstallResolving ||
                 this is ProgressEntity.InstallResolvedFailed ||
@@ -527,7 +594,7 @@ class InstallerActivity : ComponentActivity(), KoinComponent {
                 this is ProgressEntity.InstallSuccess ||
                 this is ProgressEntity.InstallingModule
 
-    private fun resolveConfirm(intent: Intent) {
+    private fun resolveConfirm(intent: Intent, callerUid: Int) {
         val sessionId = intent.getIntExtra(
             PackageInstaller.EXTRA_SESSION_ID,
             -1
@@ -541,8 +608,15 @@ class InstallerActivity : ComponentActivity(), KoinComponent {
 
         val requestType = intent.confirmationRequestType()
         Timber.d("onCreate: Dispatching resolveConfirmInstall for session $sessionId, type=$requestType")
-        session?.resolveConfirmInstall(this, sessionId, requestType)
+        session?.resolveConfirmInstall(this, sessionId, requestType, callerUid)
     }
+
+    private fun currentCallerUid(): Int =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            Api35Impl.currentCallerUid(this)
+        } else {
+            Process.INVALID_UID
+        }
 
     private fun handleUnknownSourceInstallPermission(progress: ProgressEntity) {
         if (progress !is ProgressEntity.InstallWaitingUnknownSource) {
@@ -642,6 +716,12 @@ class InstallerActivity : ComponentActivity(), KoinComponent {
         if (progress.isInstallTerminalResult()) {
             latestInstallResultProgress = progress
         }
+    }
+
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    private object Api35Impl {
+        fun currentCallerUid(activity: InstallerActivity): Int =
+            runCatching { activity.currentCaller.uid }.getOrDefault(Process.INVALID_UID)
     }
 
     private fun updateReturnResultStateFromIntent(intent: Intent) {

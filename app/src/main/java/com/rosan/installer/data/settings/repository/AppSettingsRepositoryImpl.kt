@@ -87,7 +87,7 @@ class AppSettingsRepositoryImpl(
             tryMultipleAuthorizersOnInstall = prefs[AppDataStore.TRY_MULTIPLE_AUTHORIZERS_ON_INSTALL] ?: false,
             smartAuthorizerCandidates = SmartAuthorizerPreferences.decode(
                 value = prefs[AppDataStore.SMART_AUTHORIZER_CANDIDATES].orEmpty(),
-                isSystemApp = capabilityProvider.isSystemApp
+                isSessionInstallSupported = capabilityProvider.isSessionInstallSupported
             ),
             preferSystemIcon = prefs[AppDataStore.PREFER_SYSTEM_ICON_FOR_INSTALL] ?: false,
             showLauncherIcon = prefs[AppDataStore.SHOW_LAUNCHER_ICON] ?: true,

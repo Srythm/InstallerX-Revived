@@ -21,6 +21,7 @@ data class InstallerState(
     // UI specific toggles and settings
     val viewSettings: InstallerViewSettings = InstallerViewSettings(),
     val navigatedFromPrepareToChoice: Boolean = false,
+    val isConfirmationSubmitting: Boolean = false,
     // Used to temporarily override the persistent setting during this session
     val tempShowOPPOSpecial: Boolean? = null,
     val tempLabShowFilePath: Boolean? = null,

@@ -919,4 +919,7 @@
     <string name="install_comparison_show_differences_only">Mostrar apenas as diferenças</string>
     <string name="install_comparison_show_differences_only_desc">Exibir dados idênticos como um único valor</string>
     <string name="self_update_install_success">O InstallerX foi atualizado com sucesso</string>
+    <string name="config_check_split_package_signatures_desc">Analisar as assinaturas de APK em pacotes APKS, APKM e XAPK. Isso pode aumentar significativamente o tempo de análise</string>
+    <string name="installer_writing">Gravando…</string>
+    <string name="config_check_split_package_signatures">Analisar assinaturas de pacotes divididos</string>
 </resources>

@@ -169,7 +169,7 @@ class AppInstallerRepositoryImpl(
         config: ConfigModel,
         sessionId: Int,
         granted: Boolean
-    ) = executeWithRepo(config) { repo ->
+    ) = executeWithRepo(config, resolveSessionApprovalRepo(config)) { repo ->
         repo.approveSession(config, sessionId, granted)
     }
 
@@ -178,10 +178,9 @@ class AppInstallerRepositoryImpl(
      */
     private suspend fun <T> executeWithRepo(
         config: ConfigModel,
+        repo: AppInstallerRepository = resolveRepo(config),
         action: suspend (AppInstallerRepository) -> T
     ): T {
-        val repo = resolveRepo(config)
-
         try {
             return action(repo)
         } catch (e: IllegalStateException) {
@@ -216,6 +215,24 @@ class AppInstallerRepositoryImpl(
         }
     }
 
+    private fun resolveSessionApprovalRepo(config: ConfigModel): AppInstallerRepository {
+        if (!deviceCapabilityProvider.isSystemApp) return resolveRepo(config)
+
+        Timber.tag(TAG).d(
+            "Using the system app Binder path for session approval; configured authorizer=%s",
+            config.authorizer
+        )
+        return createSystemAppRepo()
+    }
+
+    private fun createSystemAppRepo() = SystemAppInstallerRepoImpl(
+        context,
+        reflect,
+        deviceCapabilityProvider,
+        postInstallTaskProvider,
+        taskScope
+    )
+
     /**
      * Resolve the InstallerRepo based on the provided 
      */
@@ -225,7 +242,7 @@ class AppInstallerRepositoryImpl(
             Authorizer.Dhizuku -> DhizukuAppInstallerRepoImpl(context, reflect, deviceCapabilityProvider, postInstallTaskProvider, taskScope)
             Authorizer.None -> {
                 if (deviceCapabilityProvider.isSystemApp) {
-                    SystemAppInstallerRepoImpl(context, reflect, deviceCapabilityProvider, postInstallTaskProvider, taskScope)
+                    createSystemAppRepo()
                 } else {
                     NoneAppInstallerRepoImpl(context, reflect, postInstallTaskProvider, taskScope)
                 }

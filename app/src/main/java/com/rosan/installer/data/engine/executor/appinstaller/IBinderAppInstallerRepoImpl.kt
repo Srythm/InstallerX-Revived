@@ -274,8 +274,9 @@ abstract class IBinderAppInstallerRepoImpl(
         if (entities.isEmpty()) return
         val packageInstaller = getPackageInstaller(config)
         var session: Session? = null
+        var platformSessionId: Int? = null
         try {
-            session = createSession(
+            val createdSession = createSession(
                 config,
                 entities,
                 metadata,
@@ -283,6 +284,9 @@ abstract class IBinderAppInstallerRepoImpl(
                 packageInstaller,
                 packageName
             )
+            session = createdSession.second
+            platformSessionId = createdSession.first
+            metadata.onPlatformSessionActiveChanged(createdSession.first, true)
             installIts(entities, session, progressWriter)
             onPhaseChanged(InstallPhase.INSTALLING)
             commit(session)
@@ -291,6 +295,9 @@ abstract class IBinderAppInstallerRepoImpl(
             throw e
         } finally {
             session?.runCatching { close() }
+            platformSessionId?.let { sessionId ->
+                metadata.onPlatformSessionActiveChanged(sessionId, false)
+            }
         }
     }
 
@@ -301,7 +308,7 @@ abstract class IBinderAppInstallerRepoImpl(
         respectPlatformInstallPolicy: Boolean,
         packageInstaller: PackageInstaller,
         packageName: String
-    ): Session {
+    ): Pair<Int, Session> {
         val pm = context.packageManager
         val sourceType = entities.first().sourceType
         val params = if (sourceType == DataType.MULTI_APK_ZIP || sourceType == DataType.MULTI_APK)
@@ -383,7 +390,7 @@ abstract class IBinderAppInstallerRepoImpl(
         val sessionId = packageInstaller.createSession(params)
         val session = packageInstaller.openSession(sessionId)
         setSessionIBinder(session)
-        return session
+        return sessionId to session
     }
 
     private suspend fun installIts(
