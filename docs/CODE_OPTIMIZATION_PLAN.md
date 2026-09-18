@@ -902,6 +902,8 @@ suspend
 
 \## 12. Material3 与 Miuix 漂移
 
+状态：本节已失效。Miuix UI 家族已移除，只剩 Material 3 Expressive 一套界面，本节记录的图标/文案/功能漂移不再存在，也无需再统一两套 UI 的共享 Model。
+
 
 
 \### 已发现
@@ -1631,6 +1633,10 @@ strings.xml
 
 
 \# Miuix UI 移除计划（保留 Blur / Shader）
+
+状态：已在 `code-optimization-p0` 分支基本执行完毕。Miuix 源码树、Miuix UI 组件依赖与界面家族开关均已移除；`miuix-blur`、`miuix-shader`、`miuix-navigation` 按计划保留，仅作为视觉效果与导航能力使用，不再承担 UI 组件职责。
+
+仍未完成：`\- \[ ] 清理无引用资源`。`theme_settings_miuix_ui`、`theme_settings_miuix_ui_desc`、`theme_settings_miuix_custom_colors`、`theme_settings_miuix_custom_colors_desc`、`theme_settings_predictive_back_animation_miuix` 共约 50 条字符串仍残留在 `values*/strings.xml`（12—13 个 res 目录），Kotlin 代码中零引用。
 
 
 

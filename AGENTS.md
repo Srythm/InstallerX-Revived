@@ -36,7 +36,7 @@ InstallerX Revived is a community-maintained Android installer with:
 * support for APK, APKS, APKM, XAPK, APKs inside ZIP files, and batch APK installation,
 * profile-driven install options and install flags,
 * privileged workflows involving Root, Shizuku, Dhizuku, `app_process`, system package manager mode, and hidden APIs,
-* switchable UI families based on Material 3 Expressive and Miuix.
+* a single Material 3 Expressive UI family; the former Miuix UI family has been removed.
 
 Several product behaviors are intentionally flow-specific. Do **not** assume a feature supported in dialog installation is also valid for notification or automatic installation unless the existing code and docs already establish that.
 
@@ -92,7 +92,9 @@ Preserve this separation. Do not move behavior into a convenient but wrong layer
 
 ### GitHub Packages authentication
 
-The project resolves snapshot `miuix` artifacts from GitHub Packages.
+The project still resolves three snapshot `miuix` artifacts from GitHub Packages: `miuix-shader`, `miuix-blur`, and `miuix-navigation`.
+
+These are retained as low-level **visual-effect and navigation** libraries only. The Miuix UI component family (`miuix-core`, `miuix-ui`, `miuix-preference`, `miuix-icons`) is no longer a dependency and must not be reintroduced. See [UI conventions](#ui-conventions).
 
 For local builds, credentials are expected outside the repository, typically in the global Gradle properties file:
 
@@ -163,7 +165,7 @@ Do not flatten, rename, or silently bypass flavor logic. If behavior differs by 
 * Follow the existing version catalog naming style.
 * Do not scatter raw dependency coordinates or versions across module build files without a strong reason.
 * Respect the current centralized repository setup and `RepositoriesMode.FAIL_ON_PROJECT_REPOS`.
-* The GitHub Packages `miuix` repository is intentionally configured in `settings.gradle.kts`; do not duplicate it in subprojects.
+* The GitHub Packages `miuix` repository is intentionally configured in `settings.gradle.kts` because the three artifacts above are only published there; do not duplicate it in subprojects, and do not remove it while those artifacts are still used.
 
 ### Signing and release flow
 
@@ -253,8 +255,7 @@ When a setting is persisted or exposed through app state, verify whether the cha
 3. data-layer storage or mapping updates,
 4. DI wiring updates,
 5. UI state/action/view-model changes where that feature is presented,
-6. both Material 3 and Miuix screen updates when both UI families expose the same setting,
-7. English and Simplified Chinese string updates.
+6. English and Simplified Chinese string updates.
 
 Do not implement only the visible switch while leaving persistence, mapping, or downstream behavior inconsistent.
 
@@ -262,22 +263,31 @@ Do not implement only the visible switch while leaving persistence, mapping, or 
 
 ## UI conventions
 
-### Material 3 Expressive and Miuix are separate UI families
+### One UI family: Material 3 Expressive
 
-The repository keeps page implementations under distinct paths such as:
+There is a single UI family. All screens live under `ui/page/main/`.
 
-* `ui/page/main/`
-* `ui/page/miuix/`
-
-Respect that split.
+The former `ui/page/miuix/` tree has been deleted, along with the Miuix UI component dependencies and the user-facing UI-family switch. There is no second parallel surface to keep in sync.
 
 Do not:
 
-* leak Miuix-only components into Material 3 screens without intent,
-* rebuild Material 3 screens with Miuix assumptions,
-* change shared logic while checking only one UI family.
+* reintroduce Miuix UI components (`miuix-core`, `miuix-ui`, `miuix-preference`, `miuix-icons`) or recreate a parallel UI family,
+* treat the retained `miuix` artifacts as a component library (see below),
+* add a UI-family setting or branch rendering on one.
 
-When a feature exists in both design systems, preserve semantic consistency while allowing implementation details to remain native to each UI family.
+### The retained `miuix` artifacts are effects libraries, not UI components
+
+Three `miuix` artifacts remain, and their imports use the `top.yukonga.miuix.kmp.*` package prefix. That prefix is not evidence of a second UI family:
+
+* `miuix-navigation` (`kmp.nav.*`) — navigation host and transition primitives (`NavDisplay`, `NavBackStack`, `NavTransition`, predictive-back gesture bridge).
+* `miuix-blur` (`kmp.blur.*`) — background blur, `RuntimeShader` effects, highlight/tilt utilities (`Backdrop`, `drawBackdrop`, `rememberLayerBackdrop`, `colorControls`).
+* `miuix-shader` — shader support used by the above.
+
+Use them for their capabilities only. Build visible UI from Material 3 Expressive.
+
+### In-repo visual libraries
+
+`ui/library/` contains first-party visual code (`liquid/`, `blend/`, `effect/`) that was derived from `compose-miuix-ui` contributors' work. It is now maintained as part of this repository. Treat it as project code: changes there affect every screen that uses those effects.
 
 ### Reusable UI components
 
@@ -429,7 +439,7 @@ Subject rules:
 Examples that match repository style:
 
 * `fix: restore config scopes on undo`
-* `fix: fix Miuix sheet dismissal behavior`
+* `fix: fix fullscreen installer sheet dismissal behavior`
 * `feat: add smart authorizer fallback settings`
 * `refactor: define explicit parameters for ShizukuUserServiceRecycler`
 * `docs: document agent submission and repo layout`
@@ -448,7 +458,8 @@ If verification was not run or did not pass, do not write the commit or handoff 
 
 ## Common mistakes to avoid
 
-* Editing one UI family and forgetting the parallel Material 3 or Miuix surface.
+* Assuming a second UI family still exists, or writing code against the deleted `ui/page/miuix/` tree.
+* Importing Miuix UI components because `top.yukonga.miuix.kmp.*` imports appear elsewhere; only blur, shader, and navigation are legitimate.
 * Adding a setting toggle without updating persistence or state propagation.
 * Adding repositories to module Gradle files despite centralized repository management.
 * Hardcoding dependency versions outside the version catalog.

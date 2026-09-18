@@ -30,7 +30,7 @@ The full user guide, installation instructions, advanced options, system integra
   - **None:** is fully limited by the system, but can silently install when InstallerX is running as the system package installer.
 - **Profiles:** define how installation and uninstallation requests are handled, including install mode, authorizer override, installer/requester metadata, target user, DexOpt, auto-delete behavior, split selection, blacklist policy, and signature gates.
 - **System integration:** InstallerX can be locked as the default installer from the Home page status card, used with LSPosed modules such as [InxLocker](https://github.com/Chimioo/InxLocker), or installed as a replacement system package manager by advanced users.
-- **Modern UI:** Material 3 Expressive and Miuix interface styles, dark mode, dynamic color, advanced palettes, system icon packs, colorful dialogs, standard notifications, Live Activity, and Xiaomi HyperOS-style island notifications on supported Xiaomi devices.
+- **Modern UI:** Material 3 Expressive interface, dark mode, dynamic color, advanced palettes, system icon packs, colorful dialogs, standard notifications, Live Activity, and Xiaomi HyperOS-style island notifications on supported Xiaomi devices.
 - **Safety controls:** package-name and SharedUID blacklists, signature mismatch and unknown-signature policy gates, permission preview, install flags, and one-time smart suggestions for selected blocked cases.
 
 ## Supported Android Versions
@@ -59,7 +59,7 @@ InstallerX Revived is an Android Gradle project.
 
 - **JDK 25** with `JAVA_HOME` configured correctly.
 - Android SDK / Android Studio with the required platform and build tools installed.
-- GitHub Packages credentials for the snapshot `miuix` dependency.
+- GitHub Packages credentials for the snapshot `miuix` artifacts (`miuix-shader`, `miuix-blur`, `miuix-navigation`).
 
 ### GitHub Packages Authentication
 
