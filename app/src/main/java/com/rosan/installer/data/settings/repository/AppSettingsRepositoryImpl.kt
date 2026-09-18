@@ -260,6 +260,7 @@ class AppSettingsRepositoryImpl(
         BooleanSetting.ApplySelectedFirst -> AppDataStore.APPLY_SELECTED_FIRST
         BooleanSetting.ApplyShowSystemApp -> AppDataStore.APPLY_SHOW_SYSTEM_APP
         BooleanSetting.ApplyShowPackageName -> AppDataStore.APPLY_SHOW_PACKAGE_NAME
+        BooleanSetting.ApplyShowUnknownScope -> AppDataStore.APPLY_SHOW_UNKNOWN_SCOPE
         BooleanSetting.DialogHideIdenticalComparisons -> AppDataStore.DIALOG_HIDE_IDENTICAL_COMPARISONS
         BooleanSetting.DialogVersionCompareSingleLine -> AppDataStore.DIALOG_VERSION_COMPARE_SINGLE_LINE
         BooleanSetting.DialogSdkCompareMultiLine -> AppDataStore.DIALOG_SDK_COMPARE_MULTI_LINE
