@@ -105,35 +105,16 @@ fun DialogPage(
             val colorScheme = InstallerTheme.colorScheme
             // Keep module flashing inside the selected presentation mode. Full-screen installs
             // remain edge-to-edge; dialog/notification flows retain the module bottom sheet.
-            if (stage is InstallerStage.InstallingModule && installMode == InstallMode.FullScreen) {
-                val headerParams = installInfoDialog(viewModel)
-                PositionFullScreen(
-                    onBackRequest = {
-                        if (viewModel.uiState.value.isDismissible) {
-                            viewModel.requestFullscreenClose()
-                        }
-                    },
-                    isClosing = isClosingFullscreen,
-                    contentKey = FullScreenContentKey(
-                        stageType = stage::class,
-                        textId = "module",
-                        contentId = "module_log",
-                        buttonsId = "module",
-                    ),
-                    centerIcon = dialogInnerWidget(headerParams.icon),
-                    centerTitle = dialogInnerWidget(headerParams.title),
-                    centerSubtitle = dialogInnerWidget(headerParams.subtitle),
-                    centerContent = {
-                        ModuleInstallFullScreenContent(
-                            outputLines = stage.output,
-                            isFinished = stage.isFinished,
-                            colorScheme = colorScheme,
-                            onReboot = { viewModel.dispatch(InstallerViewAction.Reboot("")) },
-                            onClose = { viewModel.dispatch(InstallerViewAction.Close) },
-                        )
-                    },
-                )
-            } else if (stage is InstallerStage.InstallingModule) {
+            //
+            // In fullscreen mode the module-progress stage is rendered by the SAME
+            // [PositionFullScreen] instance as the rest of the install flow (see the
+            // `useFullScreen` branch below). Routing it through a second, sibling call site
+            // here would make Compose treat the two as unrelated composables: the pre-install
+            // instance would leave composition and the module instance would enter it, re-running
+            // its alpha enter fade from 0 — which is exactly the unwanted "fade in/out between
+            // pages" the user sees. Module installs therefore only take this branch for the
+            // non-fullscreen (dialog / notification) presentations.
+            if (stage is InstallerStage.InstallingModule && installMode != InstallMode.FullScreen) {
                 // Do NOT create a local variable for isDismissible here.
                 // Capturing a changing local variable causes the lambda below to change,
                 // which forces rememberModalBottomSheetState to recreate the state, resetting the sheet.
@@ -335,8 +316,21 @@ fun DialogPage(
                     // spinner + "Analysing..." text) so the user gets the
                     // same feedback as in dialog mode.
                     val isAnalysing = stage is InstallerStage.Analysing
-                    val bodyText: (@Composable () -> Unit)? =
-                        if (isAnalysing) {
+                    // Module flashing gets its own terminal-style body. It is
+                    // rendered through this very [PositionFullScreen] instance
+                    // (not a sibling one) so that the pre-install -> installing
+                    // -> finished progression stays one continuous surface: the
+                    // body and footer cross-fade in place while the outer layer's
+                    // alpha is left untouched. Swapping to a different
+                    // [PositionFullScreen] call site here would restart the whole
+                    // layer's enter fade from 0 and read as a full-page
+                    // fade-in/out between stages.
+                    val isModuleInstalling = stage is InstallerStage.InstallingModule
+                    val bodyText: (@Composable () -> Unit)? = when {
+                        // Module progress owns the whole body via bodyContent below.
+                        isModuleInstalling -> null
+
+                        isAnalysing -> {
                             {
                                 Column(
                                     modifier = Modifier.fillMaxWidth(),
@@ -350,11 +344,25 @@ fun DialogPage(
                                     )
                                 }
                             }
-                        } else {
-                            dialogInnerWidget(params.text)
                         }
-                    val bodyContent: (@Composable () -> Unit)? =
-                        if (isAnalysing) null else dialogInnerWidget(params.content)
+
+                        else -> dialogInnerWidget(params.text)
+                    }
+                    val bodyContent: (@Composable () -> Unit)? = when (stage) {
+                        is InstallerStage.InstallingModule -> {
+                            {
+                                ModuleInstallFullScreenContent(
+                                    outputLines = stage.output,
+                                    isFinished = stage.isFinished,
+                                    colorScheme = colorScheme,
+                                    onReboot = { viewModel.dispatch(InstallerViewAction.Reboot("")) },
+                                    onClose = { viewModel.dispatch(InstallerViewAction.Close) },
+                                )
+                            }
+                        }
+
+                        else -> if (isAnalysing) null else dialogInnerWidget(params.content)
+                    }
                     PositionFullScreen(
                         onBackRequest = { performBack() },
                         isClosing = isClosingFullscreen,
@@ -365,9 +373,14 @@ fun DialogPage(
                         // snapshots when the stage or dialog section actually changes.
                         contentKey = FullScreenContentKey(
                             stageType = stage::class,
-                            textId = params.text.id,
-                            contentId = params.content.id,
-                            buttonsId = params.buttons.id,
+                            // Module flashing owns the body/footer for the whole
+                            // progress stage; keep its section ids constant so the
+                            // body does not re-cross-fade on every log line, and so
+                            // the finished flag (which only swaps the progress
+                            // indicator and reveals the buttons) does not restart it.
+                            textId = if (isModuleInstalling) "module" else params.text.id,
+                            contentId = if (isModuleInstalling) "module_log" else params.content.id,
+                            buttonsId = if (isModuleInstalling) "module" else params.buttons.id,
                         ),
                         centerIcon = dialogInnerWidget(headerParams.icon),
                         centerTitle = dialogInnerWidget(headerParams.title),

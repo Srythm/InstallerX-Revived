@@ -167,11 +167,19 @@ fun PositionFullScreen(
     // the caller routes to the parent stage without disposing
     // [PositionFullScreen]. The exit fade has already taken alpha to 0,
     // so we re-run the enter fade on the new [contentKey] to bring the
-    // layer back in. The `isDismissing` guard makes sure we don't re-run
-    // this on the very first composition (where the first LaunchedEffect
-    // already handled the enter fade).
-    LaunchedEffect(contentKey) {
-        if (isDismissing) {
+    // layer back in.
+    //
+    // This must NOT fire while an actual close is in flight: the caller
+    // sets [isClosing] and tears the session down ~220ms later. If the
+    // stage happened to change inside that window (e.g. the module
+    // installer reports `isFinished` right as the user backs out of the
+    // module progress page), a naive `LaunchedEffect(contentKey)` would
+    // see `isDismissing == true`, treat it as a back-navigation, and fade
+    // the whole layer back in — producing exactly the unwanted full-page
+    // fade between the pre-install / installing / finished pages.
+    // Re-entering is therefore only valid while [isClosing] is false.
+    LaunchedEffect(contentKey, isClosing) {
+        if (isDismissing && !isClosing) {
             isDismissing = false
             uiAlpha.animateTo(1f, animationSpec = tween(durationMillis = EnterExitDurationMs))
         }
@@ -320,31 +328,12 @@ fun PositionFullScreen(
                                         clip = false,
                                     ) { _, _ -> tween(durationMillis = 220) }
                             }
-                        if (contentKey != null) {
-                            AnimatedContent(
-                                targetState = contentKey,
-                                transitionSpec = bodyTransitionSpec,
-                                label = "FullScreenBodyTransition",
-                            ) { _ ->
-                                PositionChildWidget(
-                                    if (contentMode) leftContent else leftText,
-                                    if (contentMode) centerContent else centerText,
-                                    if (contentMode) rightContent else rightText,
-                                ) { text ->
-                                    CompositionLocalProvider(LocalContentColor provides textContentColor) {
-                                        ProvideTextStyle(MaterialTheme.typography.bodyMedium) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .padding(if (contentMode) ContentPadding else TextPadding)
-                                                    .fillMaxWidth(),
-                                            ) {
-                                                text?.invoke()
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        } else {
+                        // The body content is identical whether or not it is
+                        // wrapped in [AnimatedContent]; only the wrapper differs.
+                        // Hoisting it into a local lambda keeps the three-way
+                        // `if (contentMode) ... else ...` selection in one place
+                        // instead of duplicating the whole subtree below.
+                        val bodyBody: @Composable () -> Unit = {
                             PositionChildWidget(
                                 if (contentMode) leftContent else leftText,
                                 if (contentMode) centerContent else centerText,
@@ -362,6 +351,17 @@ fun PositionFullScreen(
                                     }
                                 }
                             }
+                        }
+                        if (contentKey != null) {
+                            AnimatedContent(
+                                targetState = contentKey,
+                                transitionSpec = bodyTransitionSpec,
+                                label = "FullScreenBodyTransition",
+                            ) { _ ->
+                                bodyBody()
+                            }
+                        } else {
+                            bodyBody()
                         }
                     }
 
@@ -387,27 +387,9 @@ fun PositionFullScreen(
                                         clip = false,
                                     ) { _, _ -> tween(durationMillis = 200) }
                             }
-                        if (contentKey != null) {
-                            AnimatedContent(
-                                targetState = contentKey,
-                                transitionSpec = footerTransitionSpec,
-                                label = "FullScreenFooterTransition",
-                            ) { _ ->
-                                PositionChildWidget(
-                                    leftButton,
-                                    centerButton,
-                                    rightButton,
-                                ) { button ->
-                                    CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.primary) {
-                                        ProvideTextStyle(MaterialTheme.typography.labelLarge) {
-                                            Box(modifier = Modifier.padding(ButtonPadding)) {
-                                                button?.invoke()
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        } else {
+                        // Same hoisting as the body above: the buttons row is
+                        // invariant, only its AnimatedContent wrapper differs.
+                        val footerBody: @Composable () -> Unit = {
                             PositionChildWidget(
                                 leftButton,
                                 centerButton,
@@ -421,6 +403,17 @@ fun PositionFullScreen(
                                     }
                                 }
                             }
+                        }
+                        if (contentKey != null) {
+                            AnimatedContent(
+                                targetState = contentKey,
+                                transitionSpec = footerTransitionSpec,
+                                label = "FullScreenFooterTransition",
+                            ) { _ ->
+                                footerBody()
+                            }
+                        } else {
+                            footerBody()
                         }
                     }
                 }

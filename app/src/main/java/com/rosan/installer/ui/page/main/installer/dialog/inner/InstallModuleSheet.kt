@@ -2,6 +2,15 @@
 // Copyright (C) 2025-2026 InstallerX Revived contributors
 package com.rosan.installer.ui.page.main.installer.dialog.inner
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -74,16 +83,26 @@ fun ModuleInstallSheetContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        // Title
-        Text(
-            text = if (isFinished) {
-                stringResource(R.string.installer_install_complete)
-            } else {
-                stringResource(R.string.installer_installing_module)
+        // Title — cross-faded between "installing" and "complete" so the
+        // wording change matches the action-area transition below.
+        AnimatedContent(
+            targetState = isFinished,
+            transitionSpec = {
+                fadeIn(animationSpec = tween(durationMillis = 220)) togetherWith
+                    fadeOut(animationSpec = tween(durationMillis = 160))
             },
-            style = MaterialTheme.typography.titleLarge,
-            color = colorScheme.onSurface,
-        )
+            label = "ModuleSheetTitle",
+        ) { finished ->
+            Text(
+                text = if (finished) {
+                    stringResource(R.string.installer_install_complete)
+                } else {
+                    stringResource(R.string.installer_installing_module)
+                },
+                style = MaterialTheme.typography.titleLarge,
+                color = colorScheme.onSurface,
+            )
+        }
 
         // Terminal Log Container
         ModuleInstallLog(
@@ -99,42 +118,63 @@ fun ModuleInstallSheetContent(
         )
 
         // Action Button
-        if (isFinished) {
-            Column {
-                Button(
-                    onClick = { showRebootConfirmation = true },
+        // Action area. The pre-finish state shows a single disabled
+        // "installing" button; the finished state swaps in the reboot / close
+        // pair. Cross-fading the two keeps the hand-off from popping, and the
+        // size is animated so the surrounding column settles smoothly.
+        AnimatedContent(
+            targetState = isFinished,
+            transitionSpec = {
+                (
+                    fadeIn(animationSpec = tween(durationMillis = 220)) togetherWith
+                        fadeOut(animationSpec = tween(durationMillis = 160))
+                    ) using
+                    androidx.compose.animation.SizeTransform(
+                        clip = false,
+                    ) { _, _ -> tween(durationMillis = 220) }
+            },
+            label = "ModuleSheetActions",
+        ) { finished ->
+            if (finished) {
+                Column(
                     modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text(stringResource(R.string.reboot))
-                }
-                /*if (rootMode == RootMode.KernelSU)
                     Button(
-                        onClick = onSoftReboot,
-                        modifier = Modifier.fillMaxWidth()
+                        onClick = { showRebootConfirmation = true },
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(stringResource(R.string.reboot_soft_reboot))
-                    }*/
+                        Text(stringResource(R.string.reboot))
+                    }
+                    /*if (rootMode == RootMode.KernelSU)
+                        Button(
+                            onClick = onSoftReboot,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(stringResource(R.string.reboot_soft_reboot))
+                        }*/
+                    Button(
+                        onClick = onClose,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.close))
+                    }
+                }
+            } else {
                 Button(
-                    onClick = onClose,
+                    enabled = false, // Disabled while installing
+                    onClick = {},
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(stringResource(R.string.close))
-                }
-            }
-        } else {
-            Button(
-                enabled = false, // Disabled while installing
-                onClick = {},
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                        color = colorScheme.onSurface.copy(alpha = 0.38f),
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text(stringResource(R.string.installer_installing))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = colorScheme.onSurface.copy(alpha = 0.38f),
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(stringResource(R.string.installer_installing))
+                    }
                 }
             }
         }
@@ -183,23 +223,47 @@ fun ModuleInstallFullScreenContent(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (!isFinished) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(18.dp),
-                    strokeWidth = 2.dp,
-                    color = colorScheme.primary,
-                )
-                Spacer(modifier = Modifier.width(12.dp))
+            // Animate the leading status indicator so the spinner collapsing and
+            // any trailing content shifting left happen smoothly instead of
+            // snapping on the frame `isFinished` flips.
+            AnimatedVisibility(
+                visible = !isFinished,
+                enter = fadeIn(animationSpec = tween(durationMillis = 200)),
+                exit = fadeOut(animationSpec = tween(durationMillis = 200)) +
+                    shrinkHorizontally(
+                        animationSpec = tween(durationMillis = 220),
+                        shrinkTowards = Alignment.Start,
+                    ),
+            ) {
+                Row {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = colorScheme.primary,
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                }
             }
-            Text(
-                text = if (isFinished) {
-                    stringResource(R.string.installer_install_complete)
-                } else {
-                    stringResource(R.string.installer_installing_module)
+            // Cross-fade the label between "installing" and "complete" so the
+            // wording change rides along with the button reveal below.
+            AnimatedContent(
+                targetState = isFinished,
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(durationMillis = 220)) togetherWith
+                        fadeOut(animationSpec = tween(durationMillis = 160))
                 },
-                style = MaterialTheme.typography.titleMedium,
-                color = colorScheme.onSurface,
-            )
+                label = "ModuleStatusLabel",
+            ) { finished ->
+                Text(
+                    text = if (finished) {
+                        stringResource(R.string.installer_install_complete)
+                    } else {
+                        stringResource(R.string.installer_installing_module)
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                    color = colorScheme.onSurface,
+                )
+            }
         }
 
         ModuleInstallLog(
@@ -212,7 +276,24 @@ fun ModuleInstallFullScreenContent(
             shape = RoundedCornerShape(24.dp),
         )
 
-        if (isFinished) {
+        // The completion actions appear only once `isFinished` flips. A bare
+        // `if` would make them pop in with no transition, which reads as a
+        // glitch next to the surrounding animated UI. Animate them in from the
+        // bottom instead, and collapse them on the way out so the space is
+        // reclaimed smoothly. This is local to the content (rather than driven
+        // by the fullscreen `contentKey`) on purpose: the contentKey must stay
+        // constant across the whole module stage so that streaming log lines do
+        // not restart the outer body cross-fade.
+        AnimatedVisibility(
+            visible = isFinished,
+            enter = fadeIn(animationSpec = tween(durationMillis = 220)) +
+                slideInVertically(
+                    animationSpec = tween(durationMillis = 260),
+                    initialOffsetY = { it / 2 },
+                ),
+            exit = fadeOut(animationSpec = tween(durationMillis = 150)) +
+                shrinkVertically(animationSpec = tween(durationMillis = 180)),
+        ) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
