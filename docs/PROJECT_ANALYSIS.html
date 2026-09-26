@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InstallerX Revived — 项目结构分析报告</title>
+<style>
+:root{
+  --bg:#f7f8fa; --panel:#ffffff; --border:#e3e6ec; --text:#1c1f24; --muted:#5c6470;
+  --accent:#2f6fed; --accent-soft:#eaf1fe; --ok:#1a7f4b; --ok-soft:#e7f6ed;
+  --warn:#a8620a; --warn-soft:#fdf3e3; --danger:#b62b2b; --danger-soft:#fdecec;
+  --code-bg:#f2f4f8;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,"Segoe UI","Microsoft YaHei",Roboto,Helvetica,Arial,sans-serif;
+  font-size:15px;line-height:1.7;}
+.wrap{max-width:1080px;margin:0 auto;padding:40px 28px 80px}
+header{border-bottom:2px solid var(--border);padding-bottom:22px;margin-bottom:32px}
+h1{font-size:28px;margin:0 0 8px;letter-spacing:-.3px}
+.sub{color:var(--muted);font-size:14px}
+.sub code{background:var(--code-bg);padding:1px 6px;border-radius:4px;font-size:13px}
+h2{font-size:20px;margin:44px 0 16px;padding-left:11px;border-left:4px solid var(--accent)}
+h3{font-size:16px;margin:26px 0 10px;color:#2b3038}
+p{margin:10px 0}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px 22px;margin:16px 0}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.kpi{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+.kpi .n{font-size:26px;font-weight:650;letter-spacing:-.5px;color:var(--accent)}
+.kpi .l{font-size:13px;color:var(--muted);margin-top:2px}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px}
+th{text-align:left;background:#f0f2f6;font-weight:600;padding:9px 12px;border:1px solid var(--border)}
+td{padding:9px 12px;border:1px solid var(--border);vertical-align:top}
+tbody tr:nth-child(even){background:#fbfcfd}
+code{font-family:"Cascadia Code",Consolas,"SF Mono",Menlo,monospace;background:var(--code-bg);
+  padding:1px 5px;border-radius:4px;font-size:13px}
+pre{background:#1e2229;color:#e6e9ef;padding:14px 16px;border-radius:8px;overflow-x:auto;
+  font-family:"Cascadia Code",Consolas,Menlo,monospace;font-size:13px;line-height:1.55;margin:12px 0}
+pre code{background:none;padding:0;color:inherit}
+.tag{display:inline-block;font-size:12px;padding:2px 9px;border-radius:20px;font-weight:600;white-space:nowrap}
+.t-ok{background:var(--ok-soft);color:var(--ok)}
+.t-warn{background:var(--warn-soft);color:var(--warn)}
+.t-bad{background:var(--danger-soft);color:var(--danger)}
+.t-info{background:var(--accent-soft);color:var(--accent)}
+.t-neutral{background:#eef0f4;color:var(--muted)}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:5px 0}
+.tree{font-family:"Cascadia Code",Consolas,Menlo,monospace;font-size:13px;line-height:1.75;
+  background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 20px;overflow-x:auto;white-space:pre}
+.tree b{color:var(--accent);font-weight:600}
+.tree i{color:var(--muted);font-style:normal}
+.note{background:var(--accent-soft);border-left:4px solid var(--accent);padding:12px 16px;border-radius:0 8px 8px 0;margin:14px 0;font-size:14px}
+.warn{background:var(--warn-soft);border-left:4px solid var(--warn);padding:12px 16px;border-radius:0 8px 8px 0;margin:14px 0;font-size:14px}
+.bad{background:var(--danger-soft);border-left:4px solid var(--danger);padding:12px 16px;border-radius:0 8px 8px 0;margin:14px 0;font-size:14px}
+.bar{height:9px;background:#e8ebf0;border-radius:6px;overflow:hidden;margin-top:6px}
+.bar>i{display:block;height:100%;background:var(--accent);border-radius:6px}
+footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+.flex{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.mono-sm{font-size:12.5px;color:var(--muted);font-family:"Cascadia Code",Consolas,monospace}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>InstallerX Revived — 项目结构分析</h1>
+  <div class="sub">
+    分支 <code>code-optimization-p0</code> · HEAD <code>bb4c3be5</code>（2026-08-29）·
+    分析时间 2026-09-12 15:15 GMT+8 · 工作目录 <code>&lt;repo-root&gt;</code>
+  </div>
+</header>
+
+<h2>0. 结论速览</h2>
+<div class="card">
+<p>这是一个<strong>架构成熟度明显高于平均水准</strong>的 Android 工程：分层严格（core/data/di/domain/framework/ui/util 七层，
+职责边界清晰）、依赖集中管理（Version Catalog + convention plugin + <code>FAIL_ON_PROJECT_REPOS</code>）、
+Koin 注入规范、Compose + Room3 + Flow 全线现代栈。</p>
+<p>但它<strong>不是普通 App</strong>：它的核心业务是「调用系统最敏感的那部分 API 去装包」，
+因此真正的复杂度集中在三处 —— <b>特权执行后端</b>（Root / Shizuku / Dhizuku / app_process / 系统 PM 五套并存）、
+<b>安装包解析引擎</b>（APK/APKS/APKM/XAPK/ZIP 五种容器 + 模块包）、以及 <b>会话状态机</b>（前台服务 + 通知 + Live Activity）。
+这三处也是最容易出问题的地方。</p>
+<p>当前分支上的工作重点是<a href="#p7">代码优化计划</a>（32 项待办，P0 6 项）与 <b>Miuix UI 家族移除</b>，
+移除正在进行中且已推进过半。<b>构建已实测通过</b>（见 <a href="#p1">§1</a>）。</p>
+</div>
+
+<div class="grid g4" style="margin-top:16px">
+  <div class="kpi"><div class="n">601</div><div class="l">Kotlin 文件</div></div>
+  <div class="kpi"><div class="n">63,526</div><div class="l">Kotlin 行数（不含 build）</div></div>
+  <div class="kpi"><div class="n">2,613</div><div class="l">Java 行数（hidden-api）</div></div>
+  <div class="kpi"><div class="n">4</div><div class="l">Gradle 模块</div></div>
+</div>
+
+<h2 id="p1">1. 构建验证（实测，非推测）</h2>
+<div class="card">
+<table>
+<thead><tr><th style="width:32%">项目</th><th>结果</th></tr></thead>
+<tbody>
+<tr><td>命令</td><td><code>./gradlew assembleUnstableDebug --offline</code></td></tr>
+<tr><td>结果</td><td><span class="tag t-ok">通过</span> exit code 0</td></tr>
+<tr><td>耗时</td><td>2 分 45 秒（含增量）</td></tr>
+<tr><td>产物</td><td><code>app/build/outputs/apk/Unstable/debug/app-Unstable-debug.apk</code><br><span class="mono-sm">30,178,191 字节（29 MB），落地时间 2026-09-12 15:14</span></td></tr>
+<tr><td>JDK</td><td>25.0.2（PATH 上的 <code>java</code>）<br><span class="mono-sm">注意：<code>JAVA_HOME</code> 环境变量仍指向 <code>jdk1.8.0_211</code>，本次是显式覆盖 <code>JAVA_HOME</code> 后才成功的</span></td></tr>
+<tr><td>签名</td><td>本地 <code>keystore.properties</code> 有效 → debug/release 均走了自定义 <code>releaseCustom</code> 签名配置<br><span class="mono-sm">构建日志：<code>Applying custom signing to debug build.</code></span></td></tr>
+<tr><td>Gradle</td><td>Wrapper 9.7.1 · AGP 9.3.2 · Kotlin 2.4.10 · KSP 2.3.11</td></tr>
+<tr><td>未运行</td><td>单元测试（<code>testImplementation</code> 仅 kotlin-test / coroutines-test，无独立测试任务触发）、<code>assemblePreviewDebug</code>、<code>spotlessCheck</code></td></tr>
+</tbody>
+</table>
+<div class="warn"><b>一个真实的环境坑（已证实）：</b>本机 <code>JAVA_HOME</code> 指向 JDK 8，而项目要求 JDK 25。
+直接跑 <code>./gradlew</code> 会失败；必须先 <code>export JAVA_HOME="/c/Program Files/Java/jdk-25.0.2"</code>。
+这属于本机配置问题，不是仓库缺陷。</div>
+</div>
+
+<h2>2. 工程骨架</h2>
+
+<h3>2.1 Gradle 模块（<code>settings.gradle.kts</code> 实测）</h3>
+<table>
+<thead><tr><th style="width:20%">模块</th><th style="width:14%">类型</th><th>职责</th></tr></thead>
+<tbody>
+<tr><td><code>:app</code></td><td>application</td><td>主应用。全部 UI、领域逻辑、数据层</td></tr>
+<tr><td><code>:app-process</code></td><td>helper</td><td>特权助手进程桥接。Root / Shizuku 场景下 <code>app_process</code> 冷启动的宿主</td></tr>
+<tr><td><code>:hidden-api</code></td><td>compile-only</td><td>隐藏 API 声明。21 个 Java 文件（<code>IPackageInstaller</code>、<code>PackageManagerHidden</code>、<code>ActivityThread</code> 等），<b>仅编译期</b>，不打包进 APK</td></tr>
+<tr><td><code>:baselineprofile</code></td><td>com.android.test</td><td>Baseline Profile 生成，用于启动优化</td></tr>
+</tbody>
+</table>
+<div class="note"><code>build-plugins/</code> 是 <code>includeBuild</code> 的复合构建（convention plugins：<code>installerx.android.application</code> /
+<code>.library</code> / <code>.test</code> / <code>.spotless</code>），<b>不是</b>普通 Gradle 子模块。</div>
+
+<h3>2.2 主包分层（<code>app/src/main/java/com/rosan/installer/</code>）</h3>
+<div class="grid g2">
+<div class="card" style="margin:0">
+<div class="flex"><b>domain</b><span class="tag t-info">161 个 .kt</span></div>
+<div class="bar"><i style="width:100%"></i></div>
+<div class="mono-sm" style="margin-top:8px">engine · privileged · session · settings · history · updater · packageupdate · device · archive · notification</div>
+<p style="font-size:13.5px;color:var(--muted);margin-bottom:0">纯业务规则与契约。含 model / provider / repository / usecase 四件套，是仓库里最大的层，说明业务复杂度确实落在这里。</p>
+</div>
+<div class="card" style="margin:0">
+<div class="flex"><b>ui</b><span class="tag t-info">208 个 .kt</span></div>
+<div class="bar"><i style="width:100%"></i></div>
+<div class="mono-sm" style="margin-top:8px">page/main · page/main/installer · page/main/settings · widget · theme · icons · library · navigation · animation</div>
+<p style="font-size:13.5px;color:var(--muted);margin-bottom:0">文件数最多。安装对话框、设置页、历史页、主题系统都在这里。</p>
+</div>
+<div class="card" style="margin:0">
+<div class="flex"><b>data</b><span class="tag t-info">107 个 .kt</span></div>
+<div class="bar"><i style="width:55%"></i></div>
+<div class="mono-sm" style="margin-top:8px">engine(executor/parser/policy/signature) · session · settings(local/datastore/room) · updater · packageupdate · device</div>
+<p style="font-size:13.5px;color:var(--muted);margin-bottom:0">concrete 实现层。安装执行器、包解析器、签名分析器、Room/DataStore 持久化。</p>
+</div>
+<div class="card" style="margin:0">
+<div class="flex"><b>framework</b><span class="tag t-info">49 个 .kt</span></div>
+<div class="bar"><i style="width:25%"></i></div>
+<div class="mono-sm" style="margin-top:8px">privileged(core/execution/runtime/infrastructure) · notification · activity · service · receiver · tile · auth</div>
+<p style="font-size:13.5px;color:var(--muted);margin-bottom:0">与本项目相关的 Android 平台集成。特权运行时全部在此。</p>
+</div>
+<div class="card" style="margin:0">
+<div class="flex"><b>core</b><span class="tag t-info">22 个 .kt</span></div>
+<div class="bar"><i style="width:11%"></i></div>
+<div class="mono-sm" style="margin-top:8px">crash · env · 等底层基础设施</div>
+</div>
+<div class="card" style="margin:0">
+<div class="flex"><b>di / util</b><span class="tag t-info">13 + 11 个 .kt</span></div>
+<div class="bar"><i style="width:12%"></i></div>
+<div class="mono-sm" style="margin-top:8px">Core · Device · Engine · Init · InstallerSession · Network · PackageUpdate · Privileged · Serialization · Settings · ViewModel</div>
+</div>
+</div>
+
+<h3>2.3 DI 模块清单</h3>
+<pre><code>di/
+├── CoreModule.kt              ├── PackageUpdateModule.kt
+├── DeviceModule.kt            ├── PrivilegedModule.kt
+├── EngineModule.kt            ├── SerializationModule.kt
+├── InitModule.kt              ├── SettingsModule.kt
+├── InstallerSessionModule.kt  ├── ViewModelModule.kt
+├── NetworkModule.kt           └── init/</code></pre>
+<p>11 个功能模块 + 启动装配，划分与实际业务域一一对应，没有出现「万能 AppModule」。</p>
+
+<h2>3. 核心内核之一：特权执行后端</h2>
+<p>这是整个项目最敏感、也最能体现设计水准的部分。它没有把五种授权方式写成五份 <code>if-else</code>，
+而是抽象成 <b>授权者（Authorizer）→ 执行器（Executor）→ 运行时（Runtime）</b> 三段式。</p>
+
+<div class="card">
+<div class="tree">framework/privileged/core/
+├── <b>execution/authorization/</b>
+│   ├── SpecialAuthorizer.kt        <i>授权者抽象</i>
+│   ├── ShizukuPermission.kt
+│   ├── DhizukuPermission.kt
+│   └── CustomizeAuthorizer.kt
+├── <b>execution/dispatcher/</b>
+│   ├── DirectPrivilegedExecutor.kt <i>同进程直连（Binder hook）</i>
+│   └── UserServiceExecutor.kt      <i>UserService 模式（Shizuku）</i>
+├── <b>execution/runtime/</b>
+│   ├── PrivilegedOperations.kt     <i>能力接口 —— 单一契约</i>
+│   ├── BasePrivilegedService.kt
+│   ├── DefaultPrivilegedService.kt <i>1008 行，主要实现</i>
+│   ├── DhizukuPrivilegedService.kt
+│   └── PrivilegedRuntime.kt
+├── <b>infrastructure/process/</b>
+│   ├── AppProcessTerminal.kt       <i>app_process 冷启动终端</i>
+│   ├── ShellCommand.kt / ShellConstants.kt
+├── <b>infrastructure/recycler/</b>  <i>进程/服务复用与回收</i>
+│   ├── AppProcessRecycler.kt
+│   ├── ProcessHookRecycler.kt
+│   ├── ProcessUserServiceRecycler.kt
+│   ├── ShizukuHookRecycler.kt
+│   └── ShizukuUserServiceRecycler.kt
+├── <b>context/hook/</b>
+│   ├── ShizukuHook.kt
+│   └── SettingsBinderResolver.kt
+└── <b>context/wrapper/</b>
+    ├── ShizukuContext.kt / DhizukuOwnerContext.kt / SystemContext.kt</div>
+</div>
+
+<h3>3.1 能力契约</h3>
+<p>所有后端统一收口到一个接口上（<code>PrivilegedOperations.kt</code>，31 行，纯声明）：</p>
+<pre><code>interface PrivilegedOperations {
+    fun delete(paths: Array&lt;out String&gt;)
+    fun performDexOpt(packageName: String, compilerFilter: String, force: Boolean): Boolean
+    fun setDefaultInstaller(component: ComponentName, enable: Boolean)
+    fun startActivityPrivileged(intent: Intent): Boolean
+    fun sendBroadcastPrivileged(intent: Intent): Boolean
+    fun execArr(command: Array&lt;String&gt;): String
+    fun execArrWithCallback(command: Array&lt;String&gt;, listener: ICommandOutputListener?)
+    fun setAdbVerify(enabled: Boolean)
+    fun grantRuntimePermission(packageName: String, permission: String)
+    fun isPermissionGranted(packageName: String, permission: String): Boolean
+    fun getUsers(): Map&lt;Int, String&gt;
+    fun getSessionDetails(sessionId: Int): Bundle?
+    fun setPackageNetworkingEnabled(uid: Int, enabled: Boolean)
+    fun prepareUnknownSourceAppOp(uid: Int, packageName: String): Int
+}</code></pre>
+<div class="note"><b>设计亮点：</b>注释明确写了「Binder hook 后端直接使用此接口，只有真正需要跨进程的操作才另外暴露到
+<code>IPrivilegedService</code>」。这是一个<strong>刻意的最窄暴露面</strong>——能同进程做的绝不开 Binder 通道。
+在特权代码里这是正确的取向。</div>
+
+<h3>3.2 后端矩阵</h3>
+<table>
+<thead><tr><th style="width:16%">授权者</th><th style="width:26%">实现文件</th><th>定位（据 README + 代码结构）</th></tr></thead>
+<tbody>
+<tr><td><b>Root</b></td><td><code>ProcessAppInstallerRepoImpl</code></td><td>能力最全，但冷启动 <code>app_process</code> 较慢</td></tr>
+<tr><td><b>Shizuku</b></td><td><code>ShizukuAppInstallerRepoImpl</code></td><td>视激活方式获得 shell 或 root 能力，通常比直连 Root 快</td></tr>
+<tr><td><b>Dhizuku</b></td><td><code>DhizukuAppInstallerRepoImpl</code></td><td>受 DevicePolicyManager 限制，能做默认安装器锁定与装包，其余受限</td></tr>
+<tr><td><b>None</b></td><td><code>NoneAppInstallerRepoImpl</code></td><td>完全受系统限制；但作为系统安装器运行时仍可静默装</td></tr>
+<tr><td><b>System PM</b></td><td><code>SystemAppInstallerRepoImpl</code></td><td>高风险的「替换系统包管理器」路径</td></tr>
+<tr><td><b>IBinder 直连</b></td><td><code>IBinderAppInstallerRepoImpl</code></td><td>Binder 通道直连，同进程 hook 场景</td></tr>
+</tbody>
+</table>
+
+<div class="warn"><b>值得注意：</b><code>infrastructure/recycler/</code> 下有 5 个 Recycler 实现 ——
+说明「进程/UserService 复用」是被当作一等公民处理的（冷启动开销是这类应用的主要性能瓶颈）。
+但<strong>这也意味着生命周期管理的表面积很大</strong>，优化计划里的 P0 #1「CoroutineScope 泄漏」恰好就落在
+<code>AppInstallerRepositoryImpl</code> 与 <code>IBinderAppInstallerRepoImpl</code> 上。二者相关，不排除是同一个根因的两个面。</div>
+
+<h2>4. 核心内核之二：包解析引擎</h2>
+<p>支持五种容器格式，用的是 <b>Strategy 模式</b>，每种容器一个策略类。</p>
+<div class="grid g2">
+<div class="card" style="margin:0">
+<h3 style="margin-top:0">解析策略</h3>
+<pre style="margin:0"><code>data/engine/parser/strategy/
+├── AnalysisStrategy.kt      <i>策略接口</i>
+├── SingleApkStrategy.kt     <i>裸 APK</i>
+├── ApksStrategy.kt          <i>.apks</i>
+├── ApkmStrategy.kt          <i>.apkm</i>
+├── XApkStrategy.kt          <i>.xapk</i>
+├── MultiApkZipStrategy.kt   <i>ZIP 内多 APK</i>
+└── ModuleStrategy.kt        <i>模块包</i></code></pre>
+</div>
+<div class="card" style="margin:0">
+<h3 style="margin-top:0">支撑组件</h3>
+<ul style="font-size:14px;margin-bottom:0">
+<li><code>UnifiedContainerAnalyser.kt</code> — 容器统一分析入口</li>
+<li><code>UnifiedZipFile.kt</code> / <code>CommonsZipFileProvider.kt</code> — 统一 ZIP 抽象（commons-compress）</li>
+<li><code>SeekableZipReader.kt</code> — 可随机寻址读取（配合网络流式解析）</li>
+<li><code>ApkParser.kt</code>（735 行）— APK 元信息解析</li>
+<li><code>PackagePreprocessor.kt</code> / <code>ModuleSourceMaterializer.kt</code></li>
+<li><code>XposedModuleParser.kt</code> — 模块包专用</li>
+<li><code>SplitNameUtil.kt</code> / <code>FileTypeDetector.kt</code> / <code>FileHashUtils.kt</code></li>
+</ul>
+</div>
+</div>
+
+<h3>4.1 签名校验链</h3>
+<p>签名是一等公民，独立成 6 个文件的子系统 —— 这对安装器来说是必要的，因为签名不匹配是装包失败的头号原因之一。</p>
+<pre><code>data/engine/signature/
+├── LightweightApkSignatureReader.kt   <i>轻量读取（快路径）</i>
+├── PackageSignatureAnalyzer.kt        <i>待装包签名分析</i>
+├── PendingApkSignatureAnalyzer.kt
+├── InstalledPackageSignatureReader.kt <i>已装包签名读取</i>
+├── SignatureMatcher.kt                <i>比对 → 签名闸门</i>
+└── CertificateFormatter.kt            <i>指纹格式化展示</i></code></pre>
+
+<h3>4.2 安装选项（Install Flags）</h3>
+<p><code>InstallOption.kt</code> 用枚举 + <code>minSdk/maxSdk</code> 显式表达了 20 个 <code>INSTALL_*</code> 标志的可用区间，
+每个都带 <code>@StringRes</code> 标签与描述。这个设计很干净 —— 版本门禁写在数据里而不是散落在 UI 条件判断里。
+其中 <code>External</code> 在 P 以上失效、<code>DryRun</code> 限定 Q~R、<code>BypassLowTargetSdkBlock</code> /
+<code>RequestUpdateOwnerShip</code> 等只在 API 34+ 出现。</p>
+
+<h2>5. 核心内核之三：会话与流式安装</h2>
+<p>安装不是一个函数调用，而是一个<strong>有状态、可中断、要跨进程汇报进度的会话</strong>。
+项目为它建了三层：manager / repository / handler，外加一个 resolver 层负责「数据从哪来」。</p>
+
+<div class="grid g2">
+<div class="card" style="margin:0">
+<h3 style="margin-top:0">会话三层</h3>
+<pre style="margin:0"><code>data/session/
+├── manager/InstallerSessionManagerImpl.kt
+├── repository/InstallerSessionRepositoryImpl.kt
+├── handler/
+│   ├── Handler.kt
+│   ├── ActionHandler.kt          <i>1035 行</i>
+│   ├── BroadcastHandler.kt
+│   ├── ForegroundInfoHandler.kt
+│   └── ProgressHandler.kt</code></pre>
+</div>
+<div class="card" style="margin:0">
+<h3 style="margin-top:0">来源解析（Resolver）</h3>
+<pre style="margin:0"><code>data/session/resolver/
+├── SourceResolver.kt              <i>接口</i>
+├── OkHttpNetworkResolver.kt       <i>748 行，网络流式</i>
+├── UnarchiveResolver.kt           <i>解档</i>
+├── UninstallResolver.kt           <i>卸载</i>
+├── AnalysisSourceMaterializer.kt
+├── ConfigResolver.kt
+├── SeekableBlockCache.kt          <i>1MB 块 / 上限 8MB</i>
+├── ContentRange.kt
+├── RemotePackageProbeResult.kt / RemoteSourceIdentity.kt</code></pre>
+</div>
+</div>
+
+<h3>5.1 网络模式（<code>NetworkSourceMode</code>）</h3>
+<table>
+<thead><tr><th style="width:16%">模式</th><th>行为</th></tr></thead>
+<tbody>
+<tr><td><code>Cache</code></td><td>不尝试远端随机读取，全量下载到缓存</td></tr>
+<tr><td><code>Smart</code></td><td>服务端支持 Range 且平台支持（API ≥ P）时，边下边解析</td></tr>
+<tr><td><code>LowStorage</code></td><td>低存储策略；不支持 Range 则退化为远端必需</td></tr>
+</tbody>
+</table>
+<p class="mono-sm" style="margin-top:-4px">判定逻辑就写在枚举类里：<code>shouldTryRemoteSource()</code> / <code>requiresRemoteSource()</code>。
+把决策收进枚举而不是散在 resolver 里，是好的做法。</p>
+
+<h3>5.2 网络访问边界 <span class="tag t-ok">已证实</span></h3>
+<div class="card">
+<p>AGENTS.md 把「网络访问边界」列为<strong>关键约束</strong>：APK 可以声明 INTERNET 权限，
+但当应用内网络开关关闭时，网络请求必须保持禁用。我在代码里确认了这个约束是真的被执行的：</p>
+<pre><code>// OkHttpNetworkResolver.kt:94-100
+val preferences = appSettingsRepo.preferencesFlow.first()
+if (!preferences.allowInternetAccess) {
+    throw ResolveException(
+        errorType = ResolveErrorType.NO_INTERNET_ACCESS,
+        message = "Internet access is disabled in app settings.",
+    )
+}</code></pre>
+<p style="margin-bottom:0">位置正确 —— 在 resolver 入口处、任何建连动作之前<strong>先 fail-fast</strong>，
+而不是靠 UI 隐藏入口。Manifest 里 <code>INTERNET</code> 与 <code>ACCESS_NETWORK_STATE</code> 已声明，
+并配了 <code>network_security_config</code>。</p>
+</div>
+
+<h2>6. 安装模式与 UI 家族</h2>
+<h3>6.1 六种安装模式</h3>
+<table>
+<thead><tr><th style="width:22%">InstallMode</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td><code>Dialog</code></td><td>弹窗安装（用户确认）</td></tr>
+<tr><td><code>AutoDialog</code></td><td>自动弹窗</td></tr>
+<tr><td><code>Notification</code></td><td>后台通知安装（用户触发）</td></tr>
+<tr><td><code>AutoNotification</code></td><td>自动后台通知安装</td></tr>
+<tr><td><code>FullScreen</code></td><td>全屏安装页</td></tr>
+<tr><td><code>Ignore</code></td><td>忽略</td></tr>
+</tbody>
+</table>
+<div class="note">AGENTS.md 反复强调<b>「流程特定行为就是流程特定的」</b>—— dialog 支持的能力不能想当然认为通知/自动安装也支持。
+枚举里有 <code>isNotificationDriven</code> 之类的判定属性把这个区分显式化了。这是这份代码库最容易被外部贡献者踩坏的地方。</div>
+
+<h3>6.2 UI 家族现状：Miuix 移除进行中 <span class="tag t-warn">未闭环</span></h3>
+<div class="card">
+<p>README 仍然宣称支持「Material 3 Expressive + Miuix 两套界面风格」，但当前分支上已经在做移除：</p>
+<table>
+<thead><tr><th style="width:34%">证据</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td>版本目录注释</td><td><code># miuix (navigation and blur/shader only; full UI components removed)</code></td></tr>
+<tr><td>实际保留的依赖</td><td>仅 <code>miuix-shader</code> · <code>miuix-blur</code> · <code>miuix-navigation</code> 三个</td></tr>
+<tr><td>代码残留</td><td>39 个 .kt 文件仍引用 <code>top.yukonga.miuix.*</code>，但<strong>全部</strong>属于 <code>kmp.nav.*</code>（导航转场/手势）与 <code>kmp.blur.*</code>（模糊/着色器），<b>没有一个是 UI 组件</b></td></tr>
+<tr><td>目录证据</td><td><code>ui/page/</code> 下<strong>已无</strong> <code>miuix/</code> 子目录（AGENTS.md 中提到的 <code>ui/page/miuix/</code> 路径已不存在）</td></tr>
+<tr><td>待办清单</td><td><code>docs/CODE_OPTIMIZATION_PLAN.md</code> §「Miuix UI 移除计划」列出 6 大块未勾选项：源码 / Gradle / Manifest-Theme / Domain-Data / UI / 字符串（23 个 locale）</td></tr>
+</tbody>
+</table>
+<div class="bad"><b>一致性风险（已证实）：</b><code>AGENTS.md</code> 和 <code>docs/README.md</code> <b>仍按「两套 UI 家族并存」描述</b>，
+并明确要求「改一个 UI 家族别忘另一个」。而代码里 Miuix UI 家族实际上已经被删掉了。
+这是一个<strong>文档滞后于实现</strong>的问题 —— 按 AGENTS.md 自己的规则（「改变 docs/README.md 描述的行为时要更新它」），
+这次移除应当在文档里同步说明，否则后续贡献者会照着一份过时的规则去写代码。</div>
+</div>
+
+<h2>7. 当前分支的工作重心</h2>
+<div class="card">
+<p>分支名为 <code>code-optimization-p0</code>，与它的内容吻合。相对 <code>main</code> 的差异（<code>git diff --stat main...HEAD</code>）：</p>
+<p class="mono-sm">703 个文件变更 · +23,855 行 · −163,705 行</p>
+<p>那个巨大的删除量主要来自 Miuix UI 源码与资源的整体下架（另有大量 <code>build/</code> 产物被纳入统计，见下方提示）。
+本分支新增的关键文件是 <code>docs/CODE_OPTIMIZATION_PLAN.md</code>（1,810 行，全新）。</p>
+</div>
+
+<h3>7.1 优化计划结构（32 项）</h3>
+<table>
+<thead><tr><th style="width:12%">优先级</th><th style="width:10%">数量</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td><span class="tag t-bad">P0</span></td><td>6</td><td>CoroutineScope 泄漏 · BackupRepository Room 缺事务 · <code>Process.join()</code> 无超时 · CancellationException 被吞 · InputStream 泄漏 · Broadcast Receiver Scope 未取消</td></tr>
+<tr><td><span class="tag t-warn">P1</span></td><td>10</td><td>Module Log O(n²) · DataStore 重复 <code>first()</code> · <code>isInstallingModule</code> 重复遍历 · <code>SharingStarted.Eagerly</code> · DAO 补 suspend · Material3/Miuix 漂移 · EditItemWidget 重复 150 行 · <code>remember()</code> 缺 key · <code>collectAsState</code> · <code>Pair</code> 不稳定</td></tr>
+<tr><td><span class="tag t-info">P2</span></td><td>11</td><td>LazyColumn 缺 key · seedColor 协程竞争 · Drawable→Bitmap · Magic Number · PackageManager 兼容 · Wallpaper Flow · Enum Converter 等</td></tr>
+<tr><td><span class="tag t-neutral">P3</span></td><td>5</td><td><code>createdAtStart</code> · GlobalContext · <code>printStackTrace()</code> · <code>message.contains()</code> · <code>RequiresApi</code> · <code>clickable()</code> · 硬编码字符串</td></tr>
+</tbody>
+</table>
+<p>建议实施顺序：<b>Phase 1 修 P0 → Phase 2 修 P1 → Phase 3 修 P2 → Phase 4 移除 Miuix → Phase 5 清技术债</b>。
+计划文档本身也建议「P0/P1 完成后，把 Miuix 移除当作一次独立架构重构来做，避免功能修改与架构迁移交叉」——这个判断是对的。</p>
+
+<div class="warn"><b>对这份计划的独立评价：</b>P0 里至少有三条（协程 scope、InputStream、Receiver scope）属于同一类问题 ——
+<b>资源生命周期没有跟 owner 绑定</b>。它们分散在不同文件里，但根因相近，建议合并成一次「生命周期审计」统一处理，
+而不是逐条打补丁。<code>Process.join()</code> 无超时那条尤其值得警惕：在 Root 后端里，无超时的阻塞等于<strong>整个安装会话可能永久挂起</strong>。</div>
+
+<h3>7.2 未提交的工作 <span class="tag t-warn">需要注意</span></h3>
+<div class="card">
+<p><code>git status</code> 显示工作区有 <b>1 个未提交改动</b>（+5/−1）：</p>
+<pre><code>app/src/main/java/com/rosan/installer/ui/page/main/installer/dialog/inner/
+    InstallInfoDialog.kt</code></pre>
+<p>改动的语义是<strong>收窄一个按钮的可见条件</strong>：</p>
+<pre><code>- visible = stage == InstallerStage.InstallPrepare || stage == InstallerStage.InstallSuccess,
++ visible = stage == InstallerStage.InstallPrepare &amp;&amp;
++     uiState.config.installMode != InstallMode.FullScreen,</code></pre>
+<p style="margin-bottom:0">即：从「准备阶段 <b>或</b> 成功阶段都显示」改为「只在准备阶段 <b>且</b> 非全屏模式显示」。
+代码注释写明了理由 —— 该按钮只切换 prepare 对话框的快捷选项（quick chips），
+所以那一行不存在的地方（全屏展示、非 prepare 阶段）都应当隐藏。
+<strong>逻辑自洽，但这是一个未提交、未验证的状态</strong>。如果要继续这条线，建议补一次 <code>assembleUnstableDebug</code> 并做实际操作验证。</p>
+</div>
+
+<h2>8. 风险与关注点</h2>
+<table>
+<thead><tr><th style="width:6%">#</th><th style="width:24%">事项</th><th style="width:10%">性质</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>凭据存在于工作目录</td><td><span class="tag t-bad">安全</span></td><td><code>keystore.properties</code> 含真实签名口令明文。需确认它已被 <code>.gitignore</code> 覆盖（本次未验证）。AGENTS.md 明确要求凭据不得入库</td></tr>
+<tr><td>2</td><td><code>JAVA_HOME</code> 指向 JDK 8</td><td><span class="tag t-warn">环境</span></td><td>本机问题。不加覆盖就跑不了 Gradle</td></tr>
+<tr><td>3</td><td>Miuix 文档未同步</td><td><span class="tag t-warn">一致性</span></td><td>代码已删 UI 家族，AGENTS.md / README 仍按并存描述，会误导后续贡献者</td></tr>
+<tr><td>4</td><td>模块 log O(n²)</td><td><span class="tag t-warn">性能</span></td><td>批量装模块包时可能明显卡顿</td></tr>
+<tr><td>5</td><td>5 个 Recycler + 多处裸 CoroutineScope</td><td><span class="tag t-warn">稳定性</span></td><td>生命周期表面积大，是 P0 泄漏问题的高发区</td></tr>
+<tr><td>6</td><td>代码存在 <code>build/</code> 产物</td><td><span class="tag t-neutral">整洁</span></td><td>仓库内已有 12 个 APK、63 个 HTML 报告等构建产物，会污染 diff 统计与磁盘</td></tr>
+<tr><td>7</td><td>只跑了 1 个构建变体</td><td><span class="tag t-neutral">验证</span></td><td>本次仅验证 <code>UnstableDebug</code>；<code>Preview</code>、<code>Stable</code>、单元测试、<code>spotlessCheck</code> 均未运行</td></tr>
+</tbody>
+</table>
+
+<h2>9. 总评</h2>
+<div class="card">
+<div class="grid g2">
+<div>
+<h3 style="margin-top:0">做得好的</h3>
+<ul>
+<li>分层严格且被实际遵守（domain 不含 Android UI 工具，data 不含展示逻辑）</li>
+<li>依赖全走 Version Catalog；convention plugin 抽公共 Gradle 逻辑</li>
+<li>特权后端抽象干净：单一能力契约 + 多授权者实现，能同进程做的不开 Binder</li>
+<li>容器解析用 Strategy 模式，新增格式成本低</li>
+<li>网络开关是真执行而非仅 UI 拦截，fail-fast 位置正确</li>
+<li><code>InstallOption</code> 把 SDK 版本门禁写进数据而非散落 UI 判断</li>
+<li>文档体系完整：AGENTS.md / CONTRIBUTING.md / docs 多语言 / 1810 行优化计划</li>
+</ul>
+</div>
+<div>
+<h3 style="margin-top:0">值得改进的</h3>
+<ul>
+<li>P0 的 6 项里有 3~4 项同源（生命周期未绑定 owner），宜合并审计</li>
+<li><code>Process.join()</code> 无超时 —— 特权路径上这是挂死风险，优先级应最高</li>
+<li>文档与实现脱节（Miuix），违反了仓库自己的规则</li>
+<li><code>ActionHandler.kt</code>(1035) / <code>DefaultPrivilegedService.kt</code>(1008) / <code>InstallerViewModel.kt</code>(1094) / <code>InstallInfoDialog.kt</code>(1083) 四个千行级文件，拆分收益明显</li>
+<li>工作区有一个未提交、未验证的改动</li>
+<li>仓库内混入构建产物</li>
+</ul>
+</div>
+</div>
+</div>
+
+<footer>
+报告由阿砚生成 · 所有结论均标注了证据来源与验证状态（<b>已证实 / 推测 / 未闭环</b>）。<br>
+实测命令：<code>./gradlew assembleUnstableDebug --offline</code> → exit 0，产物 2026-09-12 15:14。
+未运行：单元测试、Preview/Stable 变体、spotlessCheck。
+</footer>
+
+</div>
+</body>
+</html>

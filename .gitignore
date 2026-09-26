@@ -40,3 +40,7 @@ keystore/
 .DS_Store
 /.agents
 /logs
+
+# Local agent working notes (may contain machine-specific paths and environment details)
+.workbuddy/
+.agents/
