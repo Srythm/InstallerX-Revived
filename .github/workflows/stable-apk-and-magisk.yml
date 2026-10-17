@@ -106,7 +106,12 @@ jobs:
         id: collect
         run: |
           set -euo pipefail
-          APK=$(find app/build/outputs/apk/stable/release -maxdepth 1 -type f -name '*.apk' | head -n1)
+          # AGP 的产物目录名随变体变化，按上游发布流水线的方式搜索，不硬编码。
+          APK_DIR=$(find app/build/outputs/apk -type d 2>/dev/null | grep -iE '/stable/release$' | head -n 1)
+          if [ -z "$APK_DIR" ]; then
+            echo "No stable/release output directory"; ls -R app/build/outputs/apk || true; exit 1
+          fi
+          APK=$(find "$APK_DIR" -maxdepth 1 -type f -name '*.apk' | head -n 1)
           if [ -z "$APK" ]; then
             echo "No apk produced"; ls -R app/build/outputs/apk || true; exit 1
           fi
@@ -230,7 +235,11 @@ jobs:
           MODULE_VERSION: ${{ steps.version.outputs.module }}
         run: |
           set -euo pipefail
-          APK=$(find app/build/outputs/apk/stable/release -maxdepth 1 -type f -name '*.apk' | head -n1)
+          APK_DIR=$(find app/build/outputs/apk -type d 2>/dev/null | grep -iE '/stable/release$' | head -n 1)
+          if [ -z "$APK_DIR" ]; then
+            echo "No stable/release output directory"; ls -R app/build/outputs/apk || true; exit 1
+          fi
+          APK=$(find "$APK_DIR" -maxdepth 1 -type f -name '*.apk' | head -n 1)
           if [ -z "$APK" ]; then
             echo "No apk produced"; ls -R app/build/outputs/apk || true; exit 1
           fi

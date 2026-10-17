@@ -56,11 +56,9 @@ jobs:
         run: |
           set -euo pipefail
           TASK="assemble${LEVEL}${BUILD_TYPE^}"
-          OUT_DIR="app/build/outputs/apk/${LEVEL,,}/${BUILD_TYPE}"
           echo "task=${TASK}" >> "$GITHUB_OUTPUT"
-          echo "out_dir=${OUT_DIR}" >> "$GITHUB_OUTPUT"
           echo "short_sha=$(git rev-parse --short=7 HEAD)" >> "$GITHUB_OUTPUT"
-          echo "Resolved task: ${TASK} (${OUT_DIR})"
+          echo "Resolved task: ${TASK}"
 
       - name: Set up JDK 25
         uses: actions/setup-java@v5
@@ -114,6 +112,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: manual-${{ inputs.level }}-${{ inputs.build_type }}-${{ steps.variant.outputs.short_sha }}
-          path: ${{ steps.variant.outputs.out_dir }}/*.apk
+          # 产物目录名随 AGP 变体变化，用 glob 匹配而不是硬编码路径
+          path: app/build/outputs/apk/**/${{ inputs.build_type }}/*.apk
           if-no-files-found: error
           retention-days: 14
