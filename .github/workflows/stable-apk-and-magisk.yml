@@ -37,6 +37,11 @@ on:
         required: true
         default: 1
         type: number
+      publish_release:
+        description: 'Create a DRAFT GitHub release with both files (requires signing secrets)'
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -50,6 +55,9 @@ jobs:
   stable_apk:
     name: Build Stable APK
     runs-on: ubuntu-latest
+    outputs:
+      version_name: ${{ steps.collect.outputs.version_name }}
+      version_code: ${{ steps.collect.outputs.version_code }}
     env:
       VERSION_ARGS: ${{ inputs.version_name != '' && format('-PVERSION_NAME={0}', inputs.version_name) || '' }}
     steps:
@@ -153,6 +161,9 @@ jobs:
   magisk_module:
     name: Build Magisk Module
     runs-on: ubuntu-latest
+    outputs:
+      module_version: ${{ steps.package.outputs.version_name }}
+      version_code: ${{ steps.package.outputs.version_code }}
     env:
       SYSTEM_APP_ID: 'com.android.packageinstaller'
     steps:
@@ -286,3 +297,80 @@ jobs:
           path: dist/*
           if-no-files-found: error
           retention-days: 30
+
+  publish:
+    name: Publish Draft Release
+    # Opt-in: only runs when the dispatcher asks for a release.
+    if: inputs.publish_release
+    needs: [stable_apk, magisk_module]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # create the draft release and its tag
+    steps:
+      # A stable release signed with the debug keystore cannot update an existing
+      # install, so refuse to publish unless the release key is configured.
+      - name: Require release signing
+        env:
+          SIGNING_KEY_STORE_BASE64: ${{ secrets.SIGNING_KEY_STORE_BASE64 }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          missing=""
+          [ -n "${SIGNING_KEY_STORE_BASE64:-}" ] || missing="$missing SIGNING_KEY_STORE_BASE64"
+          [ -n "${SIGNING_STORE_PASSWORD:-}" ] || missing="$missing SIGNING_STORE_PASSWORD"
+          [ -n "${SIGNING_KEY_ALIAS:-}" ] || missing="$missing SIGNING_KEY_ALIAS"
+          [ -n "${SIGNING_KEY_PASSWORD:-}" ] || missing="$missing SIGNING_KEY_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "error: refusing to publish, missing secrets:$missing"
+            exit 1
+          fi
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: InstallerX-Revived-${{ needs.stable_apk.outputs.version_name }}
+          path: dist/apk
+
+      - name: Download module artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: com-android-packageinstaller-${{ needs.magisk_module.outputs.module_version }}
+          path: dist/module
+
+      - name: Verify both files
+        run: |
+          set -euo pipefail
+          ls -l dist/apk dist/module
+          ls dist/apk/*.apk >/dev/null
+          ls dist/module/*.zip >/dev/null
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v3
+        with:
+          # Stable tags stay on the yy.MM scheme, e.g. 26.10
+          tag_name: ${{ needs.stable_apk.outputs.version_name }}
+          name: "InstallerX Revived stable ${{ needs.stable_apk.outputs.version_name }}"
+          target_commitish: ${{ github.sha }}
+          # Draft: review the changelog and publish manually.
+          draft: true
+          prerelease: false
+          generate_release_notes: false
+          body: |
+            ## 稳定版 / Stable release
+
+            - APK: `InstallerX-Revived-${{ needs.stable_apk.outputs.version_name }}.apk`
+              (versionCode `${{ needs.stable_apk.outputs.version_code }}`)
+            - Magisk module: `com-android-packageinstaller-${{ needs.magisk_module.outputs.module_version }}.zip`
+              (versionCode `${{ needs.magisk_module.outputs.version_code }}`)
+
+            模块会把 InstallerX 安装为系统安装器（`com.android.packageinstaller`），
+            与 APK 使用同一个签名密钥，可覆盖升级。
+
+            The module installs InstallerX as the system package installer
+            (`com.android.packageinstaller`) and is signed with the same key as
+            the APK, so it can upgrade in place.
+          files: |
+            dist/apk/*.apk
+            dist/module/*.zip
+
