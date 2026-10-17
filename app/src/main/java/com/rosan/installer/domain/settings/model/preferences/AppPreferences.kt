@@ -29,6 +29,7 @@ data class AppPreferences(
     val sdkCompareInMultiLine: Boolean,
     val showOPPOSpecial: Boolean,
     val checkAppSignature: Boolean,
+    val checkSourceStamp: Boolean,
     val checkSplitPackageSignatures: Boolean,
     val showSignatureInfoOnMatch: Boolean,
     val showSignatureDetails: Boolean,
@@ -71,6 +72,8 @@ data class AppPreferences(
     val labShowInstallInitiator: Boolean,
     val labInstallWithoutUserAction: Boolean,
     val labRespectPlatformInstallPolicy: Boolean,
+    val labEnableAbiOverride: Boolean,
+    val labTryDifferentArchitecture: Boolean,
     val enableFileLogging: Boolean,
     // Theme Settings
     val themeMode: ThemeMode,
@@ -79,6 +82,7 @@ data class AppPreferences(
     val useDynamicColor: Boolean,
     val useAppleFloatingBar: Boolean,
     val seedColorInt: Int, // Stored as raw Int from DataStore
+    val wallpaperSeedColorInt: Int,
     val useDynColorFollowPkgIcon: Boolean,
     val useDynColorFollowPkgIconForLiveActivity: Boolean,
     val useBlur: Boolean,

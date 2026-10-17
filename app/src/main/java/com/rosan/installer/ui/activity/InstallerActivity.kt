@@ -16,6 +16,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -158,7 +159,7 @@ class InstallerActivity :
             }
 
             intent.isSystemConfirmAction() -> {
-                confirmCallerUid = launchedFromUid
+                confirmCallerUid = launchedFromUidCompat()
             }
 
             !intent.isSystemConfirmAction() -> {
@@ -621,6 +622,12 @@ class InstallerActivity :
         session?.resolveConfirmInstall(this, sessionId, requestType, callerUid)
     }
 
+    private fun launchedFromUidCompat(): Int = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        Api34Impl.launchedFromUid(this)
+    } else {
+        Process.INVALID_UID
+    }
+
     private fun currentCallerUid(): Int = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
         Api35Impl.currentCallerUid(this)
     } else {
@@ -725,7 +732,12 @@ class InstallerActivity :
         }
     }
 
-    @androidx.annotation.RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    private object Api34Impl {
+        fun launchedFromUid(activity: InstallerActivity): Int = runCatching { activity.launchedFromUid }.getOrDefault(Process.INVALID_UID)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     private object Api35Impl {
         fun currentCallerUid(activity: InstallerActivity): Int = runCatching { activity.currentCaller.uid }.getOrDefault(Process.INVALID_UID)
     }

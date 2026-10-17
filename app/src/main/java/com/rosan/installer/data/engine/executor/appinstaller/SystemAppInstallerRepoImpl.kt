@@ -7,6 +7,7 @@ import android.os.IBinder
 import com.rosan.installer.core.reflection.ReflectionProvider
 import com.rosan.installer.domain.device.provider.DeviceCapabilityProvider
 import com.rosan.installer.domain.privileged.provider.PostInstallTaskProvider
+import com.rosan.installer.domain.settings.repository.AppSettingsRepository
 import kotlinx.coroutines.CoroutineScope
 
 class SystemAppInstallerRepoImpl(
@@ -14,7 +15,8 @@ class SystemAppInstallerRepoImpl(
     reflect: ReflectionProvider,
     capabilityProvider: DeviceCapabilityProvider,
     postInstallTaskProvider: PostInstallTaskProvider,
+    appSettingsRepo: AppSettingsRepository,
     taskScope: CoroutineScope,
-) : IBinderAppInstallerRepoImpl(context, reflect, capabilityProvider, postInstallTaskProvider, taskScope) {
+) : IBinderAppInstallerRepoImpl(context, reflect, capabilityProvider, postInstallTaskProvider, appSettingsRepo, taskScope) {
     override suspend fun iBinderWrapper(iBinder: IBinder): IBinder = iBinder
 }
