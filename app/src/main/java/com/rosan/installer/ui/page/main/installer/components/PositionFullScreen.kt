@@ -22,7 +22,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
@@ -64,9 +64,10 @@ import androidx.compose.ui.unit.dp
  *    body to reflow (no flicker). Wrapped in [AnimatedContent] on [contentKey]
  *    change for a same-position cross-fade.
  * 3. **Footer** (buttons) — overlaid on top of the body's bottom edge (just
- *    like the dialog's button row), so its size change doesn't push the body
- *    around. Its own height is animated with `animateDpAsState` so the body's
- *    bottom padding transitions smoothly.
+ *    like the dialog's button row), with one status-bar height of spacing
+ *    above the navigation bar to match the header's extra top spacing. Its
+ *    size change doesn't push the body around. Its own height is animated
+ *    with `animateDpAsState` so the body's bottom padding transitions smoothly.
  *
  * Enter / exit transition:
  * The fullscreen layer is a single alpha-animated surface. On first composition
@@ -127,7 +128,7 @@ fun PositionFullScreen(
     rightContent: @Composable (() -> Unit)? = null,
     leftButton: @Composable (() -> Unit)? = null,
     centerButton: @Composable (() -> Unit)? = null,
-    rightButton: @Composable (() -> Unit)? = null
+    rightButton: @Composable (() -> Unit)? = null,
 ) {
     // Layer alpha — animates the whole fullscreen layer in and out.
     // enter: 0 → 1 (EnterExitDurationMs)
@@ -166,11 +167,19 @@ fun PositionFullScreen(
     // the caller routes to the parent stage without disposing
     // [PositionFullScreen]. The exit fade has already taken alpha to 0,
     // so we re-run the enter fade on the new [contentKey] to bring the
-    // layer back in. The `isDismissing` guard makes sure we don't re-run
-    // this on the very first composition (where the first LaunchedEffect
-    // already handled the enter fade).
-    LaunchedEffect(contentKey) {
-        if (isDismissing) {
+    // layer back in.
+    //
+    // This must NOT fire while an actual close is in flight: the caller
+    // sets [isClosing] and tears the session down ~220ms later. If the
+    // stage happened to change inside that window (e.g. the module
+    // installer reports `isFinished` right as the user backs out of the
+    // module progress page), a naive `LaunchedEffect(contentKey)` would
+    // see `isDismissing == true`, treat it as a back-navigation, and fade
+    // the whole layer back in — producing exactly the unwanted full-page
+    // fade between the pre-install / installing / finished pages.
+    // Re-entering is therefore only valid while [isClosing] is false.
+    LaunchedEffect(contentKey, isClosing) {
+        if (isDismissing && !isClosing) {
             isDismissing = false
             uiAlpha.animateTo(1f, animationSpec = tween(durationMillis = EnterExitDurationMs))
         }
@@ -192,7 +201,7 @@ fun PositionFullScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .alpha(uiAlpha.value)
+            .alpha(uiAlpha.value),
     ) {
         // Surface (and therefore the container color) extends edge-to-edge.
         // The shape defaults to RectangleShape so the blur is not exposed in
@@ -201,46 +210,52 @@ fun PositionFullScreen(
             modifier = modifier.fillMaxSize(),
             shape = shape,
             color = containerColor,
-            tonalElevation = tonalElevation
+            tonalElevation = tonalElevation,
         ) {
-            val topInset = WindowInsets.systemBars.asPaddingValues().calculateTopPadding()
+            val statusBarInset = WindowInsets.statusBars.asPaddingValues()
+                .calculateTopPadding()
             val navInset = WindowInsets.navigationBars.asPaddingValues()
                 .calculateBottomPadding()
             // Reserve a full status-bar height above the safe area for the
             // header so the title sits visibly below the system status bar.
-            val headerTopPadding = topInset * 2
+            val contentEdgePadding = statusBarInset
+            val headerTopPadding = statusBarInset + contentEdgePadding
 
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = headerTopPadding)
+                    .padding(top = headerTopPadding),
             ) {
                 // ---- Stable header (icon, title, subtitle) ----
                 // Rendered once and not animated; the caller passes composables
                 // that are stable across the install flow (e.g. based on the
                 // current package, not the current stage).
                 PositionChildWidget(
-                    leftIcon, centerIcon, rightIcon
+                    leftIcon,
+                    centerIcon,
+                    rightIcon,
                 ) { icon ->
                     CompositionLocalProvider(LocalContentColor provides iconContentColor) {
                         Box(
                             modifier = Modifier
                                 .padding(IconPadding)
-                                .align(Alignment.CenterHorizontally)
+                                .align(Alignment.CenterHorizontally),
                         ) {
                             icon?.invoke()
                         }
                     }
                 }
                 PositionChildWidget(
-                    leftTitle, centerTitle, rightTitle
+                    leftTitle,
+                    centerTitle,
+                    rightTitle,
                 ) { title ->
                     CompositionLocalProvider(LocalContentColor provides titleContentColor) {
                         ProvideTextStyle(MaterialTheme.typography.headlineSmall) {
                             Box(
                                 modifier = Modifier
                                     .padding(TitlePadding)
-                                    .align(Alignment.CenterHorizontally)
+                                    .align(Alignment.CenterHorizontally),
                             ) {
                                 title?.invoke()
                             }
@@ -248,14 +263,16 @@ fun PositionFullScreen(
                     }
                 }
                 PositionChildWidget(
-                    leftSubtitle, centerSubtitle, rightSubtitle
+                    leftSubtitle,
+                    centerSubtitle,
+                    rightSubtitle,
                 ) { subtitle ->
                     CompositionLocalProvider(LocalContentColor provides titleContentColor) {
                         ProvideTextStyle(MaterialTheme.typography.bodyMedium) {
                             Box(
                                 modifier = Modifier
                                     .padding(SubtitlePadding)
-                                    .align(Alignment.CenterHorizontally)
+                                    .align(Alignment.CenterHorizontally),
                             ) {
                                 subtitle?.invoke()
                             }
@@ -280,15 +297,15 @@ fun PositionFullScreen(
                     targetValue = footerHeight,
                     animationSpec = spring(
                         dampingRatio = Spring.DampingRatioLowBouncy,
-                        stiffness = Spring.StiffnessMediumLow
+                        stiffness = Spring.StiffnessMediumLow,
                     ),
-                    label = "fs_footer_height"
+                    label = "fs_footer_height",
                 )
 
                 Box(
                     modifier = Modifier
                         .weight(weight = 1f, fill = true)
-                        .fillMaxWidth()
+                        .fillMaxWidth(),
                 ) {
                     // Body fills the entire body+footer area minus the
                     // (animated) footer height. The bottom padding change
@@ -297,62 +314,54 @@ fun PositionFullScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(bottom = animatedFooterHeight.coerceAtLeast(0.dp))
+                            .padding(bottom = animatedFooterHeight.coerceAtLeast(0.dp)),
                     ) {
                         val bodyTransitionSpec:
-                                AnimatedContentTransitionScope<Any?>.() -> androidx.compose.animation.ContentTransform = {
-                            // Same-position cross-fade. SizeTransform is
-                            // included so any size delta between the two
-                            // body snapshots is animated too, instead of
-                            // producing a one-frame visual jump.
-                            fadeIn(animationSpec = tween(durationMillis = 220)) togetherWith
+                            AnimatedContentTransitionScope<Any?>.() -> androidx.compose.animation.ContentTransform = {
+                                // Same-position cross-fade. SizeTransform is
+                                // included so any size delta between the two
+                                // body snapshots is animated too, instead of
+                                // producing a one-frame visual jump.
+                                fadeIn(animationSpec = tween(durationMillis = 220)) togetherWith
                                     fadeOut(animationSpec = tween(durationMillis = 180)) using
                                     androidx.compose.animation.SizeTransform(
-                                        clip = false
+                                        clip = false,
                                     ) { _, _ -> tween(durationMillis = 220) }
-                        }
-                        if (contentKey != null) {
-                            AnimatedContent(
-                                targetState = contentKey,
-                                transitionSpec = bodyTransitionSpec,
-                                label = "FullScreenBodyTransition"
-                            ) { _ ->
-                                PositionChildWidget(
-                                    if (contentMode) leftContent else leftText,
-                                    if (contentMode) centerContent else centerText,
-                                    if (contentMode) rightContent else rightText
-                                ) { text ->
-                                    CompositionLocalProvider(LocalContentColor provides textContentColor) {
-                                        ProvideTextStyle(MaterialTheme.typography.bodyMedium) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .padding(if (contentMode) ContentPadding else TextPadding)
-                                                    .fillMaxWidth()
-                                            ) {
-                                                text?.invoke()
-                                            }
-                                        }
-                                    }
-                                }
                             }
-                        } else {
+                        // The body content is identical whether or not it is
+                        // wrapped in [AnimatedContent]; only the wrapper differs.
+                        // Hoisting it into a local lambda keeps the three-way
+                        // `if (contentMode) ... else ...` selection in one place
+                        // instead of duplicating the whole subtree below.
+                        val bodyBody: @Composable () -> Unit = {
                             PositionChildWidget(
                                 if (contentMode) leftContent else leftText,
                                 if (contentMode) centerContent else centerText,
-                                if (contentMode) rightContent else rightText
+                                if (contentMode) rightContent else rightText,
                             ) { text ->
                                 CompositionLocalProvider(LocalContentColor provides textContentColor) {
                                     ProvideTextStyle(MaterialTheme.typography.bodyMedium) {
                                         Box(
                                             modifier = Modifier
                                                 .padding(if (contentMode) ContentPadding else TextPadding)
-                                                .fillMaxWidth()
+                                                .fillMaxWidth(),
                                         ) {
                                             text?.invoke()
                                         }
                                     }
                                 }
                             }
+                        }
+                        if (contentKey != null) {
+                            AnimatedContent(
+                                targetState = contentKey,
+                                transitionSpec = bodyTransitionSpec,
+                                label = "FullScreenBodyTransition",
+                            ) { _ ->
+                                bodyBody()
+                            }
+                        } else {
+                            bodyBody()
                         }
                     }
 
@@ -364,41 +373,27 @@ fun PositionFullScreen(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
-                            .padding(bottom = navInset)
-                            .onSizeChanged { footerHeightPx = it.height }
+                            .padding(bottom = navInset + contentEdgePadding)
+                            .onSizeChanged { footerHeightPx = it.height },
                     ) {
                         val footerTransitionSpec:
-                                AnimatedContentTransitionScope<Any?>.() -> androidx.compose.animation.ContentTransform = {
-                            // Buttons row is small enough that a plain
-                            // cross-fade + matching SizeTransform is enough
-                            // — it never needs to "slide in" from anywhere.
-                            fadeIn(animationSpec = tween(durationMillis = 200)) togetherWith
+                            AnimatedContentTransitionScope<Any?>.() -> androidx.compose.animation.ContentTransform = {
+                                // Buttons row is small enough that a plain
+                                // cross-fade + matching SizeTransform is enough
+                                // — it never needs to "slide in" from anywhere.
+                                fadeIn(animationSpec = tween(durationMillis = 200)) togetherWith
                                     fadeOut(animationSpec = tween(durationMillis = 160)) using
                                     androidx.compose.animation.SizeTransform(
-                                        clip = false
+                                        clip = false,
                                     ) { _, _ -> tween(durationMillis = 200) }
-                        }
-                        if (contentKey != null) {
-                            AnimatedContent(
-                                targetState = contentKey,
-                                transitionSpec = footerTransitionSpec,
-                                label = "FullScreenFooterTransition"
-                            ) { _ ->
-                                PositionChildWidget(
-                                    leftButton, centerButton, rightButton
-                                ) { button ->
-                                    CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.primary) {
-                                        ProvideTextStyle(MaterialTheme.typography.labelLarge) {
-                                            Box(modifier = Modifier.padding(ButtonPadding)) {
-                                                button?.invoke()
-                                            }
-                                        }
-                                    }
-                                }
                             }
-                        } else {
+                        // Same hoisting as the body above: the buttons row is
+                        // invariant, only its AnimatedContent wrapper differs.
+                        val footerBody: @Composable () -> Unit = {
                             PositionChildWidget(
-                                leftButton, centerButton, rightButton
+                                leftButton,
+                                centerButton,
+                                rightButton,
                             ) { button ->
                                 CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.primary) {
                                     ProvideTextStyle(MaterialTheme.typography.labelLarge) {
@@ -408,6 +403,17 @@ fun PositionFullScreen(
                                     }
                                 }
                             }
+                        }
+                        if (contentKey != null) {
+                            AnimatedContent(
+                                targetState = contentKey,
+                                transitionSpec = footerTransitionSpec,
+                                label = "FullScreenFooterTransition",
+                            ) { _ ->
+                                footerBody()
+                            }
+                        } else {
+                            footerBody()
                         }
                     }
                 }
@@ -431,5 +437,5 @@ private val ContentPadding = PaddingValues.Absolute(bottom = 8.dp)
 private val ButtonPadding = PaddingValues(
     start = DialogSinglePadding,
     end = DialogSinglePadding,
-    bottom = 0.dp
+    bottom = 0.dp,
 )

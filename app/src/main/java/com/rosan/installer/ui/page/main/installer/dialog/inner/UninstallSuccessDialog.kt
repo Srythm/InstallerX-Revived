@@ -25,7 +25,7 @@ import com.rosan.installer.ui.page.main.installer.dialog.dialogButtons
  */
 @Composable
 fun uninstallSuccessDialog(
-    viewModel: InstallerViewModel
+    viewModel: InstallerViewModel,
 ): DialogParams {
     // Use the shared uninstallInfoDialog to get the base layout with the app's icon, title, and subtitle.
     // The "magic wand" extra-button is intentionally hidden: the app is
@@ -38,7 +38,7 @@ fun uninstallSuccessDialog(
             // requires a callback. The button is hidden via
             // [showTitleExtra] = false so the click path is unreachable.
         },
-        showTitleExtra = false
+        showTitleExtra = false,
     )
 
     // Override the text and buttons sections to provide a success message and a finish button.
@@ -59,18 +59,18 @@ fun uninstallSuccessDialog(
             Text(
                 text = stringResource(R.string.uninstall_success_message),
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
         },
         buttons = dialogButtons(
-            DialogParamsType.InstallerUninstallSuccess.id
+            DialogParamsType.InstallerUninstallSuccess.id,
         ) {
             // The button list contains only a "Finish" button to close the dialog.
             listOf(
                 DialogButton(stringResource(R.string.finish)) {
                     viewModel.dispatch(InstallerViewAction.Close)
-                }
+                },
             )
-        }
+        },
     )
 }

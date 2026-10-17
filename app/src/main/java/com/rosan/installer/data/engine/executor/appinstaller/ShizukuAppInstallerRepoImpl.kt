@@ -12,7 +12,11 @@ import kotlinx.coroutines.CoroutineScope
 import rikka.shizuku.ShizukuBinderWrapper
 
 class ShizukuAppInstallerRepoImpl(
-    context: Context, reflect: ReflectionProvider, capabilityProvider: DeviceCapabilityProvider, postInstallTaskProvider: PostInstallTaskProvider, taskScope: CoroutineScope
+    context: Context,
+    reflect: ReflectionProvider,
+    capabilityProvider: DeviceCapabilityProvider,
+    postInstallTaskProvider: PostInstallTaskProvider,
+    taskScope: CoroutineScope,
 ) : IBinderAppInstallerRepoImpl(context, reflect, capabilityProvider, postInstallTaskProvider, taskScope) {
     override suspend fun iBinderWrapper(iBinder: IBinder): IBinder = requireShizukuPermissionGranted { ShizukuBinderWrapper(iBinder) }
 }

@@ -1,5 +1,6 @@
 import com.mikepenz.aboutlibraries.plugin.DuplicateMode
 import com.mikepenz.aboutlibraries.plugin.DuplicateRule
+import java.io.File
 import java.util.Properties
 
 plugins {
@@ -102,20 +103,9 @@ android {
         includeInBundle = false
     }
 
-    flavorDimensions.addAll(listOf("connectivity", "level"))
+    flavorDimensions.add("level")
 
     productFlavors {
-        create("online") {
-            dimension = "connectivity"
-            buildConfigField("boolean", "INTERNET_ACCESS_ENABLED", "true")
-            isDefault = true
-        }
-
-        create("offline") {
-            dimension = "connectivity"
-            buildConfigField("boolean", "INTERNET_ACCESS_ENABLED", "false")
-        }
-
         create("Unstable") {
             dimension = "level"
             isDefault = true
@@ -146,7 +136,7 @@ android {
             // Module-specific exclusions
             excludes += setOf(
                 "lib/*/libandroidx.graphics.path.so",
-                "lib/*/libdatastore_shared_counter.so"
+                "lib/*/libdatastore_shared_counter.so",
             )
         }
     }
@@ -156,9 +146,9 @@ android {
     }
 }
 
-configurations.all {
+/*configurations.all {
     exclude(group = "androidx.navigationevent", module = "navigationevent-compose")
-}
+}*/
 
 aboutLibraries {
     library {
@@ -169,14 +159,53 @@ aboutLibraries {
     }
 }
 
+// Use the apksig implementation bundled with the lowest installed Build Tools version that
+// supports the signature schemes handled by the app. Newer Build Tools retain this support.
+private val minApksignerBuildTools = "37.0.0"
+
+private fun buildToolsVersionParts(version: String): List<Int> = version
+    .substringBefore('-')
+    .split('.')
+    .map { it.toIntOrNull() ?: 0 }
+    .let { parts -> parts + List((3 - parts.size).coerceAtLeast(0)) { 0 } }
+
+private fun compareBuildToolsVersions(left: String, right: String): Int = buildToolsVersionParts(left).zip(buildToolsVersionParts(right))
+    .firstOrNull { (leftPart, rightPart) -> leftPart != rightPart }
+    ?.let { (leftPart, rightPart) -> leftPart.compareTo(rightPart) }
+    ?: 0
+
+private fun selectApksignerJar(sdkDirectory: File): File {
+    val buildToolsDirectory = sdkDirectory.resolve("build-tools")
+    val selectedDirectory = buildToolsDirectory
+        .listFiles()
+        .orEmpty()
+        .asSequence()
+        .filter { it.isDirectory }
+        .filter { it.resolve("lib/apksigner.jar").isFile }
+        .filter { compareBuildToolsVersions(it.name, minApksignerBuildTools) >= 0 }
+        .minWithOrNull { left, right -> compareBuildToolsVersions(left.name, right.name) }
+        ?: error(
+            "Build Tools >= $minApksignerBuildTools with lib/apksigner.jar are required",
+        )
+    return selectedDirectory.resolve("lib/apksigner.jar")
+}
+
+val apksignerJar = androidComponents.sdkComponents.sdkDirectory.map { sdkDirectory ->
+    selectApksignerJar(sdkDirectory.asFile)
+}
+
 room3 {
     // Specify the schema directory
     schemaDirectory("$projectDir/schemas")
 }
 
 dependencies {
+    testImplementation(libs.kotlin.test.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+
+    implementation(libs.commons.compress)
     implementation(libs.androidx.profileinstaller)
-    implementation(libs.android.tools.apksig)
+    implementation(files(apksignerJar))
     "baselineProfile"(project(":baselineprofile"))
     compileOnly(project(":hidden-api"))
     implementation(libs.androidx.core)
@@ -191,12 +220,6 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
-
-    implementation(libs.androidx.navigation3.runtime)
-    implementation(libs.androidx.navigation3.ui)
-    implementation(libs.androidx.navigationevent) {
-        exclude(group = "androidx.navigation", module = "navigationevent-compose")
-    }
 
     implementation(libs.compose.materialIcons)
     // Preview support only for debug builds
@@ -232,9 +255,10 @@ dependencies {
     // log
     implementation(libs.timber)
 
-    // miuix blur/shader only (UI components removed)
+    // miuix navigation plus blur/shader (full Miuix UI components removed)
     implementation(libs.miuix.shader)
     implementation(libs.miuix.blur)
+    implementation(libs.miuix.navigation)
 
     // okhttp
     implementation(platform(libs.okhttp.bom))

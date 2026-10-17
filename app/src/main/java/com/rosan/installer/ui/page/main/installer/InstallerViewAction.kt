@@ -15,6 +15,7 @@ sealed interface InstallerViewAction {
     data object Close : InstallerViewAction
     data object Analyse : InstallerViewAction
     data object InstallChoice : InstallerViewAction
+    data class SelectMixedModuleType(val installAsModule: Boolean) : InstallerViewAction
     data object InstallExtendedMenu : InstallerViewAction
     data object InstallExtendedSubMenu : InstallerViewAction
 
@@ -59,6 +60,12 @@ sealed interface InstallerViewAction {
      * Toggles the selection state of the current app.
      */
     data class ToggleSelection(val packageName: String, val entity: SelectInstallEntity, val isMultiSelect: Boolean) : InstallerViewAction
+
+    /** Clears a single-package row or restores its previous file choices. */
+    data class TogglePackageSelection(val packageName: String, val entity: SelectInstallEntity) : InstallerViewAction
+
+    /** Sets all non-module entries in the current choice session in one update. */
+    data class SetApkSelection(val selected: Boolean) : InstallerViewAction
 
     /**
      * Sets the installer mode.

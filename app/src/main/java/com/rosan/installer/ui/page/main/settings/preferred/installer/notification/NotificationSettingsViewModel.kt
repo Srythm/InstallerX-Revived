@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 
 class NotificationSettingsViewModel(
     appSettingsRepo: AppSettingsRepository,
-    private val updateSetting: UpdateSettingUseCase
+    private val updateSetting: UpdateSettingUseCase,
 ) : ViewModel() {
 
     val state: StateFlow<NotificationSettingsState> = appSettingsRepo.preferencesFlow.map { prefs ->
@@ -27,12 +27,12 @@ class NotificationSettingsViewModel(
             miIslandOuterGlow = prefs.useMiIslandOuterGlow,
             successAutoClearSeconds = prefs.notificationSuccessAutoClearSeconds,
             showDialogOnPress = prefs.showDialogWhenPressingNotification,
-            miIslandBlockingInterval = prefs.useMiIslandBlockingIntervalMs
+            miIslandBlockingInterval = prefs.useMiIslandBlockingIntervalMs,
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = NotificationSettingsState()
+        initialValue = NotificationSettingsState(),
     )
 
     fun dispatch(action: NotificationSettingsAction) {

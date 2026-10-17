@@ -22,6 +22,7 @@ InstallerX Revived 是一款现代 Android 软件包安装器，也是原 [Insta
 ## 核心能力
 
 - **安装包格式：** APK、APKS、APKM、XAPK、ZIP 压缩包内 APK，以及批量 APK 安装。
+- **对话框批量选择：** 取消单版本安装包行时会清空其文件选择，再次选中时恢复取消前的选择，包括分包和 dex 元数据。两套界面在同一次分析中行为一致；单独修改文件选择或显式全选、清空 APK 会取代已保存的选择。
 - **安装流程：** 对话框安装、通知栏后台安装、自动安装、具备权限时的静默安装，以及支持系统上的 Android 16+ 实时活动进度。
 - **授权方式：**
   - **Root：** 能以最高权限执行所有特权操作，但冷启动 `app_process` 时性能通常略弱。
@@ -30,7 +31,7 @@ InstallerX Revived 是一款现代 Android 软件包安装器，也是原 [Insta
   - **无特权：** 完全受系统限制，但 InstallerX 作为系统包管理器运行时可以获得静默安装能力。
 - **配置文件：** 定义安装和卸载请求如何处理，包括安装模式、授权覆盖、安装者/请求方信息、目标用户、DexOpt、自动删除、分包选择、黑名单策略和签名门禁。
 - **系统集成：** 可从首页状态卡进入默认安装器页面完成锁定，必要时配合 [InxLocker](https://github.com/Chimioo/InxLocker) 等 LSPosed 模块，也可由高级用户作为系统包管理器替换系统安装器。
-- **现代界面：** Material 3 Expressive 与 Miuix 两套界面，深色模式、动态取色、高级调色板、系统图标包、多彩对话框、标准通知、实时活动，以及在支持的小米设备上以小米超级岛发送通知。
+- **现代界面：** Material 3 Expressive 界面，深色模式、动态取色、高级调色板、系统图标包、多彩对话框、标准通知、实时活动，以及在支持的小米设备上以小米超级岛发送通知。
 - **安全控制：** 包名和 SharedUID 黑名单、签名不匹配和未知签名策略门禁、权限预览、安装标志位，以及部分阻止场景的一次性智能建议。
 
 ## 支持版本
@@ -49,12 +50,7 @@ InstallerX Revived 是一款现代 Android 软件包安装器，也是原 [Insta
 
 反馈问题时请尽量使用最新 Alpha 或 CI 版本复现，因为 Stable 中的问题可能已经被修复。
 
-InstallerX 发布时提供两个变体：
-
-- **Online：** 支持分享 APK 下载直链和在线更新相关功能。联网权限只用于安装相关功能。
-- **Offline：** 不申请联网权限。使用 Online 专属功能时会给出明确错误提示。
-
-两个变体的包名、版本号和签名相同，会互相覆盖安装，不能并存。
+InstallerX 现在只发布一个 APK，联网功能由应用内设置控制。发布文件名继续保留 `online` 仅用于兼容旧版应用内更新客户端，不再代表独立的构建变体。
 
 ## 构建项目
 
@@ -64,7 +60,7 @@ InstallerX Revived 是 Android Gradle 项目。
 
 - **JDK 25**，并正确配置 `JAVA_HOME`。
 - Android SDK / Android Studio，并安装所需平台和构建工具。
-- 用于下载 snapshot `miuix` 依赖的 GitHub Packages 凭据。
+- 用于下载 snapshot `miuix` 依赖（`miuix-shader`、`miuix-blur`、`miuix-navigation`）的 GitHub Packages 凭据。
 
 ### GitHub Packages 认证
 
@@ -85,13 +81,13 @@ gpr.key=YOUR_PERSONAL_ACCESS_TOKEN
 本地 Debug 构建：
 
 ```bash
-./gradlew assembleOnlineUnstableDebug assembleOfflineUnstableDebug
+./gradlew assembleUnstableDebug
 ```
 
 使用单独应用 ID 的 PR 检查构建：
 
 ```bash
-./gradlew assembleOnlinePreviewDebug assembleOfflinePreviewDebug -PAPP_ID="com.rosan.installer.x.revived.test"
+./gradlew assemblePreviewDebug -PAPP_ID="com.rosan.installer.x.revived.test"
 ```
 
 ## 常见问题
@@ -149,8 +145,8 @@ InstallerX Revived 基于 [GNU General Public License v3](http://www.gnu.org/lic
 
 <a href="https://www.star-history.com/?repos=wxxsfxyzm%2FInstallerX-Revived&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=wxxsfxyzm/InstallerX-Revived&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=wxxsfxyzm/InstallerX-Revived&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=wxxsfxyzm/InstallerX-Revived&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=wxxsfxyzm/InstallerX-Revived&type=date&theme=dark&legend=top-left&sealed_token=NIZn5WH0-dVDGHKTPTVKAke10T3j7OrdIZ6rTbhT4zwN5AyJhj5aJhc36MEg2ZD5FoBrDoxgF3jzozO8cpBCQoJ65WbUGZZestdrI42Rnv8QVdEvE9Jz-qfghs5RpT5BeRHLuDH2NLyDNypEg34_XaPsTDAkx6DZAl0bUc0tpa0C2xzKBPih_ELq-sP2" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=wxxsfxyzm/InstallerX-Revived&type=date&legend=top-left&sealed_token=NIZn5WH0-dVDGHKTPTVKAke10T3j7OrdIZ6rTbhT4zwN5AyJhj5aJhc36MEg2ZD5FoBrDoxgF3jzozO8cpBCQoJ65WbUGZZestdrI42Rnv8QVdEvE9Jz-qfghs5RpT5BeRHLuDH2NLyDNypEg34_XaPsTDAkx6DZAl0bUc0tpa0C2xzKBPih_ELq-sP2" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=wxxsfxyzm/InstallerX-Revived&type=date&legend=top-left&sealed_token=NIZn5WH0-dVDGHKTPTVKAke10T3j7OrdIZ6rTbhT4zwN5AyJhj5aJhc36MEg2ZD5FoBrDoxgF3jzozO8cpBCQoJ65WbUGZZestdrI42Rnv8QVdEvE9Jz-qfghs5RpT5BeRHLuDH2NLyDNypEg34_XaPsTDAkx6DZAl0bUc0tpa0C2xzKBPih_ELq-sP2" />
  </picture>
 </a>

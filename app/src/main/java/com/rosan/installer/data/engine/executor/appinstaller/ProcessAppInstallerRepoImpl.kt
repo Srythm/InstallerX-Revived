@@ -8,14 +8,16 @@ import com.rosan.installer.core.reflection.ReflectionProvider
 import com.rosan.installer.domain.device.provider.DeviceCapabilityProvider
 import com.rosan.installer.domain.engine.model.install.InstallEntity
 import com.rosan.installer.domain.engine.model.install.InstallMetadata
+import com.rosan.installer.domain.engine.model.install.InstallPhase
+import com.rosan.installer.domain.engine.model.install.InstallWriteProgress
 import com.rosan.installer.domain.privileged.provider.PostInstallTaskProvider
 import com.rosan.installer.domain.settings.model.config.Authorizer
 import com.rosan.installer.domain.settings.model.config.ConfigModel
-import com.rosan.installer.framework.privileged.core.infrastructure.recycler.ProcessHookRecycler
+import com.rosan.installer.framework.privileged.core.execution.authorization.requireCustomizeAuthorizer
 import com.rosan.installer.framework.privileged.core.infrastructure.process.AppProcessTerminal
 import com.rosan.installer.framework.privileged.core.infrastructure.process.SHELL_SH
 import com.rosan.installer.framework.privileged.core.infrastructure.process.ShellCommand
-import com.rosan.installer.framework.privileged.core.execution.authorization.requireCustomizeAuthorizer
+import com.rosan.installer.framework.privileged.core.infrastructure.recycler.ProcessHookRecycler
 import kotlinx.coroutines.CoroutineScope
 import org.koin.core.context.GlobalContext
 import org.koin.core.parameter.parametersOf
@@ -25,7 +27,7 @@ class ProcessAppInstallerRepoImpl(
     reflect: ReflectionProvider,
     capabilityProvider: DeviceCapabilityProvider,
     postInstallTaskProvider: PostInstallTaskProvider,
-    taskScope: CoroutineScope
+    taskScope: CoroutineScope,
 ) : IBinderAppInstallerRepoImpl(context, reflect, capabilityProvider, postInstallTaskProvider, taskScope) {
     private var localService: ProcessHookRecycler.HookedUserService? = null
 
@@ -36,7 +38,9 @@ class ProcessAppInstallerRepoImpl(
         respectPlatformInstallPolicy: Boolean,
         blacklist: List<String>,
         sharedUserIdBlacklist: List<String>,
-        sharedUserIdExemption: List<String>
+        sharedUserIdExemption: List<String>,
+        onProgress: suspend (InstallWriteProgress) -> Unit,
+        onPhaseChanged: suspend (InstallPhase) -> Unit,
     ) = runWithProcess(config) {
         super.doInstallWork(
             config,
@@ -45,13 +49,15 @@ class ProcessAppInstallerRepoImpl(
             respectPlatformInstallPolicy,
             blacklist,
             sharedUserIdBlacklist,
-            sharedUserIdExemption
+            sharedUserIdExemption,
+            onProgress,
+            onPhaseChanged,
         )
     }
 
     override suspend fun doUninstallWork(
         config: ConfigModel,
-        packageName: String
+        packageName: String,
     ) = runWithProcess(config) {
         super.doUninstallWork(config, packageName)
     }
@@ -59,7 +65,7 @@ class ProcessAppInstallerRepoImpl(
     override suspend fun approveSession(
         config: ConfigModel,
         sessionId: Int,
-        granted: Boolean
+        granted: Boolean,
     ) = runWithProcess(config) {
         super.approveSession(config, sessionId, granted)
     }
@@ -68,7 +74,7 @@ class ProcessAppInstallerRepoImpl(
         val service = localService
             ?: throw IllegalStateException(
                 "Service is null in iBinderWrapper. " +
-                        "Make sure doInstallWork/doUninstallWork calls are properly scoped."
+                    "Make sure doInstallWork/doUninstallWork calls are properly scoped.",
             )
 
         return service.binderWrapper(iBinder)
@@ -77,7 +83,7 @@ class ProcessAppInstallerRepoImpl(
     override suspend fun doFinishWork(
         config: ConfigModel,
         entities: List<InstallEntity>,
-        result: Result<Unit>
+        result: Result<Unit>,
     ) {
         super.doFinishWork(config, entities, result)
     }
@@ -85,12 +91,13 @@ class ProcessAppInstallerRepoImpl(
     private suspend fun <T> runWithProcess(
         config: ConfigModel,
         rootTerminal: AppProcessTerminal = AppProcessTerminal.Root,
-        block: suspend () -> T
+        block: suspend () -> T,
     ): T {
         val terminal = when (config.authorizer) {
             Authorizer.Root -> rootTerminal
+
             Authorizer.Customize -> AppProcessTerminal.Customize(
-                ShellCommand.parse(requireCustomizeAuthorizer(config.customizeAuthorizer))
+                ShellCommand.parse(requireCustomizeAuthorizer(config.customizeAuthorizer)),
             )
 
             else -> AppProcessTerminal.Customize(ShellCommand.of(SHELL_SH))

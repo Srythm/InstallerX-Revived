@@ -24,7 +24,7 @@ import com.rosan.installer.ui.page.main.installer.dialog.dialogButtons
  */
 @Composable
 fun uninstallFailedDialog(
-    viewModel: InstallerViewModel
+    viewModel: InstallerViewModel,
 ): DialogParams {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val currentError = uiState.error
@@ -36,27 +36,27 @@ fun uninstallFailedDialog(
     val baseParams = uninstallInfoDialog(
         viewModel = viewModel,
         onTitleExtraClick = {},
-        showTitleExtra = false
+        showTitleExtra = false,
     )
 
     // Override the text and buttons sections to display the error and provide relevant actions.
     return baseParams.copy(
         text = DialogInnerParams(
-            DialogParamsType.InstallerUninstallFailed.id
+            DialogParamsType.InstallerUninstallFailed.id,
         ) {
             // Reuse the ErrorTextBlock to display the exception message from the installer repository.
             // No intelligent suggestions are added here, keeping it focused on displaying the error.
             ErrorTextBlock(currentError)
         },
         buttons = dialogButtons(
-            DialogParamsType.InstallerUninstallFailed.id
+            DialogParamsType.InstallerUninstallFailed.id,
         ) {
             listOf(
                 // A "Close" button dismisses the dialog.
                 DialogButton(stringResource(R.string.close)) {
                     viewModel.dispatch(InstallerViewAction.Close)
-                }
+                },
             )
-        }
+        },
     )
 }

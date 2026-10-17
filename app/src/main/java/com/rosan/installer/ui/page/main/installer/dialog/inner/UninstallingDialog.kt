@@ -24,7 +24,7 @@ import com.rosan.installer.ui.page.main.installer.dialog.dialogButtons
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun uninstallingDialog(
-    viewModel: InstallerViewModel
+    viewModel: InstallerViewModel,
 ): DialogParams {
     // Call uninstallInfoDialog for base structure (icon, title, subtitle with new version).
     // The "magic wand" extra-button is hidden here: this dialog is the
@@ -35,13 +35,13 @@ fun uninstallingDialog(
     val baseParams = uninstallInfoDialog(
         viewModel = viewModel,
         onTitleExtraClick = {},
-        showTitleExtra = false
+        showTitleExtra = false,
     )
 
     // Override text and buttons
     return baseParams.copy(
         text = DialogInnerParams(
-            DialogParamsType.InstallerInstalling.id
+            DialogParamsType.InstallerInstalling.id,
         ) {
             Column {
                 Text(
@@ -50,17 +50,17 @@ fun uninstallingDialog(
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 8.dp)
+                        .padding(bottom = 8.dp),
                 )
                 // --- M3E ---
                 LinearWavyProgressIndicator(
                     modifier = Modifier.fillMaxWidth(),
-                    amplitude = 0f // not wavy
+                    amplitude = 0f, // not wavy
                 )
             }
         },
         buttons = dialogButtons(DialogParamsType.ButtonsCancel.id) {
             emptyList()
-        }
+        },
     )
 }

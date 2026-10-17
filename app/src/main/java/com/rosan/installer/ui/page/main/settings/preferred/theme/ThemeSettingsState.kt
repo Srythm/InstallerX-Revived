@@ -6,10 +6,10 @@ import androidx.compose.ui.graphics.Color
 import com.rosan.installer.domain.settings.model.preferences.PredictiveBackAnimation
 import com.rosan.installer.domain.settings.model.preferences.PredictiveBackExitDirection
 import com.rosan.installer.domain.settings.model.preferences.theme.PaletteStyle
-import com.rosan.installer.ui.theme.material.PresetColors
-import com.rosan.installer.ui.theme.material.RawColor
 import com.rosan.installer.domain.settings.model.preferences.theme.ThemeColorSpec
 import com.rosan.installer.domain.settings.model.preferences.theme.ThemeMode
+import com.rosan.installer.ui.theme.material.PresetColors
+import com.rosan.installer.ui.theme.material.RawColor
 
 data class ThemeSettingsState(
     // Blur is off by default. When enabled, every settings subpage that
@@ -37,5 +37,5 @@ data class ThemeSettingsState(
     val preferSystemIcon: Boolean = false,
     val showLiveActivity: Boolean = false,
     val predictiveBackAnimation: PredictiveBackAnimation = PredictiveBackAnimation.AOSP,
-    val predictiveBackExitDirection: PredictiveBackExitDirection = PredictiveBackExitDirection.FOLLOW_GESTURE
+    val predictiveBackExitDirection: PredictiveBackExitDirection = PredictiveBackExitDirection.FOLLOW_GESTURE,
 )

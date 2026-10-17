@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 
 class AuthorizerCustViewModel(
     appSettingsRepo: AppSettingsRepository,
-    private val updateSetting: UpdateSettingUseCase
+    private val updateSetting: UpdateSettingUseCase,
 ) : ViewModel() {
 
     val state: StateFlow<AuthorizerCustState> = appSettingsRepo.preferencesFlow.map { prefs ->
@@ -24,12 +24,12 @@ class AuthorizerCustViewModel(
             authorizer = prefs.authorizer,
             alwaysUseRootInSystem = prefs.alwaysUseRootInSystem,
             closeSessionCountDown = prefs.closeSessionCountDown,
-            allowInstallWithoutUserAction = prefs.labInstallWithoutUserAction
+            allowInstallWithoutUserAction = prefs.labInstallWithoutUserAction,
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = AuthorizerCustState()
+        initialValue = AuthorizerCustState(),
     )
 
     fun dispatch(action: AuthorizerCustAction) {
@@ -37,23 +37,25 @@ class AuthorizerCustViewModel(
             is AuthorizerCustAction.ChangeAlwaysUseRootInSystem -> viewModelScope.launch {
                 updateSetting(
                     BooleanSetting.AlwaysUseRootInSystem,
-                    action.alwaysUseRootInSystem
+                    action.alwaysUseRootInSystem,
                 )
             }
 
             is AuthorizerCustAction.ChangeCloseSessionCountDown -> {
-                if (action.countDown in 1..10) viewModelScope.launch {
-                    updateSetting(
-                        IntSetting.CloseSessionCountdown,
-                        action.countDown
-                    )
+                if (action.countDown in 1..10) {
+                    viewModelScope.launch {
+                        updateSetting(
+                            IntSetting.CloseSessionCountdown,
+                            action.countDown,
+                        )
+                    }
                 }
             }
 
             is AuthorizerCustAction.ChangeAllowInstallWithoutUserAction -> viewModelScope.launch {
                 updateSetting(
                     BooleanSetting.LabInstallWithoutUserAction,
-                    action.enable
+                    action.enable,
                 )
             }
         }

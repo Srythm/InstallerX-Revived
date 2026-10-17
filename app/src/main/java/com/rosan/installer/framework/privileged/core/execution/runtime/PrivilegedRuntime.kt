@@ -6,16 +6,17 @@ import android.annotation.SuppressLint
 import android.app.AppOpsManager
 import android.app.IActivityManager
 import android.content.Context
+import android.content.pm.IPackageInstaller
 import android.content.pm.IPackageManager
 import android.net.IConnectivityManager
 import android.os.IBinder
 import android.os.IUserManager
 import android.os.ServiceManager
 import com.rosan.installer.core.reflection.ReflectionProvider
-import com.rosan.installer.framework.privileged.core.context.wrapper.ShizukuContext
 import com.rosan.installer.framework.privileged.core.context.hook.ShizukuHook
-import com.rosan.installer.framework.privileged.core.context.wrapper.SystemContext
 import com.rosan.installer.framework.privileged.core.context.hook.resolveSettingsBinder
+import com.rosan.installer.framework.privileged.core.context.wrapper.ShizukuContext
+import com.rosan.installer.framework.privileged.core.context.wrapper.SystemContext
 import timber.log.Timber
 
 private const val TAG = "PrivilegedRuntime"
@@ -30,6 +31,8 @@ internal sealed interface PrivilegedRuntime {
     fun activityCallerPackage(context: Context): String
 
     fun packageManager(): IPackageManager
+
+    fun packageInstaller(): IPackageInstaller
 
     fun activityManager(): IActivityManager
 
@@ -72,6 +75,11 @@ internal sealed interface PrivilegedRuntime {
             return ShizukuHook.hookedPackageManager
         }
 
+        override fun packageInstaller(): IPackageInstaller {
+            Timber.tag(TAG).d("Getting IPackageInstaller in $name mode.")
+            return ShizukuHook.hookedPackageInstaller
+        }
+
         override fun activityManager(): IActivityManager {
             Timber.tag(TAG).d("Getting IActivityManager in $name mode.")
             return ShizukuHook.hookedActivityManager
@@ -101,7 +109,7 @@ internal sealed interface PrivilegedRuntime {
     class BinderWrapped(
         override val name: String,
         private val useAppCallerPackage: Boolean,
-        private val binderWrapper: (IBinder) -> IBinder
+        private val binderWrapper: (IBinder) -> IBinder,
     ) : PrivilegedRuntime {
         override val canCallSystemRestrictedPreferredApis = true
 
@@ -110,14 +118,18 @@ internal sealed interface PrivilegedRuntime {
             return SystemContext(context)
         }
 
-        override fun activityCallerPackage(context: Context): String {
-            return if (useAppCallerPackage) context.packageName else "com.android.shell"
-        }
+        override fun activityCallerPackage(context: Context): String = if (useAppCallerPackage) context.packageName else "com.android.shell"
 
         override fun packageManager(): IPackageManager {
             Timber.tag(TAG).d("Getting IPackageManager in $name mode.")
             val original = ServiceManager.getService("package")
             return IPackageManager.Stub.asInterface(binderWrapper(original))
+        }
+
+        override fun packageInstaller(): IPackageInstaller {
+            Timber.tag(TAG).d("Getting IPackageInstaller in $name mode.")
+            val original = packageManager().packageInstaller
+            return IPackageInstaller.Stub.asInterface(binderWrapper(original.asBinder()))
         }
 
         override fun activityManager(): IActivityManager {
@@ -151,25 +163,25 @@ internal sealed interface PrivilegedRuntime {
         }
     }
 
-    sealed class Direct(
-        override val name: String,
-        override val canCallSystemRestrictedPreferredApis: Boolean
-    ) : PrivilegedRuntime {
+    sealed class Direct(override val name: String, override val canCallSystemRestrictedPreferredApis: Boolean) : PrivilegedRuntime {
         override fun settingsResolverContext(context: Context): Context {
             Timber.tag(TAG).d("Using ShellContextResolver for $name.")
             return ShizukuContext(context)
         }
 
-        override fun activityCallerPackage(context: Context): String {
-            return when (this) {
-                SystemApp -> context.packageName
-                UserService -> "com.android.shell"
-            }
+        override fun activityCallerPackage(context: Context): String = when (this) {
+            SystemApp -> context.packageName
+            UserService -> "com.android.shell"
         }
 
         override fun packageManager(): IPackageManager {
             Timber.tag(TAG).d("Getting IPackageManager in $name mode.")
             return IPackageManager.Stub.asInterface(ServiceManager.getService("package"))
+        }
+
+        override fun packageInstaller(): IPackageInstaller {
+            Timber.tag(TAG).d("Getting IPackageInstaller in $name mode.")
+            return packageManager().packageInstaller
         }
 
         override fun activityManager(): IActivityManager {

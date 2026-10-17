@@ -23,7 +23,7 @@ import org.koin.compose.koinInject
 @Composable
 fun InstallerActivityContent(
     session: InstallerSessionRepository,
-    themeStateProvider: ThemeStateProvider = koinInject()
+    themeStateProvider: ThemeStateProvider = koinInject(),
 ) {
     val uiState by themeStateProvider.themeStateFlow.collectAsStateWithLifecycle(initialValue = ThemeState())
     if (!uiState.isLoaded) return
@@ -39,7 +39,7 @@ fun InstallerActivityContent(
         paletteStyle = uiState.paletteStyle,
         colorSpec = uiState.colorSpec,
         useDynamicColor = uiState.useDynamicColor,
-        seedColor = androidx.compose.ui.graphics.Color(uiState.seedColor)
+        seedColor = androidx.compose.ui.graphics.Color(uiState.seedColor),
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             InstallerPage(session)

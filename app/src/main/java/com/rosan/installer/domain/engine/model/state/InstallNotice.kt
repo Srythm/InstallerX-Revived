@@ -6,11 +6,12 @@ import com.rosan.installer.core.device.model.Architecture
 import com.rosan.installer.domain.engine.model.packageinfo.AppSignatureInfo
 import com.rosan.installer.domain.engine.model.packageinfo.PackageSignatureAnalysis
 import com.rosan.installer.domain.engine.model.packageinfo.SignatureMatchStatus
+import com.rosan.installer.domain.engine.model.packageinfo.SigningBlockCertificateStatus
 
 data class SignatureNoticeDetails(
     val pendingSignatureInfo: AppSignatureInfo?,
     val installedSignatureInfo: AppSignatureInfo?,
-    val packageSignatureAnalysis: PackageSignatureAnalysis = PackageSignatureAnalysis()
+    val packageSignatureAnalysis: PackageSignatureAnalysis = PackageSignatureAnalysis(),
 )
 
 /**
@@ -23,19 +24,18 @@ sealed interface InstallNotice {
     data class SignatureSummary(
         val status: SignatureMatchStatus,
         val details: SignatureNoticeDetails? = null,
-        val hasPackageSignatureIssues: Boolean = false
+        val hasPackageSignatureIssues: Boolean = false,
     ) : InstallNotice
 
-    data class SignatureMismatch(
-        val details: SignatureNoticeDetails? = null,
-        val hasPackageSignatureIssues: Boolean = false
-    ) : InstallNotice
+    data class SignatureMismatch(val details: SignatureNoticeDetails? = null, val hasPackageSignatureIssues: Boolean = false) : InstallNotice
 
-    data class SignatureUnknown(
+    data class SignatureUnknown(val details: SignatureNoticeDetails? = null, val hasPackageSignatureIssues: Boolean = false) : InstallNotice
+    data class SigningBlockOnly(
+        val certificateStatus: SigningBlockCertificateStatus,
         val details: SignatureNoticeDetails? = null,
-        val hasPackageSignatureIssues: Boolean = false
     ) : InstallNotice
     data object SdkIncompatible : InstallNotice
+    data class OplusOsdkIncompatible(val required: String, val device: String) : InstallNotice
     data object Arch32On64 : InstallNotice
     data class Emulated(val appArch: Architecture, val sysArch: Architecture) : InstallNotice
 

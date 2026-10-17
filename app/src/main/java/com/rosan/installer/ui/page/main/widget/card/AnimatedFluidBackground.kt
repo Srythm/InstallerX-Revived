@@ -36,13 +36,13 @@ import kotlin.math.sin
 fun AnimatedFluidBackground(
     baseColor: Color,
     enabled: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     if (!enabled) return
 
     Box(modifier = modifier) {
         AnimatedFluidBackgroundLayers(
-            baseColor = baseColor
+            baseColor = baseColor,
         )
     }
 }
@@ -77,7 +77,7 @@ fun AnimatedFluidBackground(
  */
 @Composable
 private fun AnimatedFluidBackgroundLayers(
-    baseColor: Color
+    baseColor: Color,
 ) {
     val transition = rememberInfiniteTransition(label = "fluid_background_transition")
 
@@ -87,9 +87,9 @@ private fun AnimatedFluidBackgroundLayers(
             .compositeOver(Color.Magenta.copy(alpha = 0.2f)),
         animationSpec = infiniteRepeatable(
             animation = tween(4500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
+            repeatMode = RepeatMode.Reverse,
         ),
-        label = "primary_flow"
+        label = "primary_flow",
     )
 
     val secondaryFlow by transition.animateColor(
@@ -99,9 +99,9 @@ private fun AnimatedFluidBackgroundLayers(
             .compositeOver(Color.Blue.copy(alpha = 0.15f)),
         animationSpec = infiniteRepeatable(
             animation = tween(3800, easing = LinearOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
+            repeatMode = RepeatMode.Reverse,
         ),
-        label = "secondary_flow"
+        label = "secondary_flow",
     )
 
     val accentFlow by transition.animateColor(
@@ -112,11 +112,11 @@ private fun AnimatedFluidBackgroundLayers(
         animationSpec = infiniteRepeatable(
             animation = tween(
                 durationMillis = 5200,
-                easing = CubicBezierEasing(0.4f, 0f, 0.2f, 1f)
+                easing = CubicBezierEasing(0.4f, 0f, 0.2f, 1f),
             ),
-            repeatMode = RepeatMode.Reverse
+            repeatMode = RepeatMode.Reverse,
         ),
-        label = "accent_flow"
+        label = "accent_flow",
     )
 
     val complementFlow by transition.animateColor(
@@ -126,9 +126,9 @@ private fun AnimatedFluidBackgroundLayers(
             .compositeOver(Color(0xFFFF6B35).copy(alpha = 0.2f)),
         animationSpec = infiniteRepeatable(
             animation = tween(4200, easing = FastOutLinearInEasing),
-            repeatMode = RepeatMode.Reverse
+            repeatMode = RepeatMode.Reverse,
         ),
-        label = "complement_flow"
+        label = "complement_flow",
     )
 
     // One shared overlay alpha (collapsed from three independent alphas).
@@ -137,9 +137,9 @@ private fun AnimatedFluidBackgroundLayers(
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
             animation = tween(10000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
+            repeatMode = RepeatMode.Reverse,
         ),
-        label = "overlay_alpha"
+        label = "overlay_alpha",
     )
 
     var timeState by remember { mutableFloatStateOf(0f) }
@@ -164,7 +164,7 @@ private fun AnimatedFluidBackgroundLayers(
     Canvas(
         modifier = Modifier
             .fillMaxSize()
-            .alpha(overlayAlpha)
+            .alpha(overlayAlpha),
     ) {
         val width = size.width
         val height = size.height
@@ -182,13 +182,13 @@ private fun AnimatedFluidBackgroundLayers(
                 colors = listOf(
                     baseColor.copy(alpha = glowIntensity),
                     baseColor.copy(alpha = glowIntensity * 0.5f),
-                    Color.Transparent
+                    Color.Transparent,
                 ),
                 center = glowCenter,
-                radius = glowRadius
+                radius = glowRadius,
             ),
             center = glowCenter,
-            radius = glowRadius
+            radius = glowRadius,
         )
 
         // ---- Texture (middle) — reduced from 8 points to 4 ----
@@ -200,11 +200,11 @@ private fun AnimatedFluidBackgroundLayers(
             val turbulentOffset = width * 0.06f * cos(fastTime * 0.8f + angle * 2f)
             val center = Offset(
                 x = centerX +
-                        dynamicRadius * cos(angle + mediumTime * 0.3f) +
-                        turbulentOffset,
+                    dynamicRadius * cos(angle + mediumTime * 0.3f) +
+                    turbulentOffset,
                 y = centerY +
-                        dynamicRadius * sin(angle + mediumTime * 0.3f) +
-                        height * 0.05f * sin(fastTime * 1.2f + angle)
+                    dynamicRadius * sin(angle + mediumTime * 0.3f) +
+                    height * 0.05f * sin(fastTime * 1.2f + angle),
             )
             val drawRadius = maxRadius * (0.2f + 0.1f * sin(fastTime + i * 0.5f))
             val opacity = 0.25f + 0.15f * cos(fastTime * 0.7f + i * 0.3f)
@@ -218,10 +218,10 @@ private fun AnimatedFluidBackgroundLayers(
                 brush = Brush.radialGradient(
                     colors = listOf(textureColor, textureColor.copy(alpha = 0f)),
                     center = center,
-                    radius = drawRadius
+                    radius = drawRadius,
                 ),
                 center = center,
-                radius = drawRadius
+                radius = drawRadius,
             )
         }
 
@@ -232,13 +232,13 @@ private fun AnimatedFluidBackgroundLayers(
             val phase = i * PI.toFloat() / 2.5f
             val fluidCenter = Offset(
                 x = centerX +
-                        width * 0.35f * sin(time2 * 0.6f + phase) +
-                        width * 0.2f * cos(time3 * 0.5f + phase * 1.5f) +
-                        width * 0.08f * sin(microTime * 1.5f + phase * 0.8f),
+                    width * 0.35f * sin(time2 * 0.6f + phase) +
+                    width * 0.2f * cos(time3 * 0.5f + phase * 1.5f) +
+                    width * 0.08f * sin(microTime * 1.5f + phase * 0.8f),
                 y = centerY +
-                        height * 0.32f * cos(time2 * 0.7f + phase * 1.2f) +
-                        height * 0.25f * sin(time3 * 0.6f + phase * 0.7f) +
-                        height * 0.1f * cos(microTime * 1.3f + phase * 1.3f)
+                    height * 0.32f * cos(time2 * 0.7f + phase * 1.2f) +
+                    height * 0.25f * sin(time3 * 0.6f + phase * 0.7f) +
+                    height * 0.1f * cos(microTime * 1.3f + phase * 1.3f),
             )
             val baseRadius = maxRadius * (0.55f + 0.15f * sin(i.toFloat()))
             val fluidRadius =
@@ -256,13 +256,13 @@ private fun AnimatedFluidBackgroundLayers(
                         fluidColor,
                         fluidColor.copy(alpha = fluidColor.alpha * 0.4f),
                         fluidColor.copy(alpha = fluidColor.alpha * 0.1f),
-                        fluidColor.copy(alpha = 0f)
+                        fluidColor.copy(alpha = 0f),
                     ),
                     center = fluidCenter,
-                    radius = fluidRadius
+                    radius = fluidRadius,
                 ),
                 center = fluidCenter,
-                radius = fluidRadius
+                radius = fluidRadius,
             )
         }
 
@@ -270,33 +270,33 @@ private fun AnimatedFluidBackgroundLayers(
         val flowCenters = listOf(
             Offset(
                 x = centerX +
-                        width * 0.45f * sin(time1 * 0.8f + 0.5f) +
-                        width * 0.15f * cos(time2 * 0.7f),
+                    width * 0.45f * sin(time1 * 0.8f + 0.5f) +
+                    width * 0.15f * cos(time2 * 0.7f),
                 y = centerY +
-                        height * 0.4f * cos(time1 * 0.9f) +
-                        height * 0.12f * sin(time2 * 1.1f + 1.2f)
+                    height * 0.4f * cos(time1 * 0.9f) +
+                    height * 0.12f * sin(time2 * 1.1f + 1.2f),
             ),
             Offset(
                 x = centerX +
-                        width * 0.5f * cos(time1 * 0.6f + 2.1f) +
-                        width * 0.18f * sin(time2 * 0.9f + 0.8f),
+                    width * 0.5f * cos(time1 * 0.6f + 2.1f) +
+                    width * 0.18f * sin(time2 * 0.9f + 0.8f),
                 y = centerY +
-                        height * 0.42f * sin(time1 * 0.7f + 1.5f) +
-                        height * 0.15f * cos(time2 * 0.8f + 2f)
+                    height * 0.42f * sin(time1 * 0.7f + 1.5f) +
+                    height * 0.15f * cos(time2 * 0.8f + 2f),
             ),
             Offset(
                 x = centerX +
-                        width * 0.38f * sin(time1 * 0.75f + 3.8f) +
-                        width * 0.2f * cos(microTime * 1.2f),
+                    width * 0.38f * sin(time1 * 0.75f + 3.8f) +
+                    width * 0.2f * cos(microTime * 1.2f),
                 y = centerY +
-                        height * 0.35f * cos(time1 * 0.85f + 2.7f) +
-                        height * 0.17f * sin(microTime * 1f + 1.1f)
-            )
+                    height * 0.35f * cos(time1 * 0.85f + 2.7f) +
+                    height * 0.17f * sin(microTime * 1f + 1.1f),
+            ),
         )
         val flowRadii = listOf(
             maxRadius * 0.8f + maxRadius * 0.12f * sin(microTime * 0.8f),
             maxRadius * 0.75f + maxRadius * 0.15f * cos(microTime * 0.9f + 1f),
-            maxRadius * 0.85f + maxRadius * 0.1f * sin(microTime * 1.1f + 2.3f)
+            maxRadius * 0.85f + maxRadius * 0.1f * sin(microTime * 1.1f + 2.3f),
         )
         val flowColors = listOf(primaryFlow, secondaryFlow, accentFlow)
         for (i in flowCenters.indices) {
@@ -306,13 +306,13 @@ private fun AnimatedFluidBackgroundLayers(
                     colors = listOf(
                         fluidColor,
                         fluidColor.copy(alpha = fluidColor.alpha * 0.6f),
-                        fluidColor.copy(alpha = 0f)
+                        fluidColor.copy(alpha = 0f),
                     ),
                     center = flowCenters[i],
-                    radius = flowRadii[i]
+                    radius = flowRadii[i],
                 ),
                 center = flowCenters[i],
-                radius = flowRadii[i]
+                radius = flowRadii[i],
             )
         }
     }

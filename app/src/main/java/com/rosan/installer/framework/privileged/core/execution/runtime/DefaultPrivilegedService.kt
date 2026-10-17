@@ -12,7 +12,9 @@ import android.content.ComponentName
 import android.content.ContentResolver
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ApplicationInfo
 import android.content.pm.IPackageManager
+import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.content.pm.UserInfo
@@ -25,9 +27,11 @@ import android.os.IBinder
 import android.os.IUserManager
 import android.os.Parcel
 import android.os.ParcelFileDescriptor
+import android.os.Process as AndroidProcess
 import android.os.RemoteException
 import android.os.ResultReceiver
 import android.provider.Settings
+import androidx.annotation.RequiresApi
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.net.toUri
 import com.rosan.installer.ICommandOutputListener
@@ -38,18 +42,17 @@ import com.rosan.installer.core.reflection.invokeStatic
 import com.rosan.installer.framework.privileged.core.context.hook.resolveSettingsBinder
 import com.rosan.installer.util.deletePaths
 import com.rosan.installer.util.pm.REASON_REMIND_OWNERSHIP
-import org.koin.core.component.inject
-import timber.log.Timber
 import java.io.File
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
-import android.os.Process as AndroidProcess
+import org.koin.core.component.inject
+import timber.log.Timber
 
 @SuppressLint("PrivateApi")
-class DefaultPrivilegedService private constructor(
-    private val runtime: PrivilegedRuntime
-) : BasePrivilegedService(), PrivilegedOperations {
+class DefaultPrivilegedService private constructor(private val runtime: PrivilegedRuntime) :
+    BasePrivilegedService(),
+    PrivilegedOperations {
     companion object {
         private const val TAG = "PrivilegedService"
 
@@ -64,17 +67,17 @@ class DefaultPrivilegedService private constructor(
 
         fun shizukuHook() = DefaultPrivilegedService(PrivilegedRuntime.ShizukuHooked)
 
-        fun binderWrapped(
-            name: String,
-            useAppCallerPackage: Boolean,
-            binderWrapper: (IBinder) -> IBinder
-        ) = DefaultPrivilegedService(PrivilegedRuntime.BinderWrapped(name, useAppCallerPackage, binderWrapper))
+        fun binderWrapped(name: String, useAppCallerPackage: Boolean, binderWrapper: (IBinder) -> IBinder) = DefaultPrivilegedService(PrivilegedRuntime.BinderWrapped(name, useAppCallerPackage, binderWrapper))
     }
 
     private val reflect by inject<ReflectionProvider>()
 
     private val iPackageManager: IPackageManager by lazy {
         runtime.packageManager()
+    }
+
+    private val iPackageInstaller by lazy {
+        runtime.packageInstaller()
     }
 
     private val iActivityManager: IActivityManager by lazy {
@@ -97,13 +100,24 @@ class DefaultPrivilegedService private constructor(
         runtime.appOpsManager(context, reflect)
     }
 
-    override fun delete(paths: Array<out String>) = deletePaths(paths.toList())
+    private fun getApplicationInfo(packageName: String, flags: Long, userId: Int): ApplicationInfo? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        iPackageManager.getApplicationInfo(packageName, flags, userId)
+    } else {
+        iPackageManager.getApplicationInfo(packageName, flags.toInt(), userId)
+    }
 
-    override fun performDexOpt(
-        packageName: String,
-        compilerFilter: String,
-        force: Boolean
-    ): Boolean {
+    private fun getPackageInfo(packageName: String, flags: Long, userId: Int): PackageInfo? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        iPackageManager.getPackageInfo(packageName, flags, userId)
+    } else {
+        iPackageManager.getPackageInfo(packageName, flags.toInt(), userId)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    private fun getUpdateOwnerPackageName(packageName: String, userId: Int): String? = iPackageManager.getInstallSourceInfo(packageName, userId).updateOwnerPackageName
+
+    override fun delete(paths: Array<out String>) = deletePaths(context, paths.toList())
+
+    override fun performDexOpt(packageName: String, compilerFilter: String, force: Boolean): Boolean {
         Timber.tag(TAG).d("performDexOpt: $packageName, filter=$compilerFilter, force=$force")
 
         return try {
@@ -123,7 +137,7 @@ class DefaultPrivilegedService private constructor(
             // Do not call ServiceManager.getService("package") again here.
             sendPackageShellCommandOneway(
                 binder = iPackageManager.asBinder(),
-                args = args
+                args = args,
             )
 
             Timber.tag(TAG).d("Dexopt command dispatched: ${args.joinToString(" ")}")
@@ -143,7 +157,7 @@ class DefaultPrivilegedService private constructor(
             component.flattenToShortString(),
             enable,
             userId,
-            canCallSystemRestrictedPreferredApis
+            canCallSystemRestrictedPreferredApis,
         )
 
         // Reset state for our own package
@@ -151,7 +165,7 @@ class DefaultPrivilegedService private constructor(
         clearPackageActivities(
             packageName = component.packageName,
             userId = userId,
-            canCallSystemRestrictedPreferredApis = canCallSystemRestrictedPreferredApis
+            canCallSystemRestrictedPreferredApis = canCallSystemRestrictedPreferredApis,
         )
 
         if (!enable) {
@@ -169,7 +183,7 @@ class DefaultPrivilegedService private constructor(
                 addCategory(Intent.CATEGORY_DEFAULT)
                 setDataAndType(
                     "content://storage/emulated/0/test.apk".toUri(),
-                    "application/vnd.android.package-archive"
+                    "application/vnd.android.package-archive",
                 )
             }
 
@@ -178,7 +192,7 @@ class DefaultPrivilegedService private constructor(
                 intent,
                 "application/vnd.android.package-archive",
                 PackageManager.MATCH_DEFAULT_ONLY,
-                userId
+                userId,
             )
 
             val names = mutableListOf<ComponentName>()
@@ -193,7 +207,7 @@ class DefaultPrivilegedService private constructor(
                     clearPackageActivities(
                         packageName = infoPackageName,
                         userId = userId,
-                        canCallSystemRestrictedPreferredApis = canCallSystemRestrictedPreferredApis
+                        canCallSystemRestrictedPreferredApis = canCallSystemRestrictedPreferredApis,
                     )
                 }
 
@@ -220,7 +234,7 @@ class DefaultPrivilegedService private constructor(
                 component = component,
                 userId = userId,
                 removeExisting = true,
-                canCallSystemRestrictedPreferredApis = canCallSystemRestrictedPreferredApis
+                canCallSystemRestrictedPreferredApis = canCallSystemRestrictedPreferredApis,
             )
         }
 
@@ -228,21 +242,19 @@ class DefaultPrivilegedService private constructor(
     }
 
     @Throws(RemoteException::class)
-    override fun execArr(command: Array<String>): String {
-        return try {
-            // Execute shell command
-            val process = Runtime.getRuntime().exec(command)
-            // Read execution result
-            readResult(process)
-        } catch (e: IOException) {
-            // Wrap IOException in RemoteException and throw
-            throw RemoteException(e.message)
-        } catch (e: InterruptedException) {
-            // Restore thread's interrupted status
-            Thread.currentThread().interrupt()
-            // Wrap InterruptedException in RemoteException and throw
-            throw RemoteException(e.message)
-        }
+    override fun execArr(command: Array<String>): String = try {
+        // Execute shell command
+        val process = Runtime.getRuntime().exec(command)
+        // Read execution result
+        readResult(process)
+    } catch (e: IOException) {
+        // Wrap IOException in RemoteException and throw
+        throw RemoteException(e.message)
+    } catch (e: InterruptedException) {
+        // Restore thread's interrupted status
+        Thread.currentThread().interrupt()
+        // Wrap InterruptedException in RemoteException and throw
+        throw RemoteException(e.message)
     }
 
     @Throws(RemoteException::class)
@@ -306,7 +318,6 @@ class DefaultPrivilegedService private constructor(
 
             // Notify client that the process is complete
             listener.onComplete(if (processFinished) process.exitValue() else -1)
-
         } catch (e: Exception) {
             // If process creation itself fails
             val errorMessage = "Failed to execute command: ${e.message}"
@@ -370,7 +381,6 @@ class DefaultPrivilegedService private constructor(
 
                 val result = Settings.Global.putInt(targetResolver, key, targetValue)
                 Timber.tag(TAG).i("Set $key to $targetValue. Result: $result")
-
             } catch (e: Exception) {
                 Timber.tag(TAG).e(e, "Failed to putInt for ADB verify")
             } finally {
@@ -397,7 +407,6 @@ class DefaultPrivilegedService private constructor(
             iPackageManager.grantRuntimePermission(packageName, permission, userId)
 
             Timber.tag(TAG).i("Successfully granted $permission to $packageName")
-
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "ERROR granting permission")
             throw RemoteException("Failed to grant permission via system API: ${e.message}")
@@ -422,13 +431,13 @@ class DefaultPrivilegedService private constructor(
     }
 
     override fun startActivityPrivileged(intent: Intent): Boolean {
-        try {
-            val am = iActivityManager
+        val am = iActivityManager
 
-            val userId = AndroidProcess.myUid() / 100000
-            val callerPackage = runtime.activityCallerPackage(context)
-            val resolvedType = intent.resolveType(context.contentResolver)
+        val userId = AndroidProcess.myUid() / 100000
+        val callerPackage = runtime.activityCallerPackage(context)
+        val resolvedType = intent.resolveType(context.contentResolver)
 
+        return try {
             val result = am.startActivityAsUser(
                 null as IApplicationThread?,
                 callerPackage,
@@ -440,20 +449,20 @@ class DefaultPrivilegedService private constructor(
                 0,
                 null as ProfilerInfo?,
                 null as Bundle?,
-                userId
+                userId,
             )
 
             // A result code >= 0 indicates success.
             // See ActivityManager.START_SUCCESS, START_DELIVERED_TO_TOP, etc.
-            return result >= 0
+            result >= 0
         } catch (e: SecurityException) {
             // Log security exceptions specifically, as they indicate a permission issue.
             Timber.tag(TAG).e(e, "startActivityPrivileged failed due to SecurityException")
-            return false
+            false
         } catch (e: Exception) {
             // Catch other potential exceptions, such as RemoteException.
             Timber.tag(TAG).e(e, "startActivityPrivileged failed with an exception")
-            return false
+            false
         }
     }
 
@@ -478,7 +487,7 @@ class DefaultPrivilegedService private constructor(
                 null,
                 false,
                 false,
-                userId
+                userId,
             )
             return true
         } catch (e: SecurityException) {
@@ -506,17 +515,57 @@ class DefaultPrivilegedService private constructor(
             }
         }
 
+    override fun parsePackageArchive(path: String): Bundle? {
+        Timber.tag(TAG).d("parsePackageArchive: path=$path")
+
+        return runCatching {
+            val packageManager = context.packageManager
+            val packageInfo = packageManager.getPackageArchiveInfo(path, PackageManager.GET_META_DATA)
+                ?: return@runCatching null
+            val applicationInfo = packageInfo.applicationInfo ?: return@runCatching null
+
+            applicationInfo.publicSourceDir = path
+            applicationInfo.sourceDir = path
+
+            val label = runCatching {
+                applicationInfo.loadLabel(packageManager)
+            }.onFailure { error ->
+                Timber.tag(TAG).w(error, "Failed to load APK label from $path")
+            }.getOrNull()
+
+            val icon = runCatching {
+                val drawable = applicationInfo.loadIcon(packageManager)
+                if (drawable is BitmapDrawable) {
+                    drawable.bitmap
+                } else {
+                    val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 1
+                    val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 1
+                    drawable.toBitmap(width, height, Bitmap.Config.ARGB_8888)
+                }
+            }.onFailure { error ->
+                Timber.tag(TAG).w(error, "Failed to load APK icon from $path")
+            }.getOrNull()
+
+            Bundle().apply {
+                putString("packageName", packageInfo.packageName)
+                label?.let { putCharSequence("appLabel", it) }
+                icon?.let { putParcelable("appIcon", it) }
+            }
+        }.onFailure { error ->
+            Timber.tag(TAG).w(error, "Failed to parse package archive $path")
+        }.getOrNull()
+    }
+
     override fun getSessionDetails(sessionId: Int): Bundle? {
         Timber.tag(TAG).d("getSessionDetails: sessionId=$sessionId")
 
-        val packageInstaller = context.packageManager.packageInstaller
-        val sessionInfo = packageInstaller.getSessionInfo(sessionId) ?: run {
+        val sessionInfo = iPackageInstaller.getSessionInfo(sessionId) ?: run {
             Timber.tag(TAG).w("getSessionDetails: sessionInfo is null for id $sessionId")
             return null
         }
 
-        var resolvedLabel: CharSequence? = null
-        var resolvedIcon: Bitmap? = null
+        var resolvedLabel: CharSequence? = sessionInfo.appLabel
+        var resolvedIcon: Bitmap? = reflect.getValue(sessionInfo, "appIcon")
         var path: String?
 
         // ---------------------------------------------------------
@@ -524,7 +573,7 @@ class DefaultPrivilegedService private constructor(
         // ---------------------------------------------------------
         path = reflect.getValue<String>(sessionInfo, "resolvedBaseCodePath")
 
-        if (path == null) {
+        if (path == null && runtime == PrivilegedRuntime.SystemApp) {
             val stageDir = reflect.getValue<File>(sessionInfo, "stageDir")
             if (stageDir != null && stageDir.exists() && stageDir.isDirectory) {
                 path = stageDir.listFiles { _, name -> name.endsWith(".apk") }
@@ -534,10 +583,10 @@ class DefaultPrivilegedService private constructor(
         }
 
         // ---------------------------------------------------------
-        // STRATEGY 2.5: Root/Privileged Direct File Access
+        // STRATEGY 2.5: System App Direct File Access
         // ---------------------------------------------------------
-        if (path == null) {
-            val sessionDir = File("/data/app/vmdl${sessionId}.tmp")
+        if (path == null && runtime == PrivilegedRuntime.SystemApp) {
+            val sessionDir = File("/data/app/vmdl$sessionId.tmp")
             if (sessionDir.exists() && sessionDir.isDirectory) {
                 val apkFiles = sessionDir.listFiles { _, name -> name.endsWith(".apk", true) }
                 if (!apkFiles.isNullOrEmpty()) {
@@ -551,36 +600,22 @@ class DefaultPrivilegedService private constructor(
         // ---------------------------------------------------------
         // Parse APK from path (if found)
         // ---------------------------------------------------------
-        if (!path.isNullOrEmpty()) {
-            runCatching {
-                val pm = context.packageManager
-                val pkgInfo = pm.getPackageArchiveInfo(path, PackageManager.GET_META_DATA)
-                pkgInfo?.applicationInfo?.let { appInfo ->
-                    appInfo.publicSourceDir = path
-                    appInfo.sourceDir = path
-
-                    resolvedLabel = appInfo.loadLabel(pm)
-
-                    val drawable = appInfo.loadIcon(pm)
-                    resolvedIcon = if (drawable is BitmapDrawable) {
-                        drawable.bitmap
-                    } else {
-                        val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 1
-                        val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 1
-                        drawable.toBitmap(width, height, Bitmap.Config.ARGB_8888)
-                    }
-                }
-            }.onFailure { e ->
-                Timber.tag(TAG).e(e, "Failed to parse APK from path: $path")
+        if (!path.isNullOrEmpty() && runtime == PrivilegedRuntime.SystemApp) {
+            parsePackageArchive(path)?.let { archiveDetails ->
+                archiveDetails.getCharSequence("appLabel")?.let { resolvedLabel = it }
+                @Suppress("DEPRECATION")
+                (archiveDetails.getParcelable("appIcon") as? Bitmap)?.let { resolvedIcon = it }
             }
         }
 
         val packageName = sessionInfo.appPackageName ?: ""
 
         // Try to get the exact target User ID for this session, fallback to current process user
-        val targetUserId = runCatching {
-            sessionInfo.user.hashCode() // On modern Android, userHandle.hashCode() == userId
-        }.getOrDefault(AndroidProcess.myUid() / 100000)
+        val targetUserId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            sessionInfo.user.hashCode() // UserHandle.hashCode() == userId
+        } else {
+            reflect.getValue<Int>(sessionInfo, "userId") ?: (AndroidProcess.myUid() / 100000)
+        }
 
         // ---------------------------------------------------------
         // STRATEGY 3: Fallback to Installed App Info (Crucial for Updates)
@@ -588,7 +623,7 @@ class DefaultPrivilegedService private constructor(
         if ((resolvedLabel == null || resolvedIcon == null) && packageName.isNotEmpty()) {
             runCatching {
                 // [Optimized] Use our hidden iPackageManager to respect the correct userId
-                val appInfo = iPackageManager.getApplicationInfo(packageName, 0, targetUserId)
+                val appInfo = getApplicationInfo(packageName, 0L, targetUserId) ?: return@runCatching
                 val pm = context.packageManager
 
                 if (resolvedLabel == null) resolvedLabel = appInfo.loadLabel(pm)
@@ -603,17 +638,20 @@ class DefaultPrivilegedService private constructor(
                     }
                 }
                 Timber.tag(TAG).d("Fallback: Loaded missing info from installed app")
+            }.onFailure { error ->
+                Timber.tag(TAG).w(error, "Failed to load installed app fallback for $packageName")
             }
         }
 
         var isUpdate = false
         var isOwnershipConflict = false
+        var updateOwnerPackageName: String? = null
         val isPreApprovalRequested = runCatching {
             reflect.invoke<Boolean>(
                 sessionInfo,
                 "isPreApprovalRequested",
                 sessionInfo::class.java,
-                emptyArray()
+                emptyArray(),
             ) == true
         }.getOrDefault(false)
         var sourceAppLabel: CharSequence? = null
@@ -621,55 +659,73 @@ class DefaultPrivilegedService private constructor(
         if (packageName.isNotEmpty()) {
             // 1. Check if this is an update using iPackageManager and specific userId
             isUpdate = runCatching {
-                iPackageManager.getPackageInfo(packageName, 0, targetUserId) != null
+                getPackageInfo(packageName, 0L, targetUserId) != null
+            }.onFailure { error ->
+                Timber.tag(TAG).w(error, "Failed to query installed package $packageName for user $targetUserId")
             }.getOrDefault(false)
 
             // 2. Check for Android 14+ Update Ownership Conflict
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                runCatching {
+                val pendingReasonResult = runCatching {
                     val pendingReason = reflect.invoke<Int>(
-                        sessionInfo, "getPendingUserActionReason",
-                        sessionInfo::class.java, emptyArray()
+                        sessionInfo,
+                        "getPendingUserActionReason",
+                        sessionInfo::class.java,
+                        emptyArray(),
                     ) ?: 0
                     isOwnershipConflict = (pendingReason == REASON_REMIND_OWNERSHIP)
-                }.onFailure {
-                    // Fallback inference
-                    runCatching {
-                        val ownerPkg = context.packageManager.getInstallSourceInfo(packageName).updateOwnerPackageName
-                        if (!ownerPkg.isNullOrEmpty() && ownerPkg != context.packageName) {
-                            isOwnershipConflict = true
-                        }
-                    }
+                }
+
+                if (isOwnershipConflict || pendingReasonResult.isFailure) {
+                    updateOwnerPackageName = runCatching {
+                        getUpdateOwnerPackageName(packageName, targetUserId)
+                    }.onFailure { error ->
+                        Timber.tag(TAG).w(error, "Failed to resolve update owner for $packageName")
+                    }.getOrNull()
+                }
+
+                // Fallback inference when the pending-reason API is unavailable on an OEM build.
+                if (pendingReasonResult.isFailure &&
+                    !updateOwnerPackageName.isNullOrEmpty() &&
+                    updateOwnerPackageName != context.packageName
+                ) {
+                    isOwnershipConflict = true
                 }
             }
 
             // 3. Determine the appropriate source app label
             runCatching {
-                val pm = context.packageManager
                 val targetPkgToResolve = if (isOwnershipConflict) {
-                    pm.getInstallSourceInfo(packageName).updateOwnerPackageName
+                    updateOwnerPackageName
                 } else {
                     sessionInfo.installerPackageName
                 }
 
                 if (!targetPkgToResolve.isNullOrEmpty()) {
-                    val appInfo = pm.getApplicationInfo(targetPkgToResolve, 0) // No need for flags if 0
-                    sourceAppLabel = pm.getApplicationLabel(appInfo)
-                    Timber.tag(TAG).d("Source app label resolved: $sourceAppLabel (Conflict: $isOwnershipConflict)")
+                    val appInfo = getApplicationInfo(targetPkgToResolve, 0L, targetUserId)
+                    if (appInfo != null) {
+                        sourceAppLabel = appInfo.loadLabel(context.packageManager)
+                        Timber.tag(TAG).d("Source app label resolved: $sourceAppLabel (Conflict: $isOwnershipConflict)")
+                    } else {
+                        Timber.tag(TAG).w("Source app info is null for $targetPkgToResolve, user $targetUserId")
+                    }
                 }
+            }.onFailure { error ->
+                Timber.tag(TAG).w(error, "Failed to resolve source app label for session $sessionId")
             }
         }
 
         // ---------------------------------------------------------
         // Final Data Preparation
         // ---------------------------------------------------------
-        val finalLabel = resolvedLabel ?: sessionInfo.appLabel ?: "N/A"
-        Timber.tag(TAG).d("Final Data -> Label: '$finalLabel', Has Icon: ${resolvedIcon != null}")
+        Timber.tag(TAG).d("Final Data -> Label: '$resolvedLabel', Has Icon: ${resolvedIcon != null}")
 
         return Bundle().apply {
-            putCharSequence("appLabel", finalLabel)
+            resolvedLabel?.let { putCharSequence("appLabel", it) }
             putString("packageName", packageName)
             putString("installerPackageName", sessionInfo.installerPackageName)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) putInt("installerUid", sessionInfo.installerUid)
+            path?.let { putString("resolvedBaseCodePath", it) }
             putBoolean("isUpdate", isUpdate)
             putBoolean("isOwnershipConflict", isOwnershipConflict)
             putBoolean("isPreApprovalRequested", isPreApprovalRequested)
@@ -689,7 +745,9 @@ class DefaultPrivilegedService private constructor(
             val userManagerInstance = this.iUserManager
 
             val usersList: List<UserInfo>? =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && Build.VERSION.SDK_INT_FULL <= Build.VERSION_CODES_FULL.BAKLAVA) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                    Build.VERSION.SDK_INT_FULL <= Build.VERSION_CODES_FULL.BAKLAVA
+                ) {
                     userManagerInstance.getUsers(false, false, false)
                 } else {
                     userManagerInstance.getUsers(false)
@@ -721,11 +779,15 @@ class DefaultPrivilegedService private constructor(
 
             // The integer 3 actually means FIREWALL_CHAIN_POWERSAVE (Whitelist mode).
             // We must use 9, which represents FIREWALL_CHAIN_OEM_DENY_3 (Blacklist mode).
-            val chain = 9
+            val chain = IConnectivityManager.FIREWALL_CHAIN_OEM_DENY_3
 
             // FIREWALL_RULE_DEFAULT = 0, FIREWALL_RULE_ALLOW = 1, FIREWALL_RULE_DENY = 2
             // For a DENY chain, use DENY (2) to block, and DEFAULT (0) to remove the block.
-            val rule = if (enabled) 0 else 2
+            val rule = if (enabled) {
+                IConnectivityManager.FIREWALL_RULE_DEFAULT
+            } else {
+                IConnectivityManager.FIREWALL_RULE_DENY
+            }
 
             if (!enabled) {
                 // Block network: Ensure the chain is enabled, then apply DENY rule to the UID
@@ -760,7 +822,7 @@ class DefaultPrivilegedService private constructor(
                 uid,
                 packageName,
                 null,
-                "Started package installation activity"
+                "Started package installation activity",
             )
         } else {
             @Suppress("Deprecation")
@@ -776,32 +838,29 @@ class DefaultPrivilegedService private constructor(
                 String::class.java,
                 Int::class.javaPrimitiveType!!,
                 String::class.java,
-                Int::class.javaPrimitiveType!!
+                Int::class.javaPrimitiveType!!,
             )?.invoke(appOpsManager, op, uid, packageName, AppOpsManager.MODE_ERRORED)
         }
 
         return mode
     }
 
-    private fun sendPackageShellCommandOneway(
-        binder: IBinder,
-        args: Array<String>
-    ) {
+    private fun sendPackageShellCommandOneway(binder: IBinder, args: Array<String>) {
         val data = Parcel.obtain()
 
         val stdin = ParcelFileDescriptor.open(
             File("/dev/null"),
-            ParcelFileDescriptor.MODE_READ_ONLY
+            ParcelFileDescriptor.MODE_READ_ONLY,
         )
 
         val stdout = ParcelFileDescriptor.open(
             File("/dev/null"),
-            ParcelFileDescriptor.MODE_WRITE_ONLY
+            ParcelFileDescriptor.MODE_WRITE_ONLY,
         )
 
         val stderr = ParcelFileDescriptor.open(
             File("/dev/null"),
-            ParcelFileDescriptor.MODE_WRITE_ONLY
+            ParcelFileDescriptor.MODE_WRITE_ONLY,
         )
 
         try {
@@ -819,7 +878,7 @@ class DefaultPrivilegedService private constructor(
                 SHELL_COMMAND_TRANSACTION,
                 data,
                 null,
-                FLAG_ONEWAY
+                FLAG_ONEWAY,
             )
         } finally {
             data.recycle()
@@ -835,7 +894,7 @@ class DefaultPrivilegedService private constructor(
         val method = shellCallbackClass.getDeclaredMethod(
             "writeToParcel",
             shellCallbackClass,
-            Parcel::class.java
+            Parcel::class.java,
         )
 
         method.invoke(null, null, parcel)
@@ -845,11 +904,7 @@ class DefaultPrivilegedService private constructor(
      * Clears both preferred and persistent preferred activities for a specific package.
      * Includes error handling to prevent crashes on restricted environments.
      */
-    private fun clearPackageActivities(
-        packageName: String,
-        userId: Int,
-        canCallSystemRestrictedPreferredApis: Boolean
-    ) {
+    private fun clearPackageActivities(packageName: String, userId: Int, canCallSystemRestrictedPreferredApis: Boolean) {
         // 1. Clear standard preferred activities (Always try)
         try {
             Timber.tag(TAG).d("Clearing standard preferred activities for $packageName")
@@ -885,7 +940,7 @@ class DefaultPrivilegedService private constructor(
         component: ComponentName,
         userId: Int,
         removeExisting: Boolean,
-        canCallSystemRestrictedPreferredApis: Boolean
+        canCallSystemRestrictedPreferredApis: Boolean,
     ) {
         // 1. Add standard preferred activity
         try {
@@ -918,7 +973,7 @@ class DefaultPrivilegedService private constructor(
         intent: Intent,
         resolvedType: String?,
         flags: Int,
-        userId: Int
+        userId: Int,
     ): List<ResolveInfo> = try {
         val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             iPackageManager.queryIntentActivities(intent, resolvedType, flags.toLong(), userId)

@@ -32,6 +32,7 @@ import com.rosan.installer.ui.page.main.installer.InstallerViewModel
 import com.rosan.installer.ui.page.main.installer.components.PositionDialog
 import com.rosan.installer.ui.page.main.installer.components.PositionFullScreen
 import com.rosan.installer.ui.page.main.installer.components.workingIcon
+import com.rosan.installer.ui.page.main.installer.dialog.inner.ModuleInstallFullScreenContent
 import com.rosan.installer.ui.page.main.installer.dialog.inner.ModuleInstallSheetContent
 import com.rosan.installer.ui.page.main.installer.dialog.inner.installInfoDialog
 import com.rosan.installer.ui.page.main.installer.dialog.inner.uninstallInfoDialog
@@ -43,12 +44,20 @@ import com.rosan.installer.ui.theme.material.dynamicColorScheme
 import com.rosan.installer.ui.util.WindowBlurEffect
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+import top.yukonga.miuix.kmp.nav.gesture.WindowNavigationEventBridge
+
+private data class FullScreenContentKey(
+    val stageType: Any,
+    val textId: String,
+    val contentId: String,
+    val buttonsId: String,
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DialogPage(
     session: InstallerSessionRepository,
-    viewModel: InstallerViewModel = koinViewModel { parametersOf(session) }
+    viewModel: InstallerViewModel = koinViewModel { parametersOf(session) },
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val stage = uiState.stage
@@ -74,7 +83,7 @@ fun DialogPage(
                 keyColor = it,
                 isDark = isDark,
                 style = paletteStyle,
-                colorSpec = colorSpec
+                colorSpec = colorSpec,
             )
         } ?: globalColorScheme
     }
@@ -86,16 +95,26 @@ fun DialogPage(
     InstallerEventCollector(viewModel)
 
     CompositionLocalProvider(
-        LocalInstallerColorScheme provides activeColorScheme
+        LocalInstallerColorScheme provides activeColorScheme,
     ) {
         InstallerMaterialExpressiveTheme(
             colorScheme = activeColorScheme,
             darkTheme = isDark,
-            compatStatusBarColor = false
+            compatStatusBarColor = false,
         ) {
             val colorScheme = InstallerTheme.colorScheme
-            // Handle InstallingModule state: Show ModalBottomSheet
-            if (stage is InstallerStage.InstallingModule) {
+            // Keep module flashing inside the selected presentation mode. Full-screen installs
+            // remain edge-to-edge; dialog/notification flows retain the module bottom sheet.
+            //
+            // In fullscreen mode the module-progress stage is rendered by the SAME
+            // [PositionFullScreen] instance as the rest of the install flow (see the
+            // `useFullScreen` branch below). Routing it through a second, sibling call site
+            // here would make Compose treat the two as unrelated composables: the pre-install
+            // instance would leave composition and the module instance would enter it, re-running
+            // its alpha enter fade from 0 — which is exactly the unwanted "fade in/out between
+            // pages" the user sees. Module installs therefore only take this branch for the
+            // non-fullscreen (dialog / notification) presentations.
+            if (stage is InstallerStage.InstallingModule && installMode != InstallMode.FullScreen) {
                 // Do NOT create a local variable for isDismissible here.
                 // Capturing a changing local variable causes the lambda below to change,
                 // which forces rememberModalBottomSheetState to recreate the state, resetting the sheet.
@@ -104,7 +123,7 @@ fun DialogPage(
                     initialValue = SheetValue.Hidden,
                     enabledValues = setOf(
                         SheetValue.Hidden,
-                        SheetValue.Expanded
+                        SheetValue.Expanded,
                     ),
                     confirmValueChange = { sheetValue ->
                         if (sheetValue == SheetValue.Hidden) {
@@ -112,7 +131,7 @@ fun DialogPage(
                         } else {
                             true
                         }
-                    }
+                    },
                 )
 
                 ModalBottomSheet(
@@ -123,8 +142,9 @@ fun DialogPage(
                     },
                     sheetState = sheetState,
                     containerColor = colorScheme.surfaceContainer,
-                    contentColor = colorScheme.onSurface
+                    contentColor = colorScheme.onSurface,
                 ) {
+                    WindowNavigationEventBridge()
                     val blurRadius = if (sheetState.targetValue == SheetValue.Expanded) 30 else 0
                     AnimatedContent(targetState = blurRadius) { targetState ->
                         WindowBlurEffect(useBlur = useBlur, blurRadius = targetState)
@@ -137,7 +157,7 @@ fun DialogPage(
                         onReboot = { viewModel.dispatch(InstallerViewAction.Reboot("")) },
                         onSoftReboot = { viewModel.dispatch(InstallerViewAction.Reboot("ksud_soft_reboot")) },
                         onClose = { viewModel.dispatch(InstallerViewAction.Close) },
-                        colorScheme = colorScheme
+                        colorScheme = colorScheme,
                     )
                 }
             }
@@ -229,7 +249,7 @@ fun DialogPage(
 
                         is InstallerStage.InstallConfirm -> {
                             viewModel.dispatch(
-                                InstallerViewAction.ApproveSession(currentStage.sessionId, false)
+                                InstallerViewAction.ApproveSession(currentStage.sessionId, false),
                             )
                         }
 
@@ -283,7 +303,8 @@ fun DialogPage(
                         is InstallerStage.UninstallResolveFailed,
                         is InstallerStage.Uninstalling,
                         is InstallerStage.UninstallSuccess,
-                        is InstallerStage.UninstallFailed ->
+                        is InstallerStage.UninstallFailed,
+                        ->
                             uninstallInfoDialog(viewModel, showTitleExtra = false)
 
                         else -> installInfoDialog(viewModel)
@@ -295,36 +316,78 @@ fun DialogPage(
                     // spinner + "Analysing..." text) so the user gets the
                     // same feedback as in dialog mode.
                     val isAnalysing = stage is InstallerStage.Analysing
-                    val bodyText: (@Composable () -> Unit)? =
-                        if (isAnalysing) {
+                    // Module flashing gets its own terminal-style body. It is
+                    // rendered through this very [PositionFullScreen] instance
+                    // (not a sibling one) so that the pre-install -> installing
+                    // -> finished progression stays one continuous surface: the
+                    // body and footer cross-fade in place while the outer layer's
+                    // alpha is left untouched. Swapping to a different
+                    // [PositionFullScreen] call site here would restart the whole
+                    // layer's enter fade from 0 and read as a full-page
+                    // fade-in/out between stages.
+                    val isModuleInstalling = stage is InstallerStage.InstallingModule
+                    val bodyText: (@Composable () -> Unit)? = when {
+                        // Module progress owns the whole body via bodyContent below.
+                        isModuleInstalling -> null
+
+                        isAnalysing -> {
                             {
                                 Column(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalAlignment = Alignment.CenterHorizontally
+                                    horizontalAlignment = Alignment.CenterHorizontally,
                                 ) {
                                     workingIcon()
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Text(
                                         text = stringResource(R.string.installer_analysing),
-                                        style = MaterialTheme.typography.bodyLarge
+                                        style = MaterialTheme.typography.bodyLarge,
                                     )
                                 }
                             }
-                        } else {
-                            dialogInnerWidget(params.text)
                         }
-                    val bodyContent: (@Composable () -> Unit)? =
-                        if (isAnalysing) null else dialogInnerWidget(params.content)
+
+                        else -> dialogInnerWidget(params.text)
+                    }
+                    val bodyContent: (@Composable () -> Unit)? = when (stage) {
+                        is InstallerStage.InstallingModule -> {
+                            {
+                                ModuleInstallFullScreenContent(
+                                    outputLines = stage.output,
+                                    isFinished = stage.isFinished,
+                                    colorScheme = colorScheme,
+                                    onReboot = { viewModel.dispatch(InstallerViewAction.Reboot("")) },
+                                    onClose = { viewModel.dispatch(InstallerViewAction.Close) },
+                                )
+                            }
+                        }
+
+                        else -> if (isAnalysing) null else dialogInnerWidget(params.content)
+                    }
                     PositionFullScreen(
                         onBackRequest = { performBack() },
                         isClosing = isClosingFullscreen,
-                        contentKey = stage,
+                        // Progress-bearing stages are data classes, so using the complete stage
+                        // as the AnimatedContent key restarted the body cross-fade for every file
+                        // read/write progress emission. Keep the key structural instead: progress
+                        // still recomposes its indicator, while the full-screen body only switches
+                        // snapshots when the stage or dialog section actually changes.
+                        contentKey = FullScreenContentKey(
+                            stageType = stage::class,
+                            // Module flashing owns the body/footer for the whole
+                            // progress stage; keep its section ids constant so the
+                            // body does not re-cross-fade on every log line, and so
+                            // the finished flag (which only swaps the progress
+                            // indicator and reveals the buttons) does not restart it.
+                            textId = if (isModuleInstalling) "module" else params.text.id,
+                            contentId = if (isModuleInstalling) "module_log" else params.content.id,
+                            buttonsId = if (isModuleInstalling) "module" else params.buttons.id,
+                        ),
                         centerIcon = dialogInnerWidget(headerParams.icon),
                         centerTitle = dialogInnerWidget(headerParams.title),
                         centerSubtitle = dialogInnerWidget(headerParams.subtitle),
                         centerContent = bodyContent,
                         centerText = bodyText,
-                        centerButton = dialogInnerWidget(params.buttons)
+                        centerButton = dialogInnerWidget(params.buttons),
                     )
                 } else {
                     PositionDialog(
@@ -335,7 +398,7 @@ fun DialogPage(
                         centerSubtitle = dialogInnerWidget(params.subtitle),
                         centerText = dialogInnerWidget(params.text),
                         centerContent = dialogInnerWidget(params.content),
-                        centerButton = dialogInnerWidget(params.buttons)
+                        centerButton = dialogInnerWidget(params.buttons),
                     )
                 }
             }

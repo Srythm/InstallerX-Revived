@@ -29,8 +29,9 @@ class AllViewModel(
     private val deleteConfigWithScopes: DeleteConfigWithScopesUseCase,
     private val restoreDeletedConfigSnapshot: RestoreDeletedConfigSnapshotUseCase,
     private val appSettingsRepo: AppSettingsRepository,
-    private val ioDispatcher: CoroutineDispatcher
-) : ViewModel(), KoinComponent {
+    private val ioDispatcher: CoroutineDispatcher,
+) : ViewModel(),
+    KoinComponent {
 
     private val _uiState = MutableStateFlow(AllViewState())
     val uiState: StateFlow<AllViewState> = _uiState.asStateFlow()
@@ -67,8 +68,8 @@ class AllViewModel(
         _uiState.update { currentState ->
             currentState.copy(
                 data = currentState.data.copy(
-                    progress = AllViewState.Data.Progress.Loading
-                )
+                    progress = AllViewState.Data.Progress.Loading,
+                ),
             )
         }
 
@@ -80,8 +81,8 @@ class AllViewModel(
                     currentState.copy(
                         data = currentState.data.copy(
                             configs = newConfigs,
-                            progress = AllViewState.Data.Progress.Loaded
-                        )
+                            progress = AllViewState.Data.Progress.Loaded,
+                        ),
                     )
                 }
             }

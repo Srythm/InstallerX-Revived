@@ -8,6 +8,7 @@ import com.rosan.installer.domain.engine.model.packageinfo.PackageAnalysisResult
 import com.rosan.installer.domain.engine.model.source.DataEntity
 import com.rosan.installer.domain.session.model.ConfirmationDetails
 import com.rosan.installer.domain.session.model.ConfirmationRequestType
+import com.rosan.installer.domain.session.model.ConfirmationState
 import com.rosan.installer.domain.session.model.InstallResult
 import com.rosan.installer.domain.session.model.ProgressEntity
 import com.rosan.installer.domain.session.model.SelectInstallEntity
@@ -15,9 +16,9 @@ import com.rosan.installer.domain.session.model.UnarchiveErrorInfo
 import com.rosan.installer.domain.session.model.UnarchiveInfo
 import com.rosan.installer.domain.session.model.UninstallInfo
 import com.rosan.installer.domain.settings.model.config.ConfigModel
+import java.io.Closeable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
-import java.io.Closeable
 
 interface InstallerSessionRepository : Closeable {
     val id: String
@@ -37,6 +38,8 @@ interface InstallerSessionRepository : Closeable {
     var moduleLog: List<String>
     val uninstallInfo: StateFlow<UninstallInfo?>
     val confirmationDetails: StateFlow<ConfirmationDetails?>
+    val confirmationState: StateFlow<ConfirmationState>
+    val activePlatformSessionIds: StateFlow<Set<Int>>
     val unarchiveInfo: StateFlow<UnarchiveInfo?>
     val unarchiveErrorInfo: StateFlow<UnarchiveErrorInfo?>
 
@@ -64,7 +67,8 @@ interface InstallerSessionRepository : Closeable {
     fun resolveConfirmInstall(
         activity: Activity,
         sessionId: Int,
-        requestType: ConfirmationRequestType = ConfirmationRequestType.INSTALL
+        requestType: ConfirmationRequestType = ConfirmationRequestType.INSTALL,
+        callerUid: Int,
     )
 
     fun approveConfirmation(sessionId: Int, granted: Boolean)

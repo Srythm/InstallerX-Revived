@@ -8,8 +8,8 @@ import com.rosan.installer.ui.page.main.settings.SettingsSharedViewModel
 import com.rosan.installer.ui.page.main.settings.config.all.AllViewModel
 import com.rosan.installer.ui.page.main.settings.config.apply.ApplyViewModel
 import com.rosan.installer.ui.page.main.settings.config.edit.EditViewModel
-import com.rosan.installer.ui.page.main.settings.home.HomePageViewModel
 import com.rosan.installer.ui.page.main.settings.history.HistoryViewModel
+import com.rosan.installer.ui.page.main.settings.home.HomePageViewModel
 import com.rosan.installer.ui.page.main.settings.preferred.PreferredViewModel
 import com.rosan.installer.ui.page.main.settings.preferred.about.AboutViewModel
 import com.rosan.installer.ui.page.main.settings.preferred.installer.InstallerSettingsViewModel
@@ -17,6 +17,7 @@ import com.rosan.installer.ui.page.main.settings.preferred.installer.authorizer.
 import com.rosan.installer.ui.page.main.settings.preferred.installer.dialog.DialogSettingsViewModel
 import com.rosan.installer.ui.page.main.settings.preferred.installer.notification.NotificationSettingsViewModel
 import com.rosan.installer.ui.page.main.settings.preferred.lab.LabSettingsViewModel
+import com.rosan.installer.ui.page.main.settings.preferred.network.NetworkSettingsViewModel
 import com.rosan.installer.ui.page.main.settings.preferred.theme.ThemeSettingsViewModel
 import com.rosan.installer.ui.page.main.settings.preferred.uninstaller.UninstallerSettingsViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -36,6 +37,7 @@ val viewModelModule = module {
     viewModelOf(::NotificationSettingsViewModel)
     viewModelOf(::UninstallerSettingsViewModel)
     viewModelOf(::LabSettingsViewModel)
+    viewModelOf(::NetworkSettingsViewModel)
     viewModelOf(::AboutViewModel)
 
     viewModel {
@@ -44,7 +46,7 @@ val viewModelModule = module {
             deleteConfigWithScopes = get(),
             restoreDeletedConfigSnapshot = get(),
             appSettingsRepo = get(),
-            ioDispatcher = get(named("IoDispatcher"))
+            ioDispatcher = get(named("IoDispatcher")),
         )
     }
 
@@ -54,12 +56,12 @@ val viewModelModule = module {
             updateRepo = get(),
             systemEnvProvider = get(),
             privilegedProvider = get(),
-            updateSetting = get(),
             setLauncherIcon = get(),
+            updateSetting = get(),
             exportBackup = get(),
             prepareBackupRestore = get(),
             restoreBackup = get(),
-            ioDispatcher = get(named("IoDispatcher"))
+            ioDispatcher = get(named("IoDispatcher")),
         )
     }
 
@@ -72,7 +74,7 @@ val viewModelModule = module {
             get(),
             get(),
             get(),
-            get()
+            get(),
         )
     }
 
@@ -87,7 +89,7 @@ val viewModelModule = module {
             getAppIcon = get(),
             clearAppIconCache = get(),
             defaultDispatcher = get(named("DefaultDispatcher")),
-            ioDispatcher = get(named("IoDispatcher"))
+            ioDispatcher = get(named("IoDispatcher")),
         )
     }
 
@@ -99,7 +101,7 @@ val viewModelModule = module {
             saveConfig = get(),
             getAvailableUsers = get(),
             getPackageUid = get(),
-            ioDispatcher = get(named("IoDispatcher"))
+            ioDispatcher = get(named("IoDispatcher")),
         )
     }
 }

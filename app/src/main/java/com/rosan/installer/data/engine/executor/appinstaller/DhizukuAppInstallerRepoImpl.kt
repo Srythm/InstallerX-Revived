@@ -12,10 +12,13 @@ import com.rosan.installer.framework.privileged.core.execution.authorization.req
 import kotlinx.coroutines.CoroutineScope
 
 class DhizukuAppInstallerRepoImpl(
-    context: Context, reflect: ReflectionProvider, capabilityProvider: DeviceCapabilityProvider, postInstallTaskProvider: PostInstallTaskProvider, taskScope: CoroutineScope
+    context: Context,
+    reflect: ReflectionProvider,
+    capabilityProvider: DeviceCapabilityProvider,
+    postInstallTaskProvider: PostInstallTaskProvider,
+    taskScope: CoroutineScope,
 ) : IBinderAppInstallerRepoImpl(context, reflect, capabilityProvider, postInstallTaskProvider, taskScope) {
-    override suspend fun iBinderWrapper(iBinder: IBinder): IBinder =
-        requireDhizukuPermissionGranted {
-            Dhizuku.binderWrapper(iBinder)
-        }
+    override suspend fun iBinderWrapper(iBinder: IBinder): IBinder = requireDhizukuPermissionGranted {
+        Dhizuku.binderWrapper(iBinder)
+    }
 }

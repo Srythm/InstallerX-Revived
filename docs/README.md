@@ -22,6 +22,7 @@ The full user guide, installation instructions, advanced options, system integra
 ## Highlights
 
 - **Package formats:** APK, APKS, APKM, XAPK, APK files inside ZIP archives, and batch APK installation.
+- **Dialog batch selection:** clearing a single-version package row clears its files; selecting it again restores the file choices from before clearing, including split and dex metadata choices. This applies to both UI styles within the same analysis; individual file edits or explicit APK-wide selection changes supersede the saved choices.
 - **Install flows:** dialog installation, background notification installation, automatic installation, silent installation when privileges allow it, and Android 16+ Live Activity progress on supported systems.
 - **Authorizers:**
   - **Root:** can perform all privileged operations, but may be slower because of cold `app_process` startup.
@@ -30,7 +31,7 @@ The full user guide, installation instructions, advanced options, system integra
   - **None:** is fully limited by the system, but can silently install when InstallerX is running as the system package installer.
 - **Profiles:** define how installation and uninstallation requests are handled, including install mode, authorizer override, installer/requester metadata, target user, DexOpt, auto-delete behavior, split selection, blacklist policy, and signature gates.
 - **System integration:** InstallerX can be locked as the default installer from the Home page status card, used with LSPosed modules such as [InxLocker](https://github.com/Chimioo/InxLocker), or installed as a replacement system package manager by advanced users.
-- **Modern UI:** Material 3 Expressive and Miuix interface styles, dark mode, dynamic color, advanced palettes, system icon packs, colorful dialogs, standard notifications, Live Activity, and Xiaomi HyperOS-style island notifications on supported Xiaomi devices.
+- **Modern UI:** Material 3 Expressive interface, dark mode, dynamic color, advanced palettes, system icon packs, colorful dialogs, standard notifications, Live Activity, and Xiaomi HyperOS-style island notifications on supported Xiaomi devices.
 - **Safety controls:** package-name and SharedUID blacklists, signature mismatch and unknown-signature policy gates, permission preview, install flags, and one-time smart suggestions for selected blocked cases.
 
 ## Supported Android Versions
@@ -49,12 +50,7 @@ Limited support means InstallerX may work, but some features can be unavailable 
 
 When reporting bugs, please reproduce them on the latest Alpha or CI build whenever possible, because issues in Stable may already be fixed.
 
-InstallerX is published in two variants:
-
-- **Online:** supports direct APK download links and online update features. Network permission is only used for installation-related features.
-- **Offline:** requests no network permission. Online-only features will show a clear error instead.
-
-Both variants share the same package name, version code, and signature, so they replace each other instead of installing side by side.
+InstallerX is now published as a single APK. Network access is controlled by an in-app setting. The release filename continues to include `online` only for compatibility with older in-app update clients; it no longer identifies a separate build variant.
 
 ## Building
 
@@ -64,7 +60,7 @@ InstallerX Revived is an Android Gradle project.
 
 - **JDK 25** with `JAVA_HOME` configured correctly.
 - Android SDK / Android Studio with the required platform and build tools installed.
-- GitHub Packages credentials for the snapshot `miuix` dependency.
+- GitHub Packages credentials for the snapshot `miuix` artifacts (`miuix-shader`, `miuix-blur`, `miuix-navigation`).
 
 ### GitHub Packages Authentication
 
@@ -85,13 +81,13 @@ Do not commit these credentials to this repository.
 For a local debug build:
 
 ```bash
-./gradlew assembleOnlineUnstableDebug assembleOfflineUnstableDebug
+./gradlew assembleUnstableDebug
 ```
 
 For a PR-style test build with a separate application id:
 
 ```bash
-./gradlew assembleOnlinePreviewDebug assembleOfflinePreviewDebug -PAPP_ID="com.rosan.installer.x.revived.test"
+./gradlew assemblePreviewDebug -PAPP_ID="com.rosan.installer.x.revived.test"
 ```
 
 ## Common Questions
@@ -151,8 +147,8 @@ This project uses code from, or is based on the implementation of, the following
 
 <a href="https://www.star-history.com/?repos=wxxsfxyzm%2FInstallerX-Revived&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=wxxsfxyzm/InstallerX-Revived&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=wxxsfxyzm/InstallerX-Revived&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=wxxsfxyzm/InstallerX-Revived&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=wxxsfxyzm/InstallerX-Revived&type=date&theme=dark&legend=top-left&sealed_token=NIZn5WH0-dVDGHKTPTVKAke10T3j7OrdIZ6rTbhT4zwN5AyJhj5aJhc36MEg2ZD5FoBrDoxgF3jzozO8cpBCQoJ65WbUGZZestdrI42Rnv8QVdEvE9Jz-qfghs5RpT5BeRHLuDH2NLyDNypEg34_XaPsTDAkx6DZAl0bUc0tpa0C2xzKBPih_ELq-sP2" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=wxxsfxyzm/InstallerX-Revived&type=date&legend=top-left&sealed_token=NIZn5WH0-dVDGHKTPTVKAke10T3j7OrdIZ6rTbhT4zwN5AyJhj5aJhc36MEg2ZD5FoBrDoxgF3jzozO8cpBCQoJ65WbUGZZestdrI42Rnv8QVdEvE9Jz-qfghs5RpT5BeRHLuDH2NLyDNypEg34_XaPsTDAkx6DZAl0bUc0tpa0C2xzKBPih_ELq-sP2" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=wxxsfxyzm/InstallerX-Revived&type=date&legend=top-left&sealed_token=NIZn5WH0-dVDGHKTPTVKAke10T3j7OrdIZ6rTbhT4zwN5AyJhj5aJhc36MEg2ZD5FoBrDoxgF3jzozO8cpBCQoJ65WbUGZZestdrI42Rnv8QVdEvE9Jz-qfghs5RpT5BeRHLuDH2NLyDNypEg34_XaPsTDAkx6DZAl0bUc0tpa0C2xzKBPih_ELq-sP2" />
  </picture>
 </a>
