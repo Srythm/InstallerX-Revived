@@ -2,7 +2,7 @@ name: Stable APK & Magisk Module
 
 # Produces the two deliverables this project ships per version:
 #   1. a Stable APK for normal sideloading, named like the upstream releases
-#      (InstallerX-Revived-<flavor>-<version>.apk);
+#      (InstallerX-Revived-<version>.apk);
 #   2. a Magisk module that installs the app as the system package installer
 #      (system/priv-app/PackageInstaller), packaged as
 #      com-android-packageinstaller-<version>.zip.
@@ -19,18 +19,14 @@ name: Stable APK & Magisk Module
 # Nothing is published or tagged here; both files are uploaded as artifacts.
 # Signing secrets are optional: without them Gradle falls back to the debug
 # keystore, which is enough for a system priv-app.
+#
+# Variants: upstream dropped the connectivity dimension, so the only build
+# level dimension left is level (Unstable/Preview/Stable). The stable task is
+# assembleStableRelease and its output directory is apk/stable/release.
 
 on:
   workflow_dispatch:
     inputs:
-      connectivity:
-        description: 'Connectivity flavor'
-        required: true
-        default: 'online'
-        type: choice
-        options:
-          - online
-          - offline
       version_name:
         description: 'Base version override (empty -> yy.MM from the last commit date)'
         required: false
@@ -104,34 +100,26 @@ jobs:
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FLAVOR: ${{ inputs.connectivity }}
-        run: |
-          set -euo pipefail
-          ./gradlew "assemble${FLAVOR^}StableRelease" ${VERSION_ARGS}
+        run: ./gradlew assembleStableRelease ${VERSION_ARGS}
 
       - name: Collect APK
         id: collect
         run: |
           set -euo pipefail
-          APK=$(find "app/build/outputs/apk/${{ inputs.connectivity }}Stable/release" -maxdepth 1 -type f -name '*.apk' | head -n1)
+          APK=$(find app/build/outputs/apk/stable/release -maxdepth 1 -type f -name '*.apk' | head -n1)
           if [ -z "$APK" ]; then
             echo "No apk produced"; ls -R app/build/outputs/apk || true; exit 1
           fi
 
-          version_of() {
-            local sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
-            local aapt2
-            aapt2=$(find "$sdk/build-tools" -maxdepth 2 -type f -name aapt2 | sort -V | tail -n1)
-            "$aapt2" dump badging "$1" | head -n1
-          }
-
-          BADGING=$(version_of "$APK")
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          AAPT2=$(find "$SDK/build-tools" -maxdepth 2 -type f -name aapt2 | sort -V | tail -n1)
+          BADGING=$("$AAPT2" dump badging "$APK" | head -n1)
           VERSION_NAME=$(sed -n "s/.*versionName='\([^']*\)'.*/\1/p" <<< "$BADGING")
           VERSION_CODE=$(sed -n "s/.*versionCode='\([^']*\)'.*/\1/p" <<< "$BADGING")
           echo "Resolved stable version: ${VERSION_NAME} (${VERSION_CODE})"
 
           mkdir -p dist
-          OUT="dist/InstallerX-Revived-${{ inputs.connectivity }}-${VERSION_NAME}.apk"
+          OUT="dist/InstallerX-Revived-${VERSION_NAME}.apk"
           cp "$APK" "$OUT"
           sha256sum "$OUT" | tee dist/SHA256SUMS.txt
 
@@ -152,7 +140,7 @@ jobs:
       - name: Upload Stable APK
         uses: actions/upload-artifact@v7
         with:
-          name: InstallerX-Revived-${{ inputs.connectivity }}-${{ steps.collect.outputs.version_name }}
+          name: InstallerX-Revived-${{ steps.collect.outputs.version_name }}
           path: dist/*
           if-no-files-found: error
           retention-days: 30
@@ -229,22 +217,20 @@ jobs:
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FLAVOR: ${{ inputs.connectivity }}
           MODULE_VERSION: ${{ steps.version.outputs.module }}
         run: |
           set -euo pipefail
-          ./gradlew "assemble${FLAVOR^}StableRelease" \
+          ./gradlew assembleStableRelease \
             -PAPP_ID="${SYSTEM_APP_ID}" \
             -PVERSION_NAME="${MODULE_VERSION}"
 
       - name: Package Magisk module
         id: package
         env:
-          FLAVOR: ${{ inputs.connectivity }}
           MODULE_VERSION: ${{ steps.version.outputs.module }}
         run: |
           set -euo pipefail
-          APK=$(find "app/build/outputs/apk/${FLAVOR}Stable/release" -maxdepth 1 -type f -name '*.apk' | head -n1)
+          APK=$(find app/build/outputs/apk/stable/release -maxdepth 1 -type f -name '*.apk' | head -n1)
           if [ -z "$APK" ]; then
             echo "No apk produced"; ls -R app/build/outputs/apk || true; exit 1
           fi
@@ -264,15 +250,10 @@ jobs:
             echo "error: apk version ${VERSION_NAME} does not match module version ${MODULE_VERSION}"; exit 1
           fi
 
-          # Upstream describes the online build as plain "stable"; offline keeps
-          # the flavor in the description so the two are distinguishable in Magisk.
-          FLAVOR_LABEL="stable"
-          [ "$FLAVOR" = "offline" ] && FLAVOR_LABEL="offline stable"
-
           mkdir -p dist
           OUT="dist/com-android-packageinstaller-${VERSION_NAME}.zip"
           bash .github/scripts/build-magisk-module.sh \
-            "$APK" "$VERSION_NAME" "$VERSION_CODE" "$FLAVOR_LABEL" "$OUT"
+            "$APK" "$VERSION_NAME" "$VERSION_CODE" "stable" "$OUT"
           sha256sum "$OUT" | tee dist/SHA256SUMS.txt
 
           {

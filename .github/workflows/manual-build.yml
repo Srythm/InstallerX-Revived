@@ -5,19 +5,13 @@ name: Manual Build
 # - 只读缓存，避免污染主分支缓存；
 # - 不依赖任何签名密钥，缺省回退到 debug keystore；
 # - 不创建 Release / Tag，只上传 artifact。
+#
+# 变体说明：上游已移除 connectivity 维度，只剩 level（Unstable/Preview/Stable），
+# 因此任务名是 assemble<Level><BuildType>，产物目录是 apk/<level>/<buildType>。
 
 on:
   workflow_dispatch:
     inputs:
-      connectivity:
-        description: 'Connectivity flavor'
-        required: true
-        default: 'both'
-        type: choice
-        options:
-          - both
-          - online
-          - offline
       level:
         description: 'Build level'
         required: true
@@ -54,33 +48,19 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Resolve variant and task list
+      - name: Resolve variant
         id: variant
         env:
-          CONNECTIVITY: ${{ inputs.connectivity }}
           LEVEL: ${{ inputs.level }}
           BUILD_TYPE: ${{ inputs.build_type }}
         run: |
           set -euo pipefail
-
-          case "$CONNECTIVITY" in
-            both)    FLAVORS="online offline" ;;
-            online)  FLAVORS="online" ;;
-            offline) FLAVORS="offline" ;;
-            *) echo "Unsupported connectivity: $CONNECTIVITY"; exit 1 ;;
-          esac
-
-          # Gradle 变体任务名形如 assembleOnlinePreviewDebug / assembleOfflineUnstableRelease
-          # 注意：flavor 与 build type 首字母大写，level 保持原样
-          TASKS=""
-          for FLAVOR in $FLAVORS; do
-            TASKS="$TASKS assemble${FLAVOR^}${LEVEL}${BUILD_TYPE^}"
-          done
-
-          echo "flavors=$FLAVORS" >> "$GITHUB_OUTPUT"
-          echo "tasks=$(echo "$TASKS" | xargs)" >> "$GITHUB_OUTPUT"
+          TASK="assemble${LEVEL}${BUILD_TYPE^}"
+          OUT_DIR="app/build/outputs/apk/${LEVEL,,}/${BUILD_TYPE}"
+          echo "task=${TASK}" >> "$GITHUB_OUTPUT"
+          echo "out_dir=${OUT_DIR}" >> "$GITHUB_OUTPUT"
           echo "short_sha=$(git rev-parse --short=7 HEAD)" >> "$GITHUB_OUTPUT"
-          echo "Resolved tasks: $(echo "$TASKS" | xargs)"
+          echo "Resolved task: ${TASK} (${OUT_DIR})"
 
       - name: Set up JDK 25
         uses: actions/setup-java@v5
@@ -125,25 +105,15 @@ jobs:
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew ${{ steps.variant.outputs.tasks }}
+        run: ./gradlew ${{ steps.variant.outputs.task }}
 
       - name: List produced APKs
         run: ls -R app/build/outputs/apk || true
 
-      - name: Upload Online APKs
-        if: contains(steps.variant.outputs.flavors, 'online')
+      - name: Upload APK
         uses: actions/upload-artifact@v7
         with:
-          name: manual-online-${{ inputs.level }}-${{ inputs.build_type }}-${{ steps.variant.outputs.short_sha }}
-          path: app/build/outputs/apk/online${{ inputs.level }}/${{ inputs.build_type }}/*.apk
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Upload Offline APKs
-        if: contains(steps.variant.outputs.flavors, 'offline')
-        uses: actions/upload-artifact@v7
-        with:
-          name: manual-offline-${{ inputs.level }}-${{ inputs.build_type }}-${{ steps.variant.outputs.short_sha }}
-          path: app/build/outputs/apk/offline${{ inputs.level }}/${{ inputs.build_type }}/*.apk
+          name: manual-${{ inputs.level }}-${{ inputs.build_type }}-${{ steps.variant.outputs.short_sha }}
+          path: ${{ steps.variant.outputs.out_dir }}/*.apk
           if-no-files-found: error
           retention-days: 14
