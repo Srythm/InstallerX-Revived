@@ -1,0 +1,298 @@
+name: Stable APK & Magisk Module
+
+# Produces the two deliverables this project ships per version:
+#   1. a Stable APK for normal sideloading, named like the upstream releases
+#      (InstallerX-Revived-<flavor>-<version>.apk);
+#   2. a Magisk module that installs the app as the system package installer
+#      (system/priv-app/PackageInstaller), packaged as
+#      com-android-packageinstaller-<version>.zip.
+#
+# Version scheme
+#   stable apk  : <yy.MM>                      e.g. 26.10   (upstream stable tag)
+#   module apk  : <yy.MM>.<yyyyMMdd>.<seq>     e.g. 26.10.20261006.1
+#
+# The module needs the extra build stamp because it is rebuilt far more often
+# than the stable line; without it two builds of the same month would report the
+# same version to Magisk. `seq` defaults to 1 and only has to be raised for a
+# second build on the same UTC day.
+#
+# Nothing is published or tagged here; both files are uploaded as artifacts.
+# Signing secrets are optional: without them Gradle falls back to the debug
+# keystore, which is enough for a system priv-app.
+
+on:
+  workflow_dispatch:
+    inputs:
+      connectivity:
+        description: 'Connectivity flavor'
+        required: true
+        default: 'online'
+        type: choice
+        options:
+          - online
+          - offline
+      version_name:
+        description: 'Base version override (empty -> yy.MM from the last commit date)'
+        required: false
+        default: ''
+        type: string
+      build_sequence:
+        description: 'Module build sequence for today (raise it if you build twice in one UTC day)'
+        required: true
+        default: 1
+        type: number
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: stable-apk-magisk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  stable_apk:
+    name: Build Stable APK
+    runs-on: ubuntu-latest
+    env:
+      VERSION_ARGS: ${{ inputs.version_name != '' && format('-PVERSION_NAME={0}', inputs.version_name) || '' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '25'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          build-scan-terms-of-use-url: "https://gradle.com/help/legal-terms-of-use"
+          build-scan-terms-of-use-agree: "yes"
+          build-scan-publish: false
+          cache-read-only: true
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Set up signing key (optional)
+        env:
+          SIGNING_KEY_STORE_BASE64: ${{ secrets.SIGNING_KEY_STORE_BASE64 }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          if [ -z "${SIGNING_STORE_PASSWORD:-}" ] || [ -z "${SIGNING_KEY_STORE_BASE64:-}" ] || [ -z "${SIGNING_KEY_PASSWORD:-}" ] || [ -z "${SIGNING_KEY_ALIAS:-}" ]; then
+            echo "No signing secrets configured; Gradle will fall back to the debug keystore."
+            exit 0
+          fi
+          mkdir -p keystore
+          echo "${SIGNING_KEY_STORE_BASE64}" | base64 --decode > keystore/carlyu.jks
+          {
+            echo "storeFile=keystore/carlyu.jks"
+            echo "keyAlias=${SIGNING_KEY_ALIAS}"
+            echo "keyPassword=${SIGNING_KEY_PASSWORD}"
+            echo "storePassword=${SIGNING_STORE_PASSWORD}"
+          } > keystore.properties
+
+      - name: Build stable APK
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FLAVOR: ${{ inputs.connectivity }}
+        run: |
+          set -euo pipefail
+          ./gradlew "assemble${FLAVOR^}StableRelease" ${VERSION_ARGS}
+
+      - name: Collect APK
+        id: collect
+        run: |
+          set -euo pipefail
+          APK=$(find "app/build/outputs/apk/${{ inputs.connectivity }}Stable/release" -maxdepth 1 -type f -name '*.apk' | head -n1)
+          if [ -z "$APK" ]; then
+            echo "No apk produced"; ls -R app/build/outputs/apk || true; exit 1
+          fi
+
+          version_of() {
+            local sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+            local aapt2
+            aapt2=$(find "$sdk/build-tools" -maxdepth 2 -type f -name aapt2 | sort -V | tail -n1)
+            "$aapt2" dump badging "$1" | head -n1
+          }
+
+          BADGING=$(version_of "$APK")
+          VERSION_NAME=$(sed -n "s/.*versionName='\([^']*\)'.*/\1/p" <<< "$BADGING")
+          VERSION_CODE=$(sed -n "s/.*versionCode='\([^']*\)'.*/\1/p" <<< "$BADGING")
+          echo "Resolved stable version: ${VERSION_NAME} (${VERSION_CODE})"
+
+          mkdir -p dist
+          OUT="dist/InstallerX-Revived-${{ inputs.connectivity }}-${VERSION_NAME}.apk"
+          cp "$APK" "$OUT"
+          sha256sum "$OUT" | tee dist/SHA256SUMS.txt
+
+          {
+            echo "version_name=${VERSION_NAME}"
+            echo "version_code=${VERSION_CODE}"
+            echo "apk_path=${OUT}"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Stable APK"
+            echo ""
+            echo "- file: \`$(basename "$OUT")\`"
+            echo "- version: \`${VERSION_NAME}\` (code \`${VERSION_CODE}\`)"
+            echo "- app id: \`com.rosan.installer.x.revived\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Stable APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: InstallerX-Revived-${{ inputs.connectivity }}-${{ steps.collect.outputs.version_name }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+
+  magisk_module:
+    name: Build Magisk Module
+    runs-on: ubuntu-latest
+    env:
+      SYSTEM_APP_ID: 'com.android.packageinstaller'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '25'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          build-scan-terms-of-use-url: "https://gradle.com/help/legal-terms-of-use"
+          build-scan-terms-of-use-agree: "yes"
+          build-scan-publish: false
+          cache-read-only: true
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Resolve module version
+        id: version
+        env:
+          BASE_INPUT: ${{ inputs.version_name }}
+          SEQ: ${{ inputs.build_sequence }}
+        run: |
+          set -euo pipefail
+          BASE="${BASE_INPUT}"
+          if [ -z "$BASE" ]; then
+            BASE=$(git log -1 --format=%cd --date=format:%y.%m)
+          fi
+          STAMP=$(date -u +%Y%m%d)
+          echo "base=${BASE}" >> "$GITHUB_OUTPUT"
+          echo "stamp=${STAMP}" >> "$GITHUB_OUTPUT"
+          echo "module=${BASE}.${STAMP}.${SEQ}" >> "$GITHUB_OUTPUT"
+          echo "Module version: ${BASE}.${STAMP}.${SEQ}"
+
+      - name: Set up signing key (optional)
+        env:
+          SIGNING_KEY_STORE_BASE64: ${{ secrets.SIGNING_KEY_STORE_BASE64 }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          if [ -z "${SIGNING_STORE_PASSWORD:-}" ] || [ -z "${SIGNING_KEY_STORE_BASE64:-}" ] || [ -z "${SIGNING_KEY_PASSWORD:-}" ] || [ -z "${SIGNING_KEY_ALIAS:-}" ]; then
+            echo "No signing secrets configured; Gradle will fall back to the debug keystore."
+            exit 0
+          fi
+          mkdir -p keystore
+          echo "${SIGNING_KEY_STORE_BASE64}" | base64 --decode > keystore/carlyu.jks
+          {
+            echo "storeFile=keystore/carlyu.jks"
+            echo "keyAlias=${SIGNING_KEY_ALIAS}"
+            echo "keyPassword=${SIGNING_KEY_PASSWORD}"
+            echo "storePassword=${SIGNING_STORE_PASSWORD}"
+          } > keystore.properties
+
+      # The module apk must carry the stock installer package name, otherwise
+      # the platform will not treat it as the system PackageInstaller.
+      - name: Build system installer APK
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FLAVOR: ${{ inputs.connectivity }}
+          MODULE_VERSION: ${{ steps.version.outputs.module }}
+        run: |
+          set -euo pipefail
+          ./gradlew "assemble${FLAVOR^}StableRelease" \
+            -PAPP_ID="${SYSTEM_APP_ID}" \
+            -PVERSION_NAME="${MODULE_VERSION}"
+
+      - name: Package Magisk module
+        id: package
+        env:
+          FLAVOR: ${{ inputs.connectivity }}
+          MODULE_VERSION: ${{ steps.version.outputs.module }}
+        run: |
+          set -euo pipefail
+          APK=$(find "app/build/outputs/apk/${FLAVOR}Stable/release" -maxdepth 1 -type f -name '*.apk' | head -n1)
+          if [ -z "$APK" ]; then
+            echo "No apk produced"; ls -R app/build/outputs/apk || true; exit 1
+          fi
+
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          AAPT2=$(find "$SDK/build-tools" -maxdepth 2 -type f -name aapt2 | sort -V | tail -n1)
+          BADGING=$("$AAPT2" dump badging "$APK" | head -n1)
+          PKG=$(sed -n "s/^package: name='\([^']*\)'.*/\1/p" <<< "$BADGING")
+          VERSION_NAME=$(sed -n "s/.*versionName='\([^']*\)'.*/\1/p" <<< "$BADGING")
+          VERSION_CODE=$(sed -n "s/.*versionCode='\([^']*\)'.*/\1/p" <<< "$BADGING")
+          echo "Resolved: ${PKG} ${VERSION_NAME} (${VERSION_CODE})"
+
+          if [ "$PKG" != "${SYSTEM_APP_ID}" ]; then
+            echo "error: expected package ${SYSTEM_APP_ID}, got ${PKG}"; exit 1
+          fi
+          if [ "$VERSION_NAME" != "${MODULE_VERSION}" ]; then
+            echo "error: apk version ${VERSION_NAME} does not match module version ${MODULE_VERSION}"; exit 1
+          fi
+
+          # Upstream describes the online build as plain "stable"; offline keeps
+          # the flavor in the description so the two are distinguishable in Magisk.
+          FLAVOR_LABEL="stable"
+          [ "$FLAVOR" = "offline" ] && FLAVOR_LABEL="offline stable"
+
+          mkdir -p dist
+          OUT="dist/com-android-packageinstaller-${VERSION_NAME}.zip"
+          bash .github/scripts/build-magisk-module.sh \
+            "$APK" "$VERSION_NAME" "$VERSION_CODE" "$FLAVOR_LABEL" "$OUT"
+          sha256sum "$OUT" | tee dist/SHA256SUMS.txt
+
+          {
+            echo "version_name=${VERSION_NAME}"
+            echo "version_code=${VERSION_CODE}"
+            echo "module_path=${OUT}"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Magisk module"
+            echo ""
+            echo "- file: \`$(basename "$OUT")\`"
+            echo "- installs as: \`${SYSTEM_APP_ID}\`"
+            echo "- version: \`${VERSION_NAME}\` (code \`${VERSION_CODE}\`)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Magisk module
+        uses: actions/upload-artifact@v7
+        with:
+          name: com-android-packageinstaller-${{ steps.package.outputs.version_name }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30

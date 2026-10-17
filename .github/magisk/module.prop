@@ -1,0 +1,7 @@
+id=com.android.packageinstaller
+name=InstallerX Revived
+version=@VERSION_NAME@
+versionCode=@VERSION_CODE@
+author=InstallerX Revived
+description=InstallerX Revived repackaged as system Package Installer (com.android.packageinstaller, @FLAVOR_LABEL@)
+actionIcon=launcher.png
