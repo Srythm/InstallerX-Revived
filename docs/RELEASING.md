@@ -24,18 +24,40 @@ debug keystore。CI 走的是写 `keystore.properties` 那条路径。
 
 ## 2. 生成密钥（一次，之后长期复用）
 
+不要用 `-storepass` / `-keypass` 传口令：那样口令会留在 shell 历史里。
+省略这两个参数，`keytool` 会以无回显方式提示输入。
+
+bash / zsh：
+
 ```bash
 mkdir -p ~/keys
 keytool -genkeypair -v \
   -keystore ~/keys/installerx-release.jks \
   -alias installerx \
   -keyalg RSA -keysize 4096 -validity 10000 \
-  -storepass '<STORE_PASSWORD>' \
-  -keypass  '<KEY_PASSWORD>' \
+  -storetype PKCS12 \
   -dname "CN=InstallerX Revived, O=InstallerX, C=CN"
 ```
 
-**务必离线备份这个 `.jks` 和两个密码。** 丢了就无法覆盖升级已安装的 APK / 系统模块，
+Windows PowerShell（`\` 是 bash 的续行符，PowerShell 必须改用反引号 `` ` ``，
+且反引号必须是该行最后一个字符，后面不能有空格）：
+
+```powershell
+$keytool = Join-Path $env:JAVA_HOME 'bin\keytool.exe'   # 未设 JAVA_HOME 时写 keytool 的绝对路径
+New-Item -ItemType Directory -Force -Path "$HOME\keys" | Out-Null
+& $keytool -genkeypair -v -keystore "$HOME\keys\installerx-release.jks" `
+  -alias installerx -keyalg RSA -keysize 4096 -validity 10000 `
+  -storetype PKCS12 `
+  -dname "CN=InstallerX Revived, O=InstallerX, C=CN"
+```
+
+`keytool` 未加入 `PATH` 时会提示「不会被识别为 cmdlet」，此时用上面的绝对路径调用，
+或把 `%JAVA_HOME%\bin` 加进用户环境变量。
+
+PKCS12 密钥库不支持独立 key 口令，`keytool` 会忽略 `-keypass`，
+所以 `SIGNING_KEY_PASSWORD` 与 `SIGNING_STORE_PASSWORD` 填同一个值。
+
+**务必离线备份这个 `.jks` 和口令。** 丢了就无法覆盖升级已安装的 APK / 系统模块，
 只能让用户卸载重装。
 
 > 如果你要延续已有的发布（例如以前的 `com-android-packageinstaller` 模块），
@@ -66,6 +88,13 @@ gh secret set SIGNING_STORE_PASSWORD
 gh secret set SIGNING_KEY_ALIAS
 gh secret set SIGNING_KEY_PASSWORD
 ```
+
+`gh` 未安装时：Windows 用 `winget install --id GitHub.cli -e`，然后 `gh auth login`。
+已安装但提示「无法识别」，说明它不在 PATH：用绝对路径 `"$env:ProgramFiles\GitHub CLI\gh.exe"`
+或重开终端。
+
+本仓库有两个 remote（`origin` / `upstream`），`gh` 不带 `-R` 可能选中上游仓库，
+所有写操作都要显式指定：`-R Srythm/InstallerX-Revived`。
 
 或在网页端：`Settings → Secrets and variables → Actions → New repository secret`，
 四个名字必须完全一致：

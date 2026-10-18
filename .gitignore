@@ -20,6 +20,8 @@ keystore/
 *.keystore
 *.p12
 *.pfx
+# base64 导出的中间产物，等同明文密钥
+*.b64
 
 # IntelliJ / Android Studio
 .idea/*
