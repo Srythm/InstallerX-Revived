@@ -177,7 +177,35 @@ fun ThemeSettingsPage(
                 SegmentedColumn(
                     title = stringResource(R.string.theme_settings_ui_style),
                 ) {
-                    // Floating Bottom Bar
+                    // Option 1: Material 3 UI
+                    item {
+                        RadioButtonWidget(
+                            title = stringResource(R.string.theme_settings_google_ui),
+                            description = stringResource(R.string.theme_settings_google_ui_desc),
+                            iconPlaceholder = false,
+                            selected = !uiState.showMiuixUI,
+                            onClick = {
+                                if (uiState.showMiuixUI) {
+                                    viewModel.dispatch(ThemeSettingsAction.ChangeUseMiuix(false))
+                                }
+                            },
+                        )
+                    }
+                    // Option 2: Miuix UI
+                    item {
+                        RadioButtonWidget(
+                            title = stringResource(R.string.theme_settings_miuix_ui),
+                            description = stringResource(R.string.theme_settings_miuix_ui_desc),
+                            iconPlaceholder = false,
+                            selected = uiState.showMiuixUI,
+                            onClick = {
+                                if (!uiState.showMiuixUI) {
+                                    viewModel.dispatch(ThemeSettingsAction.ChangeUseMiuix(true))
+                                }
+                            },
+                        )
+                    }
+                    // Option 3: Floating Bottom Bar
                     item {
                         SwitchWidget(
                             iconPlaceholder = false,
@@ -431,6 +459,7 @@ fun PredictiveBackAnimationDialog(
                     val animationText = when (animation) {
                         PredictiveBackAnimation.None -> stringResource(R.string.theme_settings_predictive_back_animation_none)
                         PredictiveBackAnimation.AOSP -> stringResource(R.string.theme_settings_predictive_back_animation_aosp)
+                        PredictiveBackAnimation.MIUIX -> stringResource(R.string.theme_settings_predictive_back_animation_miuix)
                         PredictiveBackAnimation.Scale -> stringResource(R.string.theme_settings_predictive_back_animation_scale)
                         PredictiveBackAnimation.Classic -> stringResource(R.string.theme_settings_predictive_back_animation_ksu_classic)
                     }

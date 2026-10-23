@@ -40,6 +40,8 @@ enum class BooleanSetting {
     NetworkSourceModeWarningAcknowledged,
     UiUseBlur,
     ThemeUseDynamicColor,
+    UiUseMiuix,
+    UiUseMiuixMonet,
     UiUseAppleFloatingBar,
     UiDynColorFollowPkgIcon,
     LiveActivityDynColorFollowPkgIcon,

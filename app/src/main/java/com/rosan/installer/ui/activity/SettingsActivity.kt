@@ -31,6 +31,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 class SettingsActivity :
     ComponentActivity(),
@@ -74,13 +75,20 @@ class SettingsActivity :
                 LocalWindowLayoutInfo provides layoutInfo,
             ) {
                 InstallerTheme(
+                    useMiuix = uiState.useMiuix,
                     themeMode = uiState.themeMode,
                     paletteStyle = uiState.paletteStyle,
                     colorSpec = uiState.colorSpec,
                     useDynamicColor = uiState.useDynamicColor,
+                    useMiuixMonet = uiState.useMiuixMonet,
                     seedColor = androidx.compose.ui.graphics.Color(uiState.seedColor),
                 ) {
-                    val backgroundColor = MaterialTheme.colorScheme.surfaceContainer
+                    val backgroundColor =
+                        if (uiState.useMiuix) {
+                            MiuixTheme.colorScheme.surface
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainer
+                        }
                     Box(
                         modifier = Modifier
                             .fillMaxSize()

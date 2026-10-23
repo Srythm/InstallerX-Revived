@@ -255,7 +255,11 @@ dependencies {
     // log
     implementation(libs.timber)
 
-    // miuix navigation plus blur/shader (full Miuix UI components removed)
+    // miuix: navigation/blur/shader primitives plus the Miuix UI family
+    implementation(libs.miuix.core)
+    implementation(libs.miuix.ui)
+    implementation(libs.miuix.preference)
+    implementation(libs.miuix.icons)
     implementation(libs.miuix.shader)
     implementation(libs.miuix.blur)
     implementation(libs.miuix.navigation)

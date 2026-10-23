@@ -32,6 +32,20 @@ import com.rosan.installer.ui.page.main.settings.preferred.lab.LabPage
 import com.rosan.installer.ui.page.main.settings.preferred.network.NetworkPage
 import com.rosan.installer.ui.page.main.settings.preferred.theme.ThemeSettingsPage
 import com.rosan.installer.ui.page.main.settings.preferred.uninstaller.UninstallerGlobalSettingsPage
+import com.rosan.installer.ui.page.miuix.settings.config.apply.MiuixApplyPage
+import com.rosan.installer.ui.page.miuix.settings.config.edit.MiuixEditPage
+import com.rosan.installer.ui.page.miuix.settings.home.installer.MiuixDefaultInstallerPage
+import com.rosan.installer.ui.page.miuix.settings.home.priv.MiuixPrivPage
+import com.rosan.installer.ui.page.miuix.settings.preferred.about.MiuixAboutPage
+import com.rosan.installer.ui.page.miuix.settings.preferred.about.ossLicensePage.MiuixOpenSourceLicensePage
+import com.rosan.installer.ui.page.miuix.settings.preferred.installer.MiuixInstallerGlobalSettingsPage
+import com.rosan.installer.ui.page.miuix.settings.preferred.installer.authorizer.MiuixAuthorizerCustPage
+import com.rosan.installer.ui.page.miuix.settings.preferred.installer.dialog.MiuixDialogSettingsPage
+import com.rosan.installer.ui.page.miuix.settings.preferred.installer.notification.MiuixNotificationSettingsPage
+import com.rosan.installer.ui.page.miuix.settings.preferred.lab.MiuixLabPage
+import com.rosan.installer.ui.page.miuix.settings.preferred.network.MiuixNetworkPage
+import com.rosan.installer.ui.page.miuix.settings.preferred.theme.MiuixThemeSettingsPage
+import com.rosan.installer.ui.page.miuix.settings.preferred.uninstaller.MiuixUninstallerGlobalSettingsPage
 import com.rosan.installer.ui.util.rememberDeviceCornerRadius
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.nav.core.NavCornerClipMode
@@ -39,6 +53,7 @@ import top.yukonga.miuix.kmp.nav.core.NavDisplay
 import top.yukonga.miuix.kmp.nav.core.NavDisplayEffects
 import top.yukonga.miuix.kmp.nav.core.rememberNavBackStack
 import top.yukonga.miuix.kmp.nav.transition.NavSwipeDirection
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun InstallerNavContainer(uiState: ThemeState) {
@@ -58,7 +73,11 @@ fun InstallerNavContainer(uiState: ThemeState) {
         val roundAllCorners = uiState.predictiveBackAnimation == PredictiveBackAnimation.AOSP ||
             uiState.predictiveBackAnimation == PredictiveBackAnimation.Scale ||
             uiState.predictiveBackAnimation == PredictiveBackAnimation.Classic
-        val backdropColor = MaterialTheme.colorScheme.surfaceContainer
+        val backdropColor = if (uiState.useMiuix) {
+            MiuixTheme.colorScheme.surface
+        } else {
+            MaterialTheme.colorScheme.surfaceContainer
+        }
         val effects = remember(navCornerRadius, roundAllCorners, backdropColor) {
             NavDisplayEffects(
                 enableCornerClip = true,
@@ -90,82 +109,145 @@ fun InstallerNavContainer(uiState: ThemeState) {
         ) {
             entry<Route.Main> {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    Material3MainPageWrapper(uiState, sharedViewModel)
+                    if (uiState.useMiuix) {
+                        MiuixMainPageWrapper(uiState, sharedViewModel)
+                    } else {
+                        Material3MainPageWrapper(uiState, sharedViewModel)
+                    }
                 }
             }
             entry<Route.EditConfig>(swipeDismiss = NavSwipeDirection.None) { key ->
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
                     val id = key.id
-                    EditPage(
-                        id = if (id != -1L) id else null,
-                        useBlur = useBlur,
-                    )
+                    if (uiState.useMiuix) {
+                        MiuixEditPage(
+                            id = if (id != -1L) id else null,
+                            useBlur = useBlur,
+                        )
+                    } else {
+                        EditPage(
+                            id = if (id != -1L) id else null,
+                            useBlur = useBlur,
+                        )
+                    }
                 }
             }
             entry<Route.ApplyConfig>(swipeDismiss = swipeBackDirection) { key ->
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
                     val id = key.id
-                    ApplyPage(id, useBlur)
+                    if (uiState.useMiuix) {
+                        MiuixApplyPage(id, useBlur)
+                    } else {
+                        ApplyPage(id, useBlur)
+                    }
                 }
             }
             entry<Route.About>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    AboutPage(useBlur)
+                    if (uiState.useMiuix) {
+                        MiuixAboutPage(useBlur)
+                    } else {
+                        AboutPage(useBlur)
+                    }
                 }
             }
             entry<Route.OpenSourceLicense>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    OpenSourceLicensePage(useBlur)
+                    if (uiState.useMiuix) {
+                        MiuixOpenSourceLicensePage(useBlur)
+                    } else {
+                        OpenSourceLicensePage(useBlur)
+                    }
                 }
             }
             entry<Route.Theme>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    ThemeSettingsPage()
+                    if (uiState.useMiuix) {
+                        MiuixThemeSettingsPage()
+                    } else {
+                        ThemeSettingsPage()
+                    }
                 }
             }
             entry<Route.Network>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    NetworkPage(useBlur)
+                    if (uiState.useMiuix) {
+                        MiuixNetworkPage(useBlur)
+                    } else {
+                        NetworkPage(useBlur)
+                    }
                 }
             }
             entry<Route.InstallerGlobal>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    InstallerGlobalSettingsPage(useBlur)
+                    if (uiState.useMiuix) {
+                        MiuixInstallerGlobalSettingsPage(useBlur)
+                    } else {
+                        InstallerGlobalSettingsPage(useBlur)
+                    }
                 }
             }
             entry<Route.AuthorizerCust>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    AuthorizerCustPage(useBlur)
+                    if (uiState.useMiuix) {
+                        MiuixAuthorizerCustPage(useBlur)
+                    } else {
+                        AuthorizerCustPage(useBlur)
+                    }
                 }
             }
             entry<Route.DialogSettings>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    DialogSettingsPage(useBlur)
+                    if (uiState.useMiuix) {
+                        MiuixDialogSettingsPage(useBlur)
+                    } else {
+                        DialogSettingsPage(useBlur)
+                    }
                 }
             }
             entry<Route.NotificationSettings>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    NotificationSettingsPage(useBlur)
+                    if (uiState.useMiuix) {
+                        MiuixNotificationSettingsPage(useBlur)
+                    } else {
+                        NotificationSettingsPage(useBlur)
+                    }
                 }
             }
             entry<Route.UninstallerGlobal>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    UninstallerGlobalSettingsPage(useBlur)
+                    if (uiState.useMiuix) {
+                        MiuixUninstallerGlobalSettingsPage(useBlur)
+                    } else {
+                        UninstallerGlobalSettingsPage(useBlur)
+                    }
                 }
             }
             entry<Route.Lab>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    LabPage(useBlur)
+                    if (uiState.useMiuix) {
+                        MiuixLabPage(useBlur)
+                    } else {
+                        LabPage(useBlur)
+                    }
                 }
             }
             entry<Route.DefaultInstaller>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    DefaultInstallerPage(useBlur)
+                    if (uiState.useMiuix) {
+                        MiuixDefaultInstallerPage(useBlur)
+                    } else {
+                        DefaultInstallerPage(useBlur)
+                    }
                 }
             }
             entry<Route.Priv>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    PrivPage(useBlur)
+                    if (uiState.useMiuix) {
+                        MiuixPrivPage(useBlur)
+                    } else {
+                        PrivPage(useBlur)
+                    }
                 }
             }
         }

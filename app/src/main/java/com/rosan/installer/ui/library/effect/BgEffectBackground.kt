@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import com.rosan.installer.ui.theme.InstallerTheme
 import com.rosan.installer.ui.theme.LocalWindowLayoutInfo
 import kotlin.math.floor
@@ -31,6 +32,7 @@ fun BgEffectBackground(
     effectBackground: Boolean = true,
     isOs3Effect: Boolean = true,
     alpha: () -> Float = { 1f },
+    surfaceColor: Color = MaterialTheme.colorScheme.surface,
     content: @Composable (BoxScope.() -> Unit),
 ) {
     val shaderSupported = remember { isRuntimeShaderSupported() }
@@ -41,7 +43,7 @@ fun BgEffectBackground(
     Box(
         modifier = modifier,
     ) {
-        val surface = MaterialTheme.colorScheme.surface
+        val surface = surfaceColor
 
         val windowLayoutInfo = LocalWindowLayoutInfo.current
         val deviceType = if (windowLayoutInfo.showNavigationRail) DeviceType.PAD else DeviceType.PHONE

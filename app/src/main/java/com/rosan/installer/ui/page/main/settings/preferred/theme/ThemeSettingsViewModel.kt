@@ -70,10 +70,12 @@ class ThemeSettingsViewModel(
 
         ThemeSettingsState(
             useBlur = prefs.useBlur,
+            showMiuixUI = prefs.showMiuixUI,
             themeMode = prefs.themeMode,
             paletteStyle = prefs.paletteStyle,
             colorSpec = prefs.colorSpec,
             useDynamicColor = prefs.useDynamicColor,
+            useMiuixMonet = prefs.useMiuixMonet,
             useAppleFloatingBar = prefs.useAppleFloatingBar,
             seedColor = effectiveSeedColor,
             availableColors = availableColors,
@@ -92,6 +94,10 @@ class ThemeSettingsViewModel(
 
     fun dispatch(action: ThemeSettingsAction) {
         when (action) {
+            is ThemeSettingsAction.ChangeUseMiuix -> viewModelScope.launch {
+                updateSetting(BooleanSetting.UiUseMiuix, action.useMiuix)
+            }
+
             is ThemeSettingsAction.SetUseBlur -> viewModelScope.launch { updateSetting(BooleanSetting.UiUseBlur, action.enable) }
 
             is ThemeSettingsAction.SetThemeMode -> viewModelScope.launch { updateSetting(StringSetting.ThemeMode, action.mode.name) }
@@ -102,6 +108,10 @@ class ThemeSettingsViewModel(
 
             is ThemeSettingsAction.SetUseDynamicColor -> viewModelScope.launch {
                 updateSetting(BooleanSetting.ThemeUseDynamicColor, action.use)
+            }
+
+            is ThemeSettingsAction.SetUseMiuixMonet -> viewModelScope.launch {
+                updateSetting(BooleanSetting.UiUseMiuixMonet, action.use)
             }
 
             is ThemeSettingsAction.SetUseAppleFloatingBar -> viewModelScope.launch {
