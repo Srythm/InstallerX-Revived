@@ -21,4 +21,5 @@ fun couiSheetCardColor(): Color = if (isDynamicColor) {
 fun couiSheetCardColors(contentColor: Color = COUITheme.colorScheme.onSurface): CardColors = CardColors(
     color = couiSheetCardColor(),
     contentColor = contentColor,
+    pressedColor = couiSheetCardColor(),
 )

@@ -187,6 +187,7 @@ fun CouiErrorTextBlock(error: Throwable, modifier: Modifier = Modifier) {
         colors = CardColors(
             color = cardBackgroundColor,
             contentColor = contentColor,
+            pressedColor = cardBackgroundColor,
         ),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {

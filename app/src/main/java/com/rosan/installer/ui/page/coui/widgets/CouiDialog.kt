@@ -139,6 +139,7 @@ fun CouiUpdateDialog(showState: MutableState<Boolean>, onDismiss: () -> Unit) {
                     colors = CardColors(
                         color = COUITheme.colorScheme.secondaryVariant,
                         contentColor = COUITheme.colorScheme.onSurface,
+                        pressedColor = COUITheme.colorScheme.secondaryContainerVariant,
                     ),
                 ) {
                     BasicComponent(

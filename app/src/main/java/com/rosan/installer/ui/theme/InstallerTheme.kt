@@ -220,6 +220,8 @@ fun InstallerCOUITheme(
             ThemeMode.DARK -> ColorSchemeMode.MonetDark
         }
 
+        // COUI has no CMF style and stops at the 2025 color spec, so both are
+        // degraded here instead of branching at every call site.
         val style = when (paletteStyle) {
             PaletteStyle.TonalSpot -> CouiPaletteStyle.TonalSpot
             PaletteStyle.Neutral -> CouiPaletteStyle.Neutral
@@ -230,12 +232,10 @@ fun InstallerCOUITheme(
             PaletteStyle.Monochrome -> CouiPaletteStyle.Monochrome
             PaletteStyle.Fidelity -> CouiPaletteStyle.Fidelity
             PaletteStyle.Content -> CouiPaletteStyle.Content
-            // COUI does not ship the CMF style; fall back to the closest tonal match.
             PaletteStyle.Cmf -> CouiPaletteStyle.TonalSpot
         }
 
         val colorSpecVersion = when (paletteStyle.effectiveSpec(colorSpec)) {
-            // COUI stops at the 2025 spec; newer specs degrade to 2025.
             ThemeColorSpec.SPEC_2026 -> CouiColorSpec.Spec2025
             ThemeColorSpec.SPEC_2025 -> CouiColorSpec.Spec2025
             ThemeColorSpec.SPEC_2021 -> CouiColorSpec.Spec2021

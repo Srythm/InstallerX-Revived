@@ -5,9 +5,9 @@ package com.rosan.installer.data.engine.parser
 import android.annotation.SuppressLint
 import android.content.res.ApkAssets
 import android.content.res.AssetManager
+import android.content.res.`AssetManager$Builder`
 import android.content.res.Resources
 import android.content.res.XmlResourceParser
-import android.content.res.`AssetManager$Builder`
 import android.graphics.drawable.Drawable
 import android.os.Build
 import androidx.core.content.res.ResourcesCompat
