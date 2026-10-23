@@ -183,24 +183,24 @@ fun ThemeSettingsPage(
                             title = stringResource(R.string.theme_settings_google_ui),
                             description = stringResource(R.string.theme_settings_google_ui_desc),
                             iconPlaceholder = false,
-                            selected = !uiState.showMiuixUI,
+                            selected = !uiState.showCouiUI,
                             onClick = {
-                                if (uiState.showMiuixUI) {
-                                    viewModel.dispatch(ThemeSettingsAction.ChangeUseMiuix(false))
+                                if (uiState.showCouiUI) {
+                                    viewModel.dispatch(ThemeSettingsAction.ChangeUseCoui(false))
                                 }
                             },
                         )
                     }
-                    // Option 2: Miuix UI
+                    // Option 2: Coui UI
                     item {
                         RadioButtonWidget(
-                            title = stringResource(R.string.theme_settings_miuix_ui),
-                            description = stringResource(R.string.theme_settings_miuix_ui_desc),
+                            title = stringResource(R.string.theme_settings_coui_ui),
+                            description = stringResource(R.string.theme_settings_coui_ui_desc),
                             iconPlaceholder = false,
-                            selected = uiState.showMiuixUI,
+                            selected = uiState.showCouiUI,
                             onClick = {
-                                if (!uiState.showMiuixUI) {
-                                    viewModel.dispatch(ThemeSettingsAction.ChangeUseMiuix(true))
+                                if (!uiState.showCouiUI) {
+                                    viewModel.dispatch(ThemeSettingsAction.ChangeUseCoui(true))
                                 }
                             },
                         )
@@ -459,7 +459,7 @@ fun PredictiveBackAnimationDialog(
                     val animationText = when (animation) {
                         PredictiveBackAnimation.None -> stringResource(R.string.theme_settings_predictive_back_animation_none)
                         PredictiveBackAnimation.AOSP -> stringResource(R.string.theme_settings_predictive_back_animation_aosp)
-                        PredictiveBackAnimation.MIUIX -> stringResource(R.string.theme_settings_predictive_back_animation_miuix)
+                        PredictiveBackAnimation.MIUIX -> stringResource(R.string.theme_settings_predictive_back_animation_coui)
                         PredictiveBackAnimation.Scale -> stringResource(R.string.theme_settings_predictive_back_animation_scale)
                         PredictiveBackAnimation.Classic -> stringResource(R.string.theme_settings_predictive_back_animation_ksu_classic)
                     }

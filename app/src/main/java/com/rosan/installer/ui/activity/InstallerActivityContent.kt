@@ -15,7 +15,7 @@ import com.rosan.installer.domain.session.repository.InstallerSessionRepository
 import com.rosan.installer.domain.settings.model.preferences.ThemeState
 import com.rosan.installer.domain.settings.provider.ThemeStateProvider
 import com.rosan.installer.ui.page.main.installer.InstallerPage
-import com.rosan.installer.ui.page.miuix.installer.MiuixInstallerPage
+import com.rosan.installer.ui.page.coui.installer.CouiInstallerPage
 import com.rosan.installer.ui.theme.InstallerTheme
 import com.rosan.installer.ui.theme.isPhoneDevice
 import com.rosan.installer.ui.util.requestPortraitOrientationOnPhoneSafely
@@ -36,17 +36,17 @@ fun InstallerActivityContent(
     }
 
     InstallerTheme(
-        useMiuix = uiState.useMiuix,
+        useCoui = uiState.useCoui,
         themeMode = uiState.themeMode,
         paletteStyle = uiState.paletteStyle,
         colorSpec = uiState.colorSpec,
         useDynamicColor = uiState.useDynamicColor,
-        useMiuixMonet = uiState.useMiuixMonet,
+        useCouiMonet = uiState.useCouiMonet,
         seedColor = androidx.compose.ui.graphics.Color(uiState.seedColor),
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            if (uiState.useMiuix) {
-                MiuixInstallerPage(session)
+            if (uiState.useCoui) {
+                CouiInstallerPage(session)
             } else {
                 InstallerPage(session)
             }

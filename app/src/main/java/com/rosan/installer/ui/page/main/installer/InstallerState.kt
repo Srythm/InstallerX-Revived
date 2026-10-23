@@ -26,9 +26,9 @@ data class InstallerState(
     val tempShowOPPOSpecial: Boolean? = null,
     val tempLabShowFilePath: Boolean? = null,
     val tempLabShowInstallInitiator: Boolean? = null,
-    // Miuix sheet-level overlays; only read by the Miuix family shell.
-    val showMiuixSheetRightActionSettings: Boolean = false,
-    val showMiuixPermissionList: Boolean = false,
+    // Coui sheet-level overlays; only read by the Coui family shell.
+    val showCouiSheetRightActionSettings: Boolean = false,
+    val showCouiPermissionList: Boolean = false,
 
     // Visual data
     val currentPackageName: String? = null,
@@ -70,7 +70,7 @@ data class InstallerState(
 
             is InstallerStage.InstallingModule -> stage.isFinished
 
-            is InstallerStage.InstallPrepare -> !(showMiuixSheetRightActionSettings || showMiuixPermissionList)
+            is InstallerStage.InstallPrepare -> !(showCouiSheetRightActionSettings || showCouiPermissionList)
 
             is InstallerStage.Preparing,
             is InstallerStage.InstallWaitingUnknownSource,

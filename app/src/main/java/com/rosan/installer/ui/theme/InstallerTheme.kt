@@ -28,18 +28,18 @@ import com.rosan.installer.domain.settings.model.preferences.theme.ThemeColorSpe
 import com.rosan.installer.domain.settings.model.preferences.theme.ThemeMode
 import com.rosan.installer.ui.theme.material.animateAsState
 import com.rosan.installer.ui.theme.material.dynamicColorScheme
-import top.yukonga.miuix.kmp.theme.ColorSchemeMode
-import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.theme.ThemeColorSpec as MiuixColorSpec
-import top.yukonga.miuix.kmp.theme.ThemeController
-import top.yukonga.miuix.kmp.theme.ThemePaletteStyle as MiuixPaletteStyle
+import io.github.suqi8.coui.kmp.theme.ColorSchemeMode
+import io.github.suqi8.coui.kmp.theme.COUITheme
+import io.github.suqi8.coui.kmp.theme.ThemeColorSpec as CouiColorSpec
+import io.github.suqi8.coui.kmp.theme.ThemeController
+import io.github.suqi8.coui.kmp.theme.ThemePaletteStyle as CouiPaletteStyle
 
 private val LocalIsDark = staticCompositionLocalOf { false }
 private val LocalPaletteStyle = staticCompositionLocalOf { PaletteStyle.Expressive }
 private val LocalThemeColorSpec = staticCompositionLocalOf { ThemeColorSpec.SPEC_2025 }
 private val LocalSeedColor = staticCompositionLocalOf { Color.Unspecified }
 private val LocalThemeMode = staticCompositionLocalOf { ThemeMode.SYSTEM }
-private val LocalUseMiuixMonet = staticCompositionLocalOf { false }
+private val LocalUseCouiMonet = staticCompositionLocalOf { false }
 private val LocalUseDynamicColor = staticCompositionLocalOf { false }
 
 val LocalInstallerColorScheme = staticCompositionLocalOf<ColorScheme> { error("No ColorScheme provided") }
@@ -69,9 +69,9 @@ object InstallerTheme {
         @Composable @ReadOnlyComposable
         get() = LocalThemeMode.current
 
-    val useMiuixMonet: Boolean
+    val useCouiMonet: Boolean
         @Composable @ReadOnlyComposable
-        get() = LocalUseMiuixMonet.current
+        get() = LocalUseCouiMonet.current
 
     val useDynamicColor: Boolean
         @Composable @ReadOnlyComposable
@@ -80,12 +80,12 @@ object InstallerTheme {
 
 @Composable
 fun InstallerTheme(
-    useMiuix: Boolean,
+    useCoui: Boolean,
     themeMode: ThemeMode,
     paletteStyle: PaletteStyle,
     colorSpec: ThemeColorSpec,
     useDynamicColor: Boolean,
-    useMiuixMonet: Boolean,
+    useCouiMonet: Boolean,
     seedColor: Color,
     content: @Composable () -> Unit,
 ) {
@@ -126,7 +126,7 @@ fun InstallerTheme(
         LocalSeedColor provides seedColor,
         LocalInstallerColorScheme provides animatedColorScheme,
         LocalThemeMode provides themeMode,
-        LocalUseMiuixMonet provides useMiuixMonet,
+        LocalUseCouiMonet provides useCouiMonet,
         LocalUseDynamicColor provides useDynamicColor,
         LocalThemeColorSpec provides colorSpec,
     ) {
@@ -135,12 +135,12 @@ fun InstallerTheme(
             NavigationBarContrastHandler()
         }
 
-        if (useMiuix) {
-            InstallerMiuixTheme(
+        if (useCoui) {
+            InstallerCOUITheme(
                 darkTheme = isDark,
                 themeMode = themeMode,
                 useDynamicColor = useDynamicColor,
-                useMiuixMonet = useMiuixMonet,
+                useCouiMonet = useCouiMonet,
                 seedColor = seedColor,
                 paletteStyle = paletteStyle,
                 colorSpec = colorSpec,
@@ -185,10 +185,10 @@ fun InstallerMaterialExpressiveTheme(
 }
 
 @Composable
-fun InstallerMiuixTheme(
+fun InstallerCOUITheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     themeMode: ThemeMode,
-    useMiuixMonet: Boolean,
+    useCouiMonet: Boolean,
     useDynamicColor: Boolean = false,
     compatStatusBarColor: Boolean = true,
     seedColor: Color,
@@ -206,7 +206,7 @@ fun InstallerMiuixTheme(
         }
     }
 
-    val controller = if (useMiuixMonet) {
+    val controller = if (useCouiMonet) {
         // --- Monet Engine Path ---
         val keyColor = if (useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             colorResource(id = android.R.color.system_accent1_500)
@@ -221,22 +221,24 @@ fun InstallerMiuixTheme(
         }
 
         val style = when (paletteStyle) {
-            PaletteStyle.TonalSpot -> MiuixPaletteStyle.TonalSpot
-            PaletteStyle.Neutral -> MiuixPaletteStyle.Neutral
-            PaletteStyle.Vibrant -> MiuixPaletteStyle.Vibrant
-            PaletteStyle.Expressive -> MiuixPaletteStyle.Expressive
-            PaletteStyle.Rainbow -> MiuixPaletteStyle.Rainbow
-            PaletteStyle.FruitSalad -> MiuixPaletteStyle.FruitSalad
-            PaletteStyle.Monochrome -> MiuixPaletteStyle.Monochrome
-            PaletteStyle.Fidelity -> MiuixPaletteStyle.Fidelity
-            PaletteStyle.Content -> MiuixPaletteStyle.Content
-            PaletteStyle.Cmf -> MiuixPaletteStyle.Cmf
+            PaletteStyle.TonalSpot -> CouiPaletteStyle.TonalSpot
+            PaletteStyle.Neutral -> CouiPaletteStyle.Neutral
+            PaletteStyle.Vibrant -> CouiPaletteStyle.Vibrant
+            PaletteStyle.Expressive -> CouiPaletteStyle.Expressive
+            PaletteStyle.Rainbow -> CouiPaletteStyle.Rainbow
+            PaletteStyle.FruitSalad -> CouiPaletteStyle.FruitSalad
+            PaletteStyle.Monochrome -> CouiPaletteStyle.Monochrome
+            PaletteStyle.Fidelity -> CouiPaletteStyle.Fidelity
+            PaletteStyle.Content -> CouiPaletteStyle.Content
+            // COUI does not ship the CMF style; fall back to the closest tonal match.
+            PaletteStyle.Cmf -> CouiPaletteStyle.TonalSpot
         }
 
         val colorSpecVersion = when (paletteStyle.effectiveSpec(colorSpec)) {
-            ThemeColorSpec.SPEC_2026 -> MiuixColorSpec.Spec2026
-            ThemeColorSpec.SPEC_2025 -> MiuixColorSpec.Spec2025
-            ThemeColorSpec.SPEC_2021 -> MiuixColorSpec.Spec2021
+            // COUI stops at the 2025 spec; newer specs degrade to 2025.
+            ThemeColorSpec.SPEC_2026 -> CouiColorSpec.Spec2025
+            ThemeColorSpec.SPEC_2025 -> CouiColorSpec.Spec2025
+            ThemeColorSpec.SPEC_2021 -> CouiColorSpec.Spec2021
         }
 
         remember(colorSchemeMode, keyColor, paletteStyle, colorSpecVersion, darkTheme) {
@@ -249,7 +251,7 @@ fun InstallerMiuixTheme(
             )
         }
     } else {
-        // --- Default Miuix Theme Path ---
+        // --- Default Coui Theme Path ---
         val colorSchemeMode = when (themeMode) {
             ThemeMode.SYSTEM -> ColorSchemeMode.System
             ThemeMode.LIGHT -> ColorSchemeMode.Light
@@ -264,7 +266,7 @@ fun InstallerMiuixTheme(
         }
     }
 
-    MiuixTheme(
+    COUITheme(
         controller = controller,
         content = content,
     )

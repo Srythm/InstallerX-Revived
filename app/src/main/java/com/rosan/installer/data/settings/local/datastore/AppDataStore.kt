@@ -40,8 +40,8 @@ class AppDataStore(private val dataStore: DataStore<Preferences>, private val js
 
         // UI Related
         val UI_USE_BLUR = register(booleanPreferencesKey("ui_use_blur"), PreferenceValueType.BOOLEAN)
-        val UI_USE_MIUIX = register(booleanPreferencesKey("ui_use_miuix"), PreferenceValueType.BOOLEAN)
-        val UI_USE_MIUIX_MONET = register(booleanPreferencesKey("ui_use_miuix_monet"), PreferenceValueType.BOOLEAN)
+        val UI_USE_MIUIX = register(booleanPreferencesKey("ui_use_coui"), PreferenceValueType.BOOLEAN)
+        val UI_USE_MIUIX_MONET = register(booleanPreferencesKey("ui_use_coui_monet"), PreferenceValueType.BOOLEAN)
         val THEME_MODE = register(stringPreferencesKey("theme_mode"), PreferenceValueType.STRING)
         val THEME_PALETTE_STYLE = register(stringPreferencesKey("theme_palette_style"), PreferenceValueType.STRING)
         val THEME_COLOR_SPEC = register(stringPreferencesKey("theme_color_spec"), PreferenceValueType.STRING)

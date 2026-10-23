@@ -92,7 +92,7 @@ class AppSettingsRepositoryImpl(
                 value = prefs[AppDataStore.SMART_AUTHORIZER_CANDIDATES].orEmpty(),
                 isSessionInstallSupported = capabilityProvider.isSessionInstallSupported,
             ),
-            showMiuixUI = prefs[AppDataStore.UI_USE_MIUIX] ?: false,
+            showCouiUI = prefs[AppDataStore.UI_USE_MIUIX] ?: false,
             preferSystemIcon = prefs[AppDataStore.PREFER_SYSTEM_ICON_FOR_INSTALL] ?: false,
             showLauncherIcon = prefs[AppDataStore.SHOW_LAUNCHER_ICON] ?: true,
             userSetLSPosedActive = prefs[AppDataStore.USER_SET_LSPOSED_ACTIVE] ?: false,
@@ -156,7 +156,7 @@ class AppSettingsRepositoryImpl(
             ),
             colorSpec = ThemeColorSpec.fromValueOrDefault(prefs[AppDataStore.THEME_COLOR_SPEC] ?: ThemeColorSpec.SPEC_2025.name),
             useDynamicColor = prefs[AppDataStore.THEME_USE_DYNAMIC_COLOR] ?: true,
-            useMiuixMonet = prefs[AppDataStore.UI_USE_MIUIX_MONET] ?: false,
+            useCouiMonet = prefs[AppDataStore.UI_USE_MIUIX_MONET] ?: false,
             useAppleFloatingBar = prefs[AppDataStore.UI_USE_APPLE_FLOATING_BAR] ?: false,
             seedColorInt = prefs[AppDataStore.THEME_SEED_COLOR] ?: DEFAULT_SEED_COLOR,
             wallpaperSeedColorInt = prefs[AppDataStore.THEME_WALLPAPER_SEED_COLOR] ?: 0,
@@ -248,8 +248,8 @@ class AppSettingsRepositoryImpl(
         BooleanSetting.NetworkSourceModeWarningAcknowledged -> AppDataStore.NETWORK_SOURCE_MODE_WARNING_ACKNOWLEDGED
         BooleanSetting.UiUseBlur -> AppDataStore.UI_USE_BLUR
         BooleanSetting.ThemeUseDynamicColor -> AppDataStore.THEME_USE_DYNAMIC_COLOR
-        BooleanSetting.UiUseMiuix -> AppDataStore.UI_USE_MIUIX
-        BooleanSetting.UiUseMiuixMonet -> AppDataStore.UI_USE_MIUIX_MONET
+        BooleanSetting.UiUseCoui -> AppDataStore.UI_USE_MIUIX
+        BooleanSetting.UiUseCouiMonet -> AppDataStore.UI_USE_MIUIX_MONET
         BooleanSetting.UiUseAppleFloatingBar -> AppDataStore.UI_USE_APPLE_FLOATING_BAR
         BooleanSetting.UiDynColorFollowPkgIcon -> AppDataStore.UI_DYN_COLOR_FOLLOW_PKG_ICON
         BooleanSetting.LiveActivityDynColorFollowPkgIcon -> AppDataStore.LIVE_ACTIVITY_DYN_COLOR_FOLLOW_PKG_ICON

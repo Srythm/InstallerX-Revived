@@ -10,12 +10,12 @@ import com.rosan.installer.domain.settings.model.preferences.theme.ThemeMode
  */
 data class ThemeState(
     val isLoaded: Boolean = false,
-    val useMiuix: Boolean = false,
+    val useCoui: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val paletteStyle: PaletteStyle = PaletteStyle.TonalSpot,
     val colorSpec: ThemeColorSpec = ThemeColorSpec.SPEC_2025,
     val useDynamicColor: Boolean = true,
-    val useMiuixMonet: Boolean = false,
+    val useCouiMonet: Boolean = false,
     val useAppleFloatingBar: Boolean = false,
     val seedColor: Int = 0xFF6750A4.toInt(),
     val useBlur: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU,

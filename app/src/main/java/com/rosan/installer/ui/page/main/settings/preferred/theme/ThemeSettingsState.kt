@@ -25,12 +25,12 @@ data class ThemeSettingsState(
     // user-controlled preference; this only changes the *initial* value
     // before the user has made an explicit choice.
     val useBlur: Boolean = false,
-    val showMiuixUI: Boolean = false,
+    val showCouiUI: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val paletteStyle: PaletteStyle = PaletteStyle.TonalSpot,
     val colorSpec: ThemeColorSpec = ThemeColorSpec.SPEC_2025,
     val useDynamicColor: Boolean = true,
-    val useMiuixMonet: Boolean = false,
+    val useCouiMonet: Boolean = false,
     val useAppleFloatingBar: Boolean = false,
     val seedColor: Color = PresetColors[0].color,
     val availableColors: List<RawColor> = PresetColors,

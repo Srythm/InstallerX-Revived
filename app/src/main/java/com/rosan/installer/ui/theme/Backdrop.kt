@@ -14,7 +14,7 @@ import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.blur.textureBlur
 import top.yukonga.miuix.kmp.shader.isRenderEffectSupported
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import io.github.suqi8.coui.kmp.theme.COUITheme
 
 /**
  * Remember a LayerBackdrop with a solid background to prevent alpha-blending artifacts.
@@ -22,9 +22,9 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
  * @return A LayerBackdrop instance if supported and enabled, null otherwise.
  */
 @Composable
-fun rememberMiuixBlurBackdrop(enableBlur: Boolean): LayerBackdrop? {
+fun rememberCouiBlurBackdrop(enableBlur: Boolean): LayerBackdrop? {
     if (!enableBlur || !isRenderEffectSupported()) return null
-    val surfaceColor = MiuixTheme.colorScheme.surface
+    val surfaceColor = COUITheme.colorScheme.surface
     return rememberLayerBackdrop {
         drawRect(surfaceColor)
         drawContent()
@@ -36,17 +36,17 @@ fun rememberMiuixBlurBackdrop(enableBlur: Boolean): LayerBackdrop? {
  * @return Transparent if Backdrop is active, otherwise the default surface color.
  */
 @Composable
-fun LayerBackdrop?.getMiuixAppBarColor(): Color = this?.let { Color.Transparent } ?: MiuixTheme.colorScheme.surface
+fun LayerBackdrop?.getCouiAppBarColor(): Color = this?.let { Color.Transparent } ?: COUITheme.colorScheme.surface
 
 /**
- * Apply a standard glassmorphism blur effect using Miuix Backdrop.
+ * Apply a standard glassmorphism blur effect using Coui Backdrop.
  * @param backdrop The LayerBackdrop providing the visual source.
  * @param enabled Whether the effect is locally enabled for this component.
  * @param blurRadius The radius of the Gaussian blur.
  * @param shape The clipping shape for the blurred area.
  */
 @Composable
-fun Modifier.installerMiuixBlurEffect(
+fun Modifier.installerCouiBlurEffect(
     backdrop: LayerBackdrop?,
     enabled: Boolean = true,
     blurRadius: Float = 25f,
@@ -56,7 +56,7 @@ fun Modifier.installerMiuixBlurEffect(
     if (!enabled || backdrop == null) return this
 
     // Grab the current theme surface color for blending
-    val blendColor = MiuixTheme.colorScheme.surface.copy(alpha = 0.8f)
+    val blendColor = COUITheme.colorScheme.surface.copy(alpha = 0.8f)
 
     return this.then(
         Modifier.textureBlur(

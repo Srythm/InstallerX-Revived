@@ -32,20 +32,20 @@ import com.rosan.installer.ui.page.main.settings.preferred.lab.LabPage
 import com.rosan.installer.ui.page.main.settings.preferred.network.NetworkPage
 import com.rosan.installer.ui.page.main.settings.preferred.theme.ThemeSettingsPage
 import com.rosan.installer.ui.page.main.settings.preferred.uninstaller.UninstallerGlobalSettingsPage
-import com.rosan.installer.ui.page.miuix.settings.config.apply.MiuixApplyPage
-import com.rosan.installer.ui.page.miuix.settings.config.edit.MiuixEditPage
-import com.rosan.installer.ui.page.miuix.settings.home.installer.MiuixDefaultInstallerPage
-import com.rosan.installer.ui.page.miuix.settings.home.priv.MiuixPrivPage
-import com.rosan.installer.ui.page.miuix.settings.preferred.about.MiuixAboutPage
-import com.rosan.installer.ui.page.miuix.settings.preferred.about.ossLicensePage.MiuixOpenSourceLicensePage
-import com.rosan.installer.ui.page.miuix.settings.preferred.installer.MiuixInstallerGlobalSettingsPage
-import com.rosan.installer.ui.page.miuix.settings.preferred.installer.authorizer.MiuixAuthorizerCustPage
-import com.rosan.installer.ui.page.miuix.settings.preferred.installer.dialog.MiuixDialogSettingsPage
-import com.rosan.installer.ui.page.miuix.settings.preferred.installer.notification.MiuixNotificationSettingsPage
-import com.rosan.installer.ui.page.miuix.settings.preferred.lab.MiuixLabPage
-import com.rosan.installer.ui.page.miuix.settings.preferred.network.MiuixNetworkPage
-import com.rosan.installer.ui.page.miuix.settings.preferred.theme.MiuixThemeSettingsPage
-import com.rosan.installer.ui.page.miuix.settings.preferred.uninstaller.MiuixUninstallerGlobalSettingsPage
+import com.rosan.installer.ui.page.coui.settings.config.apply.CouiApplyPage
+import com.rosan.installer.ui.page.coui.settings.config.edit.CouiEditPage
+import com.rosan.installer.ui.page.coui.settings.home.installer.CouiDefaultInstallerPage
+import com.rosan.installer.ui.page.coui.settings.home.priv.CouiPrivPage
+import com.rosan.installer.ui.page.coui.settings.preferred.about.CouiAboutPage
+import com.rosan.installer.ui.page.coui.settings.preferred.about.ossLicensePage.CouiOpenSourceLicensePage
+import com.rosan.installer.ui.page.coui.settings.preferred.installer.CouiInstallerGlobalSettingsPage
+import com.rosan.installer.ui.page.coui.settings.preferred.installer.authorizer.CouiAuthorizerCustPage
+import com.rosan.installer.ui.page.coui.settings.preferred.installer.dialog.CouiDialogSettingsPage
+import com.rosan.installer.ui.page.coui.settings.preferred.installer.notification.CouiNotificationSettingsPage
+import com.rosan.installer.ui.page.coui.settings.preferred.lab.CouiLabPage
+import com.rosan.installer.ui.page.coui.settings.preferred.network.CouiNetworkPage
+import com.rosan.installer.ui.page.coui.settings.preferred.theme.COUIThemeSettingsPage
+import com.rosan.installer.ui.page.coui.settings.preferred.uninstaller.CouiUninstallerGlobalSettingsPage
 import com.rosan.installer.ui.util.rememberDeviceCornerRadius
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.nav.core.NavCornerClipMode
@@ -53,7 +53,7 @@ import top.yukonga.miuix.kmp.nav.core.NavDisplay
 import top.yukonga.miuix.kmp.nav.core.NavDisplayEffects
 import top.yukonga.miuix.kmp.nav.core.rememberNavBackStack
 import top.yukonga.miuix.kmp.nav.transition.NavSwipeDirection
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import io.github.suqi8.coui.kmp.theme.COUITheme
 
 @Composable
 fun InstallerNavContainer(uiState: ThemeState) {
@@ -73,8 +73,8 @@ fun InstallerNavContainer(uiState: ThemeState) {
         val roundAllCorners = uiState.predictiveBackAnimation == PredictiveBackAnimation.AOSP ||
             uiState.predictiveBackAnimation == PredictiveBackAnimation.Scale ||
             uiState.predictiveBackAnimation == PredictiveBackAnimation.Classic
-        val backdropColor = if (uiState.useMiuix) {
-            MiuixTheme.colorScheme.surface
+        val backdropColor = if (uiState.useCoui) {
+            COUITheme.colorScheme.surface
         } else {
             MaterialTheme.colorScheme.surfaceContainer
         }
@@ -109,8 +109,8 @@ fun InstallerNavContainer(uiState: ThemeState) {
         ) {
             entry<Route.Main> {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    if (uiState.useMiuix) {
-                        MiuixMainPageWrapper(uiState, sharedViewModel)
+                    if (uiState.useCoui) {
+                        CouiMainPageWrapper(uiState, sharedViewModel)
                     } else {
                         Material3MainPageWrapper(uiState, sharedViewModel)
                     }
@@ -119,8 +119,8 @@ fun InstallerNavContainer(uiState: ThemeState) {
             entry<Route.EditConfig>(swipeDismiss = NavSwipeDirection.None) { key ->
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
                     val id = key.id
-                    if (uiState.useMiuix) {
-                        MiuixEditPage(
+                    if (uiState.useCoui) {
+                        CouiEditPage(
                             id = if (id != -1L) id else null,
                             useBlur = useBlur,
                         )
@@ -135,8 +135,8 @@ fun InstallerNavContainer(uiState: ThemeState) {
             entry<Route.ApplyConfig>(swipeDismiss = swipeBackDirection) { key ->
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
                     val id = key.id
-                    if (uiState.useMiuix) {
-                        MiuixApplyPage(id, useBlur)
+                    if (uiState.useCoui) {
+                        CouiApplyPage(id, useBlur)
                     } else {
                         ApplyPage(id, useBlur)
                     }
@@ -144,8 +144,8 @@ fun InstallerNavContainer(uiState: ThemeState) {
             }
             entry<Route.About>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    if (uiState.useMiuix) {
-                        MiuixAboutPage(useBlur)
+                    if (uiState.useCoui) {
+                        CouiAboutPage(useBlur)
                     } else {
                         AboutPage(useBlur)
                     }
@@ -153,8 +153,8 @@ fun InstallerNavContainer(uiState: ThemeState) {
             }
             entry<Route.OpenSourceLicense>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    if (uiState.useMiuix) {
-                        MiuixOpenSourceLicensePage(useBlur)
+                    if (uiState.useCoui) {
+                        CouiOpenSourceLicensePage(useBlur)
                     } else {
                         OpenSourceLicensePage(useBlur)
                     }
@@ -162,8 +162,8 @@ fun InstallerNavContainer(uiState: ThemeState) {
             }
             entry<Route.Theme>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    if (uiState.useMiuix) {
-                        MiuixThemeSettingsPage()
+                    if (uiState.useCoui) {
+                        COUIThemeSettingsPage()
                     } else {
                         ThemeSettingsPage()
                     }
@@ -171,8 +171,8 @@ fun InstallerNavContainer(uiState: ThemeState) {
             }
             entry<Route.Network>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    if (uiState.useMiuix) {
-                        MiuixNetworkPage(useBlur)
+                    if (uiState.useCoui) {
+                        CouiNetworkPage(useBlur)
                     } else {
                         NetworkPage(useBlur)
                     }
@@ -180,8 +180,8 @@ fun InstallerNavContainer(uiState: ThemeState) {
             }
             entry<Route.InstallerGlobal>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    if (uiState.useMiuix) {
-                        MiuixInstallerGlobalSettingsPage(useBlur)
+                    if (uiState.useCoui) {
+                        CouiInstallerGlobalSettingsPage(useBlur)
                     } else {
                         InstallerGlobalSettingsPage(useBlur)
                     }
@@ -189,8 +189,8 @@ fun InstallerNavContainer(uiState: ThemeState) {
             }
             entry<Route.AuthorizerCust>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    if (uiState.useMiuix) {
-                        MiuixAuthorizerCustPage(useBlur)
+                    if (uiState.useCoui) {
+                        CouiAuthorizerCustPage(useBlur)
                     } else {
                         AuthorizerCustPage(useBlur)
                     }
@@ -198,8 +198,8 @@ fun InstallerNavContainer(uiState: ThemeState) {
             }
             entry<Route.DialogSettings>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    if (uiState.useMiuix) {
-                        MiuixDialogSettingsPage(useBlur)
+                    if (uiState.useCoui) {
+                        CouiDialogSettingsPage(useBlur)
                     } else {
                         DialogSettingsPage(useBlur)
                     }
@@ -207,8 +207,8 @@ fun InstallerNavContainer(uiState: ThemeState) {
             }
             entry<Route.NotificationSettings>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    if (uiState.useMiuix) {
-                        MiuixNotificationSettingsPage(useBlur)
+                    if (uiState.useCoui) {
+                        CouiNotificationSettingsPage(useBlur)
                     } else {
                         NotificationSettingsPage(useBlur)
                     }
@@ -216,8 +216,8 @@ fun InstallerNavContainer(uiState: ThemeState) {
             }
             entry<Route.UninstallerGlobal>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    if (uiState.useMiuix) {
-                        MiuixUninstallerGlobalSettingsPage(useBlur)
+                    if (uiState.useCoui) {
+                        CouiUninstallerGlobalSettingsPage(useBlur)
                     } else {
                         UninstallerGlobalSettingsPage(useBlur)
                     }
@@ -225,8 +225,8 @@ fun InstallerNavContainer(uiState: ThemeState) {
             }
             entry<Route.Lab>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    if (uiState.useMiuix) {
-                        MiuixLabPage(useBlur)
+                    if (uiState.useCoui) {
+                        CouiLabPage(useBlur)
                     } else {
                         LabPage(useBlur)
                     }
@@ -234,8 +234,8 @@ fun InstallerNavContainer(uiState: ThemeState) {
             }
             entry<Route.DefaultInstaller>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    if (uiState.useMiuix) {
-                        MiuixDefaultInstallerPage(useBlur)
+                    if (uiState.useCoui) {
+                        CouiDefaultInstallerPage(useBlur)
                     } else {
                         DefaultInstallerPage(useBlur)
                     }
@@ -243,8 +243,8 @@ fun InstallerNavContainer(uiState: ThemeState) {
             }
             entry<Route.Priv>(swipeDismiss = swipeBackDirection) {
                 InstallerNavEntry(interceptPredictiveBack, onBack) {
-                    if (uiState.useMiuix) {
-                        MiuixPrivPage(useBlur)
+                    if (uiState.useCoui) {
+                        CouiPrivPage(useBlur)
                     } else {
                         PrivPage(useBlur)
                     }

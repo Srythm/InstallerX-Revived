@@ -31,7 +31,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import io.github.suqi8.coui.kmp.theme.COUITheme
 
 class SettingsActivity :
     ComponentActivity(),
@@ -75,17 +75,17 @@ class SettingsActivity :
                 LocalWindowLayoutInfo provides layoutInfo,
             ) {
                 InstallerTheme(
-                    useMiuix = uiState.useMiuix,
+                    useCoui = uiState.useCoui,
                     themeMode = uiState.themeMode,
                     paletteStyle = uiState.paletteStyle,
                     colorSpec = uiState.colorSpec,
                     useDynamicColor = uiState.useDynamicColor,
-                    useMiuixMonet = uiState.useMiuixMonet,
+                    useCouiMonet = uiState.useCouiMonet,
                     seedColor = androidx.compose.ui.graphics.Color(uiState.seedColor),
                 ) {
                     val backgroundColor =
-                        if (uiState.useMiuix) {
-                            MiuixTheme.colorScheme.surface
+                        if (uiState.useCoui) {
+                            COUITheme.colorScheme.surface
                         } else {
                             MaterialTheme.colorScheme.surfaceContainer
                         }

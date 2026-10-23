@@ -255,11 +255,12 @@ dependencies {
     // log
     implementation(libs.timber)
 
-    // miuix: navigation/blur/shader primitives plus the Miuix UI family
-    implementation(libs.miuix.core)
-    implementation(libs.miuix.ui)
-    implementation(libs.miuix.preference)
-    implementation(libs.miuix.icons)
+    // coui: the ColorOS-styled component family (second UI family)
+    implementation(libs.coui.ui)
+    implementation(libs.coui.preference)
+    implementation(libs.coui.icons)
+
+    // miuix: shared navigation / blur / shader primitives used by both families
     implementation(libs.miuix.shader)
     implementation(libs.miuix.blur)
     implementation(libs.miuix.navigation)

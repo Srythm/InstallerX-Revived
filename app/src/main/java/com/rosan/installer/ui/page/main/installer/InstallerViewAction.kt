@@ -124,18 +124,18 @@ sealed interface InstallerViewAction {
      */
     data class ShowToastRes(@param:StringRes val messageResId: Int) : InstallerViewAction
 
-    // Miuix-family sheet overlays. The Material 3 family renders these states as
-    // dialogs instead, so only the Miuix shell dispatches them.
+    // Coui-family sheet overlays. The Material 3 family renders these states as
+    // dialogs instead, so only the Coui shell dispatches them.
 
-    /** Opens the right-action settings panel inside the Miuix install sheet. */
-    data object ShowMiuixSheetRightActionSettings : InstallerViewAction
+    /** Opens the right-action settings panel inside the Coui install sheet. */
+    data object ShowCouiSheetRightActionSettings : InstallerViewAction
 
-    /** Closes the right-action settings panel inside the Miuix install sheet. */
-    data object HideMiuixSheetRightActionSettings : InstallerViewAction
+    /** Closes the right-action settings panel inside the Coui install sheet. */
+    data object HideCouiSheetRightActionSettings : InstallerViewAction
 
-    /** Expands the permission list inside the Miuix install sheet. */
-    data object ShowMiuixPermissionList : InstallerViewAction
+    /** Expands the permission list inside the Coui install sheet. */
+    data object ShowCouiPermissionList : InstallerViewAction
 
-    /** Collapses the permission list inside the Miuix install sheet. */
-    data object HideMiuixPermissionList : InstallerViewAction
+    /** Collapses the permission list inside the Coui install sheet. */
+    data object HideCouiPermissionList : InstallerViewAction
 }

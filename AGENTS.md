@@ -36,7 +36,7 @@ InstallerX Revived is a community-maintained Android installer with:
 * support for APK, APKS, APKM, XAPK, APKs inside ZIP files, and batch APK installation,
 * profile-driven install options and install flags,
 * privileged workflows involving Root, Shizuku, Dhizuku, `app_process`, system package manager mode, and hidden APIs,
-* two selectable UI families — Material 3 Expressive (default) and Miuix — sharing one ViewModel, domain, and navigation core.
+* two selectable UI families — Material 3 Expressive (default) and COUI (ColorOS-styled) — sharing one ViewModel, domain, and navigation core.
 
 Several product behaviors are intentionally flow-specific. Do **not** assume a feature supported in dialog installation is also valid for notification or automatic installation unless the existing code and docs already establish that.
 
@@ -92,12 +92,14 @@ Preserve this separation. Do not move behavior into a convenient but wrong layer
 
 ### GitHub Packages authentication
 
-The project resolves seven snapshot `miuix` artifacts from GitHub Packages, all pinned to the same `miuix` version: `miuix-core`, `miuix-ui`, `miuix-preference`, `miuix-icons`, `miuix-shader`, `miuix-blur`, and `miuix-navigation`.
+The project resolves three snapshot `miuix` artifacts from GitHub Packages, all pinned to the same `miuix` version: `miuix-shader`, `miuix-blur`, and `miuix-navigation`.
 
-They serve two different roles and both are intentional:
+These are low-level **visual-effect and navigation** primitives shared by both UI families. The navigation host, the `NavKey` back stack, and the predictive-back gesture bridge all come from `miuix-navigation`, so changing the navigation engine means touching every route.
 
-* `miuix-shader`, `miuix-blur`, `miuix-navigation` — low-level **visual-effect and navigation** primitives shared by every UI family. The navigation host, the `NavKey` back stack, and the predictive-back gesture bridge all come from `miuix-navigation`, so changing the navigation engine means touching every route.
-* `miuix-core`, `miuix-ui`, `miuix-preference`, `miuix-icons` — the **Miuix UI family** components. See [UI conventions](#ui-conventions).
+The **component families** are separate and come from two other places:
+
+* Material 3 Expressive — `androidx.compose.material3` from Google Maven.
+* COUI — `io.github.suqi8.coui.kmp` from Maven Central, no credentials needed.
 
 Release builds of `miuix` are also published to Maven Central, so a non-snapshot version can be resolved without credentials. The pinned `-SNAPSHOT` version still requires GitHub Packages access.
 
@@ -170,7 +172,7 @@ Do not flatten, rename, or silently bypass flavor logic. If behavior differs by 
 * Follow the existing version catalog naming style.
 * Do not scatter raw dependency coordinates or versions across module build files without a strong reason.
 * Respect the current centralized repository setup and `RepositoriesMode.FAIL_ON_PROJECT_REPOS`.
-* The GitHub Packages `miuix` repository is intentionally configured in `settings.gradle.kts` because the three artifacts above are only published there; do not duplicate it in subprojects, and do not remove it while those artifacts are still used.
+* The GitHub Packages `miuix` repository is intentionally configured in `settings.gradle.kts` because the three snapshot artifacts above are only published there; do not duplicate it in subprojects, and do not remove it while those artifacts are still used.
 
 ### Signing and release flow
 
@@ -273,39 +275,45 @@ Do not implement only the visible switch while leaving persistence, mapping, or 
 The app ships **two UI families** that render the same product:
 
 * **Material 3 Expressive** — the default. Screens live under `ui/page/main/`.
-* **Miuix** (HyperOS-flavored) — screens live under `ui/page/miuix/`, components under `ui/page/miuix/widgets/`.
+* **COUI** (ColorOS-flavored) — screens live under `ui/page/coui/`, components under `ui/page/coui/widgets/`.
 
-The family is a user-facing setting (`ThemeState.useMiuix`) and is resolved once at the shell, not inside leaf screens.
+The family is a user-facing setting (`ThemeState.useCoui`) and is resolved once at the shell, not inside leaf screens.
 
 Shared and family-agnostic, never fork it per family:
 
 * `domain/`, `data/`, `di/`, `framework/` — no Compose dependency at all.
-* ViewModels under `ui/page/*/**` — both families call the **same** ViewModel. A ViewModel must not import `androidx.compose.material3` or `top.yukonga.miuix.kmp.theme`.
+* ViewModels under `ui/page/*/**` — both families call the **same** ViewModel. A ViewModel must not import `androidx.compose.material3` or `io.github.suqi8.coui.kmp.theme`.
 * `ui/navigation/Routes.kt`, `Navigator.kt`, `MainPagerState` — routes are `miuix` `NavKey`s for both families.
 * `res/values*/strings.xml` — one string set, two consumers.
 
 Family-specific, must be implemented twice:
 
-* the shell (`Scaffold` / bottom bar / pager) — `InstallerNavContainer` branches on `useMiuix`,
+* the shell (`Scaffold` / bottom bar / pager) — `InstallerNavContainer` branches on `useCoui`,
 * screen composables,
 * the component/widget set,
-* the theme host (`InstallerMaterialExpressiveTheme` vs `InstallerMiuixTheme`).
+* the theme host (`InstallerMaterialExpressiveTheme` vs `InstallerCOUITheme`).
 
 When a feature adds a screen, a setting, or a workflow, ship it in **both** families in the same change unless the maintainer explicitly scopes it to one. A visible switch without the second rendering is an incomplete change.
 
 ### Family-aware theming
 
-Both families derive their colors from the same `ThemeState` (seed color, `PaletteStyle`, `ThemeColorSpec`, `ThemeMode`) but land in different types: `androidx.compose.material3.ColorScheme` for Material 3, `MiuixTheme.colorScheme` for Miuix. There is no implicit conversion between them.
+Both families derive their colors from the same `ThemeState` (seed color, `PaletteStyle`, `ThemeColorSpec`, `ThemeMode`) but land in different types: `androidx.compose.material3.ColorScheme` for Material 3, `COUITheme.colorScheme` for COUI. There is no implicit conversion between them.
 
 * Color computation stays in `ui/theme/` and `ui/theme/material/`; the mapping into a family's palette belongs to that family's theme host.
-* `LocalInstallerColorScheme` only exists for the Material 3 family. Do not read it from Miuix code.
+* `LocalInstallerColorScheme` only exists for the Material 3 family. Do not read it from COUI code.
+* COUI's palette stops at `ThemeColorSpec.Spec2025` and has no `Cmf` style; the theme host degrades those inputs rather than branching at call sites.
 * Shared visual libraries under `ui/library/` take their colors from the caller (for example `FloatingBottomBarColors`), so both families can pass their own palette. Do not hardcode a single family's palette as the default inside a shared component.
 
-### Miuix and Coui are upstream-derived
+### The COUI family is a renamed port of the Miuix tree
 
-The Miuix component family in this repository is sourced from the upstream `wxxsfxyzm/InstallerX-Revived` tree and the public `compose-miuix-ui/miuix` library. Keep `ui/page/miuix/` close to upstream so upstream fixes can be merged without re-deriving them.
+`ui/page/coui/` started life as the upstream Miuix tree (`ui/page/miuix/` in `wxxsfxyzm/InstallerX-Revived`) and was renamed onto COUI: `Miuix*` → `Coui*` for app-owned identifiers, `MiuixTheme`/`MiuixIcons`/`MiuixScrollBehavior` → `COUITheme`/`COUIIcons`/`COUIScrollBehavior`, and `top.yukonga.miuix.kmp.*` → `io.github.suqi8.coui.kmp.*` for component packages.
 
-A ColorOS-flavored alternative family (`io.github.suqi8.coui.kmp`) is under evaluation. If adopted, treat it as a **replacement for the second family**, not a third parallel surface: Coui is a 1:1 API fork of Miuix (`Miuix*` → `COUI*`, `top.yukonga.miuix.kmp.*` → `io.github.suqi8.coui.kmp.*`), and maintaining three families triples every UI change.
+Two rules follow from that history:
+
+* **Do not move the navigation, blur, or shader imports.** `top.yukonga.miuix.kmp.nav.*`, `.blur.*`, and `.shader.*` stay on Miuix; only `basic` / `theme` / `utils` / `layout` / `icon` / `window` / `overlay` / `anim` / `interfaces` come from COUI. Mixing the two namespaces inside one import block is expected; collapsing them is not.
+* When an upstream Miuix fix lands, port it by the same rename rather than re-deriving the screen. COUI lags Miuix upstream in places (its navigation module has no `WindowNavigationEventBridge`, and its `NavigationRail` is stateless), so a straight rename is not always enough.
+
+Do not add a third parallel family. Two families already means every UI change is written twice.
 
 ### In-repo visual libraries
 
@@ -480,8 +488,8 @@ If verification was not run or did not pass, do not write the commit or handoff 
 
 ## Common mistakes to avoid
 
-* Assuming a second UI family still exists, or writing code against the deleted `ui/page/miuix/` tree.
-* Importing Miuix UI components because `top.yukonga.miuix.kmp.*` imports appear elsewhere; only blur, shader, and navigation are legitimate.
+* Writing code against a `ui/page/miuix/` tree; the second family lives in `ui/page/coui/`.
+* Importing Miuix UI components (`basic`, `theme`, `utils`, `icon`) because `top.yukonga.miuix.kmp.*` imports appear elsewhere; only `nav`, `blur`, and `shader` are legitimate, and the component family is `io.github.suqi8.coui.kmp`.
 * Adding a setting toggle without updating persistence or state propagation.
 * Adding repositories to module Gradle files despite centralized repository management.
 * Hardcoding dependency versions outside the version catalog.

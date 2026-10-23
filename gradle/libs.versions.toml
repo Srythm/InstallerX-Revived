@@ -28,6 +28,7 @@ appiconloader = "1.5.0"
 androidx-annotation = "1.11.0"
 timber = "5.0.1"
 miuix = "0.9.4-292d8ec6-SNAPSHOT"
+coui = "1.1.0"
 okhttp = "5.5.0"
 monetcompat = "0.4.1"
 materialKolor = "6.0.0"
@@ -129,14 +130,16 @@ aboutlibraries-compose-m3 = { module = "com.mikepenz:aboutlibraries-compose-m3",
 # log
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
 
-# miuix (navigation/blur/shader primitives plus the Miuix UI family)
-miuix-core = { group = "top.yukonga.miuix.kmp", name = "miuix-core-android", version.ref = "miuix" }
-miuix-ui = { group = "top.yukonga.miuix.kmp", name = "miuix-ui-android", version.ref = "miuix" }
-miuix-preference = { group = "top.yukonga.miuix.kmp", name = "miuix-preference-android", version.ref = "miuix" }
-miuix-icons = { group = "top.yukonga.miuix.kmp", name = "miuix-icons-android", version.ref = "miuix" }
+# miuix (shared navigation and blur/shader primitives only; the component
+# family comes from coui below)
 miuix-shader = { group = "top.yukonga.miuix.kmp", name = "miuix-shader-android", version.ref = "miuix" }
 miuix-blur = { group = "top.yukonga.miuix.kmp", name = "miuix-blur-android", version.ref = "miuix" }
 miuix-navigation = { group = "top.yukonga.miuix.kmp", name = "miuix-nav-android", version.ref = "miuix" }
+
+# coui (ColorOS-styled component family; fork of miuix, Maven Central)
+coui-ui = { group = "io.github.suqi8.coui.kmp", name = "coui-ui-android", version.ref = "coui" }
+coui-preference = { group = "io.github.suqi8.coui.kmp", name = "coui-preference-android", version.ref = "coui" }
+coui-icons = { group = "io.github.suqi8.coui.kmp", name = "coui-icons-android", version.ref = "coui" }
 
 # okhttp
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp" }
