@@ -21,13 +21,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
-import com.rosan.installer.ui.page.main.installer.InstallerViewAction
-import com.rosan.installer.ui.page.main.installer.InstallerViewModel
 import com.rosan.installer.ui.page.coui.installer.components.AppInfoSlot
 import com.rosan.installer.ui.page.coui.installer.components.AppInfoState
 import com.rosan.installer.ui.page.coui.widgets.CouiErrorTextBlock
 import com.rosan.installer.ui.page.coui.widgets.CouiNavigationItemWidget
 import com.rosan.installer.ui.page.coui.widgets.CouiUninstallConfirmationDialog
+import com.rosan.installer.ui.page.main.installer.InstallerViewAction
+import com.rosan.installer.ui.page.main.installer.InstallerViewModel
 import com.rosan.installer.ui.theme.couiSheetCardColors
 import com.rosan.installer.ui.util.isGestureNavigation
 import com.rosan.installer.ui.util.rememberErrorSuggestions

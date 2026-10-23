@@ -19,10 +19,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
 import com.rosan.installer.core.device.model.Manufacturer
 import com.rosan.installer.core.env.DeviceConfig
-import com.rosan.installer.ui.page.main.installer.InstallerViewAction
-import com.rosan.installer.ui.page.main.installer.InstallerViewModel
 import com.rosan.installer.ui.page.coui.widgets.CouiInstallerTipCard
 import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
+import com.rosan.installer.ui.page.main.installer.InstallerViewAction
+import com.rosan.installer.ui.page.main.installer.InstallerViewModel
 import com.rosan.installer.ui.theme.couiSheetCardColors
 import com.rosan.installer.ui.util.isGestureNavigation
 import io.github.suqi8.coui.kmp.basic.Card

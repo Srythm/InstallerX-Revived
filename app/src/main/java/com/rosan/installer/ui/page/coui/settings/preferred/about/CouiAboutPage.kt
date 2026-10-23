@@ -82,21 +82,21 @@ import com.rosan.installer.ui.library.blend.ColorBlendToken
 import com.rosan.installer.ui.library.effect.BgEffectBackground
 import com.rosan.installer.ui.navigation.LocalNavigator
 import com.rosan.installer.ui.navigation.Route
+import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
+import com.rosan.installer.ui.page.coui.widgets.CouiNavigationItemWidget
+import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
+import com.rosan.installer.ui.page.coui.widgets.CouiUpdateDialog
+import com.rosan.installer.ui.page.coui.widgets.ErrorDisplaySheet
 import com.rosan.installer.ui.page.main.settings.preferred.about.AboutAction
 import com.rosan.installer.ui.page.main.settings.preferred.about.AboutEvent
 import com.rosan.installer.ui.page.main.settings.preferred.about.AboutState
 import com.rosan.installer.ui.page.main.settings.preferred.about.AboutViewModel
 import com.rosan.installer.ui.page.main.widget.util.LogEventCollector
-import com.rosan.installer.ui.page.coui.widgets.ErrorDisplaySheet
-import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
-import com.rosan.installer.ui.page.coui.widgets.CouiNavigationItemWidget
-import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
-import com.rosan.installer.ui.page.coui.widgets.CouiUpdateDialog
 import com.rosan.installer.ui.theme.InstallerTheme
 import com.rosan.installer.ui.theme.installerCouiBlurEffect
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
-import org.koin.androidx.compose.koinViewModel
 import io.github.suqi8.coui.kmp.basic.BasicComponent
+import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
 import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.CardDefaults
 import io.github.suqi8.coui.kmp.basic.DropdownArrowEndAction
@@ -104,7 +104,6 @@ import io.github.suqi8.coui.kmp.basic.DropdownDefaults
 import io.github.suqi8.coui.kmp.basic.DropdownImpl
 import io.github.suqi8.coui.kmp.basic.InfiniteProgressIndicator
 import io.github.suqi8.coui.kmp.basic.ListPopupColumn
-import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
 import io.github.suqi8.coui.kmp.basic.PopupPositionProvider
 import io.github.suqi8.coui.kmp.basic.Scaffold
 import io.github.suqi8.coui.kmp.basic.ScrollBehavior
@@ -116,6 +115,15 @@ import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.basic.VerticalScrollBar
 import io.github.suqi8.coui.kmp.basic.rememberScrollBarAdapter
+import io.github.suqi8.coui.kmp.interfaces.ExperimentalScrollBarApi
+import io.github.suqi8.coui.kmp.theme.COUITheme
+import io.github.suqi8.coui.kmp.theme.LocalDismissState
+import io.github.suqi8.coui.kmp.utils.overScrollVertical
+import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
+import io.github.suqi8.coui.kmp.window.WindowBottomSheet
+import io.github.suqi8.coui.kmp.window.WindowDialog
+import io.github.suqi8.coui.kmp.window.WindowListPopup
+import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.blur.BlendColorEntry
 import top.yukonga.miuix.kmp.blur.BlurBlendMode
 import top.yukonga.miuix.kmp.blur.BlurColors
@@ -123,14 +131,6 @@ import top.yukonga.miuix.kmp.blur.BlurDefaults
 import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.textureBlur
-import io.github.suqi8.coui.kmp.interfaces.ExperimentalScrollBarApi
-import io.github.suqi8.coui.kmp.theme.LocalDismissState
-import io.github.suqi8.coui.kmp.theme.COUITheme
-import io.github.suqi8.coui.kmp.utils.overScrollVertical
-import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
-import io.github.suqi8.coui.kmp.window.WindowBottomSheet
-import io.github.suqi8.coui.kmp.window.WindowDialog
-import io.github.suqi8.coui.kmp.window.WindowListPopup
 
 // Unified entry point
 @Composable

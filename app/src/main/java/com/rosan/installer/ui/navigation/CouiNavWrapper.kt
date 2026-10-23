@@ -20,16 +20,16 @@ import com.rosan.installer.domain.settings.model.preferences.ThemeState
 import com.rosan.installer.domain.settings.repository.ConfigRepository
 import com.rosan.installer.ui.icons.AppIcons
 import com.rosan.installer.ui.library.FloatingBottomBarMode
-import com.rosan.installer.ui.page.main.settings.SettingsSharedViewModel
 import com.rosan.installer.ui.page.coui.settings.SettingsCompactLayout
 import com.rosan.installer.ui.page.coui.settings.SettingsWideScreenLayout
+import com.rosan.installer.ui.page.main.settings.SettingsSharedViewModel
 import com.rosan.installer.ui.theme.LocalWindowLayoutInfo
 import com.rosan.installer.ui.theme.WindowLayoutType
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
-import kotlinx.coroutines.flow.map
-import org.koin.compose.koinInject
 import io.github.suqi8.coui.kmp.basic.NavigationItem
 import io.github.suqi8.coui.kmp.basic.SnackbarHostState
+import kotlinx.coroutines.flow.map
+import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 // Centralized complex layout logic to keep provider clean and readable

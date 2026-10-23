@@ -29,6 +29,7 @@ import com.rosan.installer.domain.settings.model.app.NamedPackage
 import com.rosan.installer.domain.settings.model.config.Authorizer
 import com.rosan.installer.domain.settings.model.config.InstallerMode
 import com.rosan.installer.ui.icons.AppIcons
+import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
 import com.rosan.installer.ui.page.main.installer.InstallerViewAction
 import com.rosan.installer.ui.page.main.installer.InstallerViewAction.SetInstaller
 import com.rosan.installer.ui.page.main.installer.InstallerViewAction.SetTargetUser
@@ -37,14 +38,13 @@ import com.rosan.installer.ui.page.main.installer.components.rememberInstallOpti
 import com.rosan.installer.ui.page.main.installer.dialog.ExtendedMenuEntity
 import com.rosan.installer.ui.page.main.installer.dialog.ExtendedMenuItemEntity
 import com.rosan.installer.ui.page.main.installer.dialog.inner.InstallExtendedMenuAction
-import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
 import com.rosan.installer.ui.theme.couiSheetCardColors
 import com.rosan.installer.ui.util.isGestureNavigation
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
 import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.DropdownItem
 import io.github.suqi8.coui.kmp.basic.TextButton
-import top.yukonga.coui.kmp.preference.WindowSpinnerPreference
+import io.github.suqi8.coui.kmp.preference.WindowSpinnerPreference
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
 

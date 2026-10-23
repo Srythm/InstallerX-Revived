@@ -42,24 +42,21 @@ import com.rosan.installer.R
 import com.rosan.installer.core.env.AppConfig
 import com.rosan.installer.domain.settings.model.config.BiometricAuthMode
 import com.rosan.installer.ui.navigation.LocalNavigator
-import com.rosan.installer.ui.page.main.settings.config.edit.EditViewAction
-import com.rosan.installer.ui.page.main.settings.config.edit.EditViewEvent
-import com.rosan.installer.ui.page.main.settings.config.edit.EditViewModel
 import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
 import com.rosan.installer.ui.page.coui.widgets.CouiSettingsTipCard
 import com.rosan.installer.ui.page.coui.widgets.CouiUnsavedChangesDialog
+import com.rosan.installer.ui.page.main.settings.config.edit.EditViewAction
+import com.rosan.installer.ui.page.main.settings.config.edit.EditViewEvent
+import com.rosan.installer.ui.page.main.settings.config.edit.EditViewModel
 import com.rosan.installer.ui.theme.getCouiAppBarColor
 import com.rosan.installer.ui.theme.installerCouiBlurEffect
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
 import com.rosan.installer.ui.util.isNoneActive
-import kotlinx.coroutines.flow.collectLatest
-import org.koin.androidx.compose.koinViewModel
-import org.koin.core.parameter.parametersOf
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
+import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
 import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.IconButton
-import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
 import io.github.suqi8.coui.kmp.basic.Scaffold
 import io.github.suqi8.coui.kmp.basic.SmallTitle
 import io.github.suqi8.coui.kmp.basic.SnackbarHost
@@ -67,7 +64,6 @@ import io.github.suqi8.coui.kmp.basic.SnackbarHostState
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 import io.github.suqi8.coui.kmp.icon.COUIIcons
 import io.github.suqi8.coui.kmp.icon.extended.Close
 import io.github.suqi8.coui.kmp.icon.extended.Ok
@@ -75,6 +71,10 @@ import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
 import io.github.suqi8.coui.kmp.window.WindowDialog
+import kotlinx.coroutines.flow.collectLatest
+import org.koin.androidx.compose.koinViewModel
+import org.koin.core.parameter.parametersOf
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 @Composable
 fun CouiEditPage(id: Long? = null, viewModel: EditViewModel = koinViewModel { parametersOf(id) }, useBlur: Boolean) {

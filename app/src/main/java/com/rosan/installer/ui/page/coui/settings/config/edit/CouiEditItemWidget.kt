@@ -37,22 +37,22 @@ import com.rosan.installer.domain.settings.model.config.InstallerMode
 import com.rosan.installer.domain.settings.model.config.PackageSource
 import com.rosan.installer.domain.settings.model.config.ToastMode
 import com.rosan.installer.ui.icons.AppIcons
+import com.rosan.installer.ui.page.coui.widgets.CouiHintTextField
+import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
 import com.rosan.installer.ui.page.main.settings.config.edit.EditViewAction
 import com.rosan.installer.ui.page.main.settings.config.edit.EditViewState
 import com.rosan.installer.ui.page.main.settings.config.edit.dhizukuAwareDescription
-import com.rosan.installer.ui.page.coui.widgets.CouiHintTextField
-import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
 import com.rosan.installer.ui.util.isSystemPackageInstallerActive
-import org.koin.compose.koinInject
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
 import io.github.suqi8.coui.kmp.basic.DropdownItem
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.basic.TextField
 import io.github.suqi8.coui.kmp.basic.TextFieldDefaults
-import top.yukonga.coui.kmp.preference.WindowSpinnerPreference
+import io.github.suqi8.coui.kmp.preference.WindowSpinnerPreference
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.window.WindowDialog
+import org.koin.compose.koinInject
 
 @Composable
 fun CouiDataNameWidget(

@@ -39,27 +39,27 @@ import com.rosan.installer.domain.engine.model.install.UninstallFlags
 import com.rosan.installer.ui.activity.UninstallerActivity
 import com.rosan.installer.ui.icons.AppIcons
 import com.rosan.installer.ui.navigation.LocalNavigator
-import com.rosan.installer.ui.page.main.settings.preferred.uninstaller.UninstallerSettingsAction
-import com.rosan.installer.ui.page.main.settings.preferred.uninstaller.UninstallerSettingsEvent
-import com.rosan.installer.ui.page.main.settings.preferred.uninstaller.UninstallerSettingsViewModel
 import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
 import com.rosan.installer.ui.page.coui.widgets.CouiNavigationItemWidget
 import com.rosan.installer.ui.page.coui.widgets.CouiSettingsTipCard
 import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
 import com.rosan.installer.ui.page.coui.widgets.CouiUninstallPackageDialog
+import com.rosan.installer.ui.page.main.settings.preferred.uninstaller.UninstallerSettingsAction
+import com.rosan.installer.ui.page.main.settings.preferred.uninstaller.UninstallerSettingsEvent
+import com.rosan.installer.ui.page.main.settings.preferred.uninstaller.UninstallerSettingsViewModel
 import com.rosan.installer.ui.theme.getCouiAppBarColor
 import com.rosan.installer.ui.theme.installerCouiBlurEffect
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
 import com.rosan.installer.util.toast
-import org.koin.androidx.compose.koinViewModel
-import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
+import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.Scaffold
 import io.github.suqi8.coui.kmp.basic.SmallTitle
 import io.github.suqi8.coui.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
+import org.koin.androidx.compose.koinViewModel
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 @Composable
 fun CouiUninstallerGlobalSettingsPage(useBlur: Boolean, viewModel: UninstallerSettingsViewModel = koinViewModel()) {

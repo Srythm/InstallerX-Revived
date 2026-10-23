@@ -35,13 +35,13 @@ import com.rosan.installer.domain.engine.model.install.SessionMode
 import com.rosan.installer.domain.engine.model.packageinfo.AppEntity
 import com.rosan.installer.domain.engine.model.packageinfo.PackageAnalysisResult
 import com.rosan.installer.domain.engine.model.source.DataType
-import com.rosan.installer.ui.page.main.installer.InstallerViewAction
-import com.rosan.installer.ui.page.main.installer.InstallerViewModel
 import com.rosan.installer.ui.page.coui.widgets.CouiCheckboxWidget
 import com.rosan.installer.ui.page.coui.widgets.CouiInstallerTipCard
 import com.rosan.installer.ui.page.coui.widgets.CouiMultiApkCheckboxWidget
 import com.rosan.installer.ui.page.coui.widgets.CouiNavigationItemWidget
 import com.rosan.installer.ui.page.coui.widgets.WarningCard
+import com.rosan.installer.ui.page.main.installer.InstallerViewAction
+import com.rosan.installer.ui.page.main.installer.InstallerViewModel
 import com.rosan.installer.ui.theme.InstallerTheme
 import com.rosan.installer.ui.theme.couiSheetCardColors
 import com.rosan.installer.ui.util.getSupportSubtitle

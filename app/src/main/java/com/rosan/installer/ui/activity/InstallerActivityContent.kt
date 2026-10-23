@@ -14,8 +14,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.domain.session.repository.InstallerSessionRepository
 import com.rosan.installer.domain.settings.model.preferences.ThemeState
 import com.rosan.installer.domain.settings.provider.ThemeStateProvider
-import com.rosan.installer.ui.page.main.installer.InstallerPage
 import com.rosan.installer.ui.page.coui.installer.CouiInstallerPage
+import com.rosan.installer.ui.page.main.installer.InstallerPage
 import com.rosan.installer.ui.theme.InstallerTheme
 import com.rosan.installer.ui.theme.isPhoneDevice
 import com.rosan.installer.ui.util.requestPortraitOrientationOnPhoneSafely

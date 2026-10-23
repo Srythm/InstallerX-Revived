@@ -27,9 +27,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
 import com.rosan.installer.domain.session.model.ConfirmationRequestType
+import com.rosan.installer.ui.page.coui.widgets.CouiInstallerTipCard
 import com.rosan.installer.ui.page.main.installer.InstallerStage
 import com.rosan.installer.ui.page.main.installer.InstallerViewModel
-import com.rosan.installer.ui.page.coui.widgets.CouiInstallerTipCard
 import com.rosan.installer.ui.util.isGestureNavigation
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
 import io.github.suqi8.coui.kmp.basic.Text

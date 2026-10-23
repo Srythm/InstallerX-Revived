@@ -27,11 +27,11 @@ import com.rosan.installer.ui.theme.InstallerTheme
 import com.rosan.installer.ui.theme.LocalWindowLayoutInfo
 import com.rosan.installer.ui.theme.rememberWindowLayoutInfo
 import com.rosan.installer.util.toast
+import io.github.suqi8.coui.kmp.theme.COUITheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import io.github.suqi8.coui.kmp.theme.COUITheme
 
 class SettingsActivity :
     ComponentActivity(),

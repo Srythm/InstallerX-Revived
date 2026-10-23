@@ -35,30 +35,30 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
 import com.rosan.installer.domain.settings.model.config.Authorizer
 import com.rosan.installer.ui.navigation.LocalNavigator
-import com.rosan.installer.ui.page.main.settings.home.HomePageViewAction
-import com.rosan.installer.ui.page.main.settings.home.HomePageViewEvent
-import com.rosan.installer.ui.page.main.settings.home.HomePageViewModel
-import com.rosan.installer.ui.page.main.settings.home.delayDefaultInstallerProgressIfNeeded
-import com.rosan.installer.ui.page.coui.widgets.ErrorDisplaySheet
 import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
 import com.rosan.installer.ui.page.coui.widgets.CouiBlockingLoadingDialog
 import com.rosan.installer.ui.page.coui.widgets.CouiSettingsTipCard
 import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
+import com.rosan.installer.ui.page.coui.widgets.ErrorDisplaySheet
+import com.rosan.installer.ui.page.main.settings.home.HomePageViewAction
+import com.rosan.installer.ui.page.main.settings.home.HomePageViewEvent
+import com.rosan.installer.ui.page.main.settings.home.HomePageViewModel
+import com.rosan.installer.ui.page.main.settings.home.delayDefaultInstallerProgressIfNeeded
 import com.rosan.installer.ui.theme.getCouiAppBarColor
 import com.rosan.installer.ui.theme.installerCouiBlurEffect
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
-import org.koin.androidx.compose.koinViewModel
 import io.github.suqi8.coui.kmp.basic.BasicComponent
 import io.github.suqi8.coui.kmp.basic.BasicComponentColors
-import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
+import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.Scaffold
 import io.github.suqi8.coui.kmp.basic.SmallTitle
 import io.github.suqi8.coui.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
+import org.koin.androidx.compose.koinViewModel
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 @Composable
 fun CouiDefaultInstallerPage(useBlur: Boolean, viewModel: HomePageViewModel = koinViewModel()) {

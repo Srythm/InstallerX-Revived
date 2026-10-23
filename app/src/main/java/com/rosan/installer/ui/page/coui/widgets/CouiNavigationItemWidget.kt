@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import io.github.suqi8.coui.kmp.basic.BasicComponentDefaults
-import top.yukonga.coui.kmp.preference.ArrowPreference
+import io.github.suqi8.coui.kmp.preference.ArrowPreference
 
 /**
  * A setting pkg that navigates to a secondary page, built upon BaseWidget.

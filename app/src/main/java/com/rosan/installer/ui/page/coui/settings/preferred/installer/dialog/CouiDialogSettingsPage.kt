@@ -26,24 +26,24 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
 import com.rosan.installer.ui.navigation.LocalNavigator
-import com.rosan.installer.ui.page.main.settings.preferred.installer.dialog.DialogSettingsAction
-import com.rosan.installer.ui.page.main.settings.preferred.installer.dialog.DialogSettingsViewModel
 import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
 import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
+import com.rosan.installer.ui.page.main.settings.preferred.installer.dialog.DialogSettingsAction
+import com.rosan.installer.ui.page.main.settings.preferred.installer.dialog.DialogSettingsViewModel
 import com.rosan.installer.ui.theme.getCouiAppBarColor
 import com.rosan.installer.ui.theme.installerCouiBlurEffect
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
-import org.koin.androidx.compose.koinViewModel
+import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
 import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.DropdownItem
-import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
 import io.github.suqi8.coui.kmp.basic.Scaffold
 import io.github.suqi8.coui.kmp.basic.SmallTitle
 import io.github.suqi8.coui.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.coui.kmp.preference.WindowSpinnerPreference
+import io.github.suqi8.coui.kmp.preference.WindowSpinnerPreference
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
+import org.koin.androidx.compose.koinViewModel
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 @Composable
 fun CouiDialogSettingsPage(useBlur: Boolean, viewModel: DialogSettingsViewModel = koinViewModel()) {

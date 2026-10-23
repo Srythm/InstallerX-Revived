@@ -62,12 +62,12 @@ import io.github.suqi8.coui.kmp.basic.Scaffold
 import io.github.suqi8.coui.kmp.basic.SnackbarHost
 import io.github.suqi8.coui.kmp.basic.SnackbarHostState
 import io.github.suqi8.coui.kmp.basic.Text
+import io.github.suqi8.coui.kmp.theme.COUITheme
 import top.yukonga.miuix.kmp.blur.BlendColorEntry
 import top.yukonga.miuix.kmp.blur.BlurColors
 import top.yukonga.miuix.kmp.blur.LayerBackdrop as CouiLayerBackdrop
 import top.yukonga.miuix.kmp.blur.layerBackdrop as couiLayerBackdrop
 import top.yukonga.miuix.kmp.blur.textureBlur
-import io.github.suqi8.coui.kmp.theme.COUITheme
 
 /**
  * Reusable Floating Bottom Bar

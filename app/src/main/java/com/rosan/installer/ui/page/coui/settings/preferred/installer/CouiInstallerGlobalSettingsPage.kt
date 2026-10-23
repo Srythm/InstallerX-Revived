@@ -65,35 +65,35 @@ import com.rosan.installer.domain.settings.model.config.BiometricAuthMode
 import com.rosan.installer.ui.icons.AppIcons
 import com.rosan.installer.ui.navigation.LocalNavigator
 import com.rosan.installer.ui.navigation.Route
-import com.rosan.installer.ui.page.main.settings.preferred.installer.InstallerSettingsAction
-import com.rosan.installer.ui.page.main.settings.preferred.installer.InstallerSettingsViewModel
 import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
 import com.rosan.installer.ui.page.coui.widgets.CouiNavigationItemWidget
 import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
+import com.rosan.installer.ui.page.main.settings.preferred.installer.InstallerSettingsAction
+import com.rosan.installer.ui.page.main.settings.preferred.installer.InstallerSettingsViewModel
 import com.rosan.installer.ui.theme.getCouiAppBarColor
 import com.rosan.installer.ui.theme.installerCouiBlurEffect
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
-import org.koin.androidx.compose.koinViewModel
 import io.github.suqi8.coui.kmp.basic.BasicComponent
 import io.github.suqi8.coui.kmp.basic.Button
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
+import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
 import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.DropdownItem
 import io.github.suqi8.coui.kmp.basic.HorizontalDivider
 import io.github.suqi8.coui.kmp.basic.Icon
-import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
 import io.github.suqi8.coui.kmp.basic.Scaffold
 import io.github.suqi8.coui.kmp.basic.SmallTitle
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.basic.TextField
 import io.github.suqi8.coui.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.coui.kmp.preference.WindowSpinnerPreference
+import io.github.suqi8.coui.kmp.preference.WindowSpinnerPreference
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
 import io.github.suqi8.coui.kmp.window.WindowDialog
+import org.koin.androidx.compose.koinViewModel
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 @SuppressLint("LocalContextGetResourceValueCall")
 @Composable

@@ -48,35 +48,35 @@ import com.rosan.installer.domain.settings.model.config.Authorizer
 import com.rosan.installer.domain.settings.model.preferences.RootMode
 import com.rosan.installer.domain.settings.model.preferences.SmartAuthorizerCandidate
 import com.rosan.installer.ui.navigation.LocalNavigator
-import com.rosan.installer.ui.page.main.settings.preferred.lab.LabSettingsAction
-import com.rosan.installer.ui.page.main.settings.preferred.lab.LabSettingsViewModel
 import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
 import com.rosan.installer.ui.page.coui.widgets.CouiDraggableList
 import com.rosan.installer.ui.page.coui.widgets.CouiInstallerTipCard
 import com.rosan.installer.ui.page.coui.widgets.CouiRootImplementationDialog
 import com.rosan.installer.ui.page.coui.widgets.CouiSettingsTipCard
 import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
+import com.rosan.installer.ui.page.main.settings.preferred.lab.LabSettingsAction
+import com.rosan.installer.ui.page.main.settings.preferred.lab.LabSettingsViewModel
 import com.rosan.installer.ui.theme.getCouiAppBarColor
 import com.rosan.installer.ui.theme.installerCouiBlurEffect
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
-import org.koin.androidx.compose.koinViewModel
-import org.koin.compose.koinInject
 import io.github.suqi8.coui.kmp.basic.BasicComponent
+import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
 import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.CardDefaults
 import io.github.suqi8.coui.kmp.basic.Checkbox
 import io.github.suqi8.coui.kmp.basic.CheckboxDefaults
 import io.github.suqi8.coui.kmp.basic.DropdownItem
-import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
 import io.github.suqi8.coui.kmp.basic.Scaffold
 import io.github.suqi8.coui.kmp.basic.SmallTitle
 import io.github.suqi8.coui.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.coui.kmp.preference.WindowSpinnerPreference
+import io.github.suqi8.coui.kmp.preference.WindowSpinnerPreference
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
 import io.github.suqi8.coui.kmp.window.WindowBottomSheet
+import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 @Composable
 fun CouiLabPage(useBlur: Boolean, viewModel: LabSettingsViewModel = koinViewModel()) {

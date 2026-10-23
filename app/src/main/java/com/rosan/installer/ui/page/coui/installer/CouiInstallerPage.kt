@@ -40,11 +40,6 @@ import com.rosan.installer.domain.session.model.ConfirmationRequestType
 import com.rosan.installer.domain.session.repository.InstallerSessionRepository
 import com.rosan.installer.domain.settings.model.preferences.RootMode
 import com.rosan.installer.ui.icons.AppCOUIIcons
-import com.rosan.installer.ui.page.main.installer.InstallerStage
-import com.rosan.installer.ui.page.main.installer.InstallerViewAction
-import com.rosan.installer.ui.page.main.installer.InstallerViewModel
-import com.rosan.installer.ui.page.main.installer.rememberUnknownSourcePermissionActionVisible
-import com.rosan.installer.ui.page.main.widget.util.InstallerEventCollector
 import com.rosan.installer.ui.page.coui.installer.components.rememberAppInfoState
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.InstallChoiceContent
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.InstallCompletedContent
@@ -67,18 +62,21 @@ import com.rosan.installer.ui.page.coui.installer.sheetcontent.UninstallPrepareC
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.UninstallSuccessContent
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.UninstallingContent
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.unarchiveErrorTitle
-import com.rosan.installer.ui.page.coui.widgets.DropdownItem
 import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
+import com.rosan.installer.ui.page.coui.widgets.DropdownItem
+import com.rosan.installer.ui.page.main.installer.InstallerStage
+import com.rosan.installer.ui.page.main.installer.InstallerViewAction
+import com.rosan.installer.ui.page.main.installer.InstallerViewModel
+import com.rosan.installer.ui.page.main.installer.rememberUnknownSourcePermissionActionVisible
+import com.rosan.installer.ui.page.main.widget.util.InstallerEventCollector
 import com.rosan.installer.ui.theme.InstallerCOUITheme
 import com.rosan.installer.ui.theme.InstallerTheme
 import com.rosan.installer.ui.theme.LocalInstallerColorScheme
-import com.rosan.installer.ui.theme.material.dynamicColorScheme
 import com.rosan.installer.ui.theme.couiSheetColorDark
 import com.rosan.installer.ui.theme.couiSheetColorLight
+import com.rosan.installer.ui.theme.material.dynamicColorScheme
 import com.rosan.installer.ui.util.WindowBlurEffect
 import com.rosan.installer.ui.util.getSupportTitle
-import org.koin.androidx.compose.koinViewModel
-import org.koin.core.parameter.parametersOf
 import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.IconButton
 import io.github.suqi8.coui.kmp.basic.ListPopupColumn
@@ -88,6 +86,8 @@ import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.theme.COUITheme.isDynamicColor
 import io.github.suqi8.coui.kmp.window.WindowBottomSheet
 import io.github.suqi8.coui.kmp.window.WindowListPopup
+import org.koin.androidx.compose.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @SuppressLint("UnusedContentLambdaTargetStateParameter")
 @Composable

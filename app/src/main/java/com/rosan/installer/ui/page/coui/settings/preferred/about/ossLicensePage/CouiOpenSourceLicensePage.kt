@@ -27,9 +27,9 @@ import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
 import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
 import io.github.suqi8.coui.kmp.basic.Scaffold
 import io.github.suqi8.coui.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 @Composable
 fun CouiOpenSourceLicensePage(useBlur: Boolean) {

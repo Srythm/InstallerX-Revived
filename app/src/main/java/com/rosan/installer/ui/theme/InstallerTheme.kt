@@ -28,8 +28,8 @@ import com.rosan.installer.domain.settings.model.preferences.theme.ThemeColorSpe
 import com.rosan.installer.domain.settings.model.preferences.theme.ThemeMode
 import com.rosan.installer.ui.theme.material.animateAsState
 import com.rosan.installer.ui.theme.material.dynamicColorScheme
-import io.github.suqi8.coui.kmp.theme.ColorSchemeMode
 import io.github.suqi8.coui.kmp.theme.COUITheme
+import io.github.suqi8.coui.kmp.theme.ColorSchemeMode
 import io.github.suqi8.coui.kmp.theme.ThemeColorSpec as CouiColorSpec
 import io.github.suqi8.coui.kmp.theme.ThemeController
 import io.github.suqi8.coui.kmp.theme.ThemePaletteStyle as CouiPaletteStyle

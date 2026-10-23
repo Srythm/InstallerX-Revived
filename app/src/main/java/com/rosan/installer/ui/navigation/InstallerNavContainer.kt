@@ -17,6 +17,20 @@ import androidx.navigationevent.compose.rememberNavigationEventState
 import com.rosan.installer.domain.settings.model.preferences.PredictiveBackAnimation
 import com.rosan.installer.domain.settings.model.preferences.ThemeState
 import com.rosan.installer.ui.animation.predictiveback.installerNavTransition
+import com.rosan.installer.ui.page.coui.settings.config.apply.CouiApplyPage
+import com.rosan.installer.ui.page.coui.settings.config.edit.CouiEditPage
+import com.rosan.installer.ui.page.coui.settings.home.installer.CouiDefaultInstallerPage
+import com.rosan.installer.ui.page.coui.settings.home.priv.CouiPrivPage
+import com.rosan.installer.ui.page.coui.settings.preferred.about.CouiAboutPage
+import com.rosan.installer.ui.page.coui.settings.preferred.about.ossLicensePage.CouiOpenSourceLicensePage
+import com.rosan.installer.ui.page.coui.settings.preferred.installer.CouiInstallerGlobalSettingsPage
+import com.rosan.installer.ui.page.coui.settings.preferred.installer.authorizer.CouiAuthorizerCustPage
+import com.rosan.installer.ui.page.coui.settings.preferred.installer.dialog.CouiDialogSettingsPage
+import com.rosan.installer.ui.page.coui.settings.preferred.installer.notification.CouiNotificationSettingsPage
+import com.rosan.installer.ui.page.coui.settings.preferred.lab.CouiLabPage
+import com.rosan.installer.ui.page.coui.settings.preferred.network.CouiNetworkPage
+import com.rosan.installer.ui.page.coui.settings.preferred.theme.COUIThemeSettingsPage
+import com.rosan.installer.ui.page.coui.settings.preferred.uninstaller.CouiUninstallerGlobalSettingsPage
 import com.rosan.installer.ui.page.main.settings.SettingsSharedViewModel
 import com.rosan.installer.ui.page.main.settings.config.apply.ApplyPage
 import com.rosan.installer.ui.page.main.settings.config.edit.EditPage
@@ -32,28 +46,14 @@ import com.rosan.installer.ui.page.main.settings.preferred.lab.LabPage
 import com.rosan.installer.ui.page.main.settings.preferred.network.NetworkPage
 import com.rosan.installer.ui.page.main.settings.preferred.theme.ThemeSettingsPage
 import com.rosan.installer.ui.page.main.settings.preferred.uninstaller.UninstallerGlobalSettingsPage
-import com.rosan.installer.ui.page.coui.settings.config.apply.CouiApplyPage
-import com.rosan.installer.ui.page.coui.settings.config.edit.CouiEditPage
-import com.rosan.installer.ui.page.coui.settings.home.installer.CouiDefaultInstallerPage
-import com.rosan.installer.ui.page.coui.settings.home.priv.CouiPrivPage
-import com.rosan.installer.ui.page.coui.settings.preferred.about.CouiAboutPage
-import com.rosan.installer.ui.page.coui.settings.preferred.about.ossLicensePage.CouiOpenSourceLicensePage
-import com.rosan.installer.ui.page.coui.settings.preferred.installer.CouiInstallerGlobalSettingsPage
-import com.rosan.installer.ui.page.coui.settings.preferred.installer.authorizer.CouiAuthorizerCustPage
-import com.rosan.installer.ui.page.coui.settings.preferred.installer.dialog.CouiDialogSettingsPage
-import com.rosan.installer.ui.page.coui.settings.preferred.installer.notification.CouiNotificationSettingsPage
-import com.rosan.installer.ui.page.coui.settings.preferred.lab.CouiLabPage
-import com.rosan.installer.ui.page.coui.settings.preferred.network.CouiNetworkPage
-import com.rosan.installer.ui.page.coui.settings.preferred.theme.COUIThemeSettingsPage
-import com.rosan.installer.ui.page.coui.settings.preferred.uninstaller.CouiUninstallerGlobalSettingsPage
 import com.rosan.installer.ui.util.rememberDeviceCornerRadius
+import io.github.suqi8.coui.kmp.theme.COUITheme
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.nav.core.NavCornerClipMode
 import top.yukonga.miuix.kmp.nav.core.NavDisplay
 import top.yukonga.miuix.kmp.nav.core.NavDisplayEffects
 import top.yukonga.miuix.kmp.nav.core.rememberNavBackStack
 import top.yukonga.miuix.kmp.nav.transition.NavSwipeDirection
-import io.github.suqi8.coui.kmp.theme.COUITheme
 
 @Composable
 fun InstallerNavContainer(uiState: ThemeState) {

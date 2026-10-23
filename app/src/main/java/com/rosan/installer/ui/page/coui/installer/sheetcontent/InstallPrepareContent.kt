@@ -55,24 +55,20 @@ import com.rosan.installer.domain.engine.model.source.DataType
 import com.rosan.installer.domain.engine.usecase.AnalyzeInstallStateUseCase
 import com.rosan.installer.domain.settings.model.config.Authorizer
 import com.rosan.installer.ui.icons.AppIcons
-import com.rosan.installer.ui.page.main.installer.InstallerViewAction
-import com.rosan.installer.ui.page.main.installer.InstallerViewModel
-import com.rosan.installer.ui.page.main.installer.mapper.InstallNoticeResources
-import com.rosan.installer.ui.page.main.installer.mapper.InstallStateUiMapper
 import com.rosan.installer.ui.page.coui.installer.components.AdaptiveInfoRow
 import com.rosan.installer.ui.page.coui.installer.components.AppInfoSlot
 import com.rosan.installer.ui.page.coui.installer.components.AppInfoState
 import com.rosan.installer.ui.page.coui.widgets.CouiInfoChipGroup
 import com.rosan.installer.ui.page.coui.widgets.CouiInstallerTipCard
 import com.rosan.installer.ui.page.coui.widgets.CouiNavigationItemWidget
+import com.rosan.installer.ui.page.main.installer.InstallerViewAction
+import com.rosan.installer.ui.page.main.installer.InstallerViewModel
+import com.rosan.installer.ui.page.main.installer.mapper.InstallNoticeResources
+import com.rosan.installer.ui.page.main.installer.mapper.InstallStateUiMapper
 import com.rosan.installer.ui.theme.couiSheetCardColors
 import com.rosan.installer.ui.util.formatSize
 import com.rosan.installer.ui.util.isGestureNavigation
 import com.rosan.installer.util.toast
-import kotlin.time.Duration.Companion.milliseconds
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import org.koin.compose.koinInject
 import io.github.suqi8.coui.kmp.basic.BasicComponent
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
 import io.github.suqi8.coui.kmp.basic.Card
@@ -81,6 +77,10 @@ import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.theme.COUITheme.isDynamicColor
+import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 
 @Composable
 fun InstallPrepareContent(
