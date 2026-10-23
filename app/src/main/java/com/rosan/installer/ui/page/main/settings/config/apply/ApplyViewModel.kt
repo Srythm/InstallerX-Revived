@@ -193,9 +193,13 @@ class ApplyViewModel(
     fun dispatch(action: ApplyViewAction) {
         when (action) {
             ApplyViewAction.LoadApps -> loadApps()
+
             ApplyViewAction.LoadAppEntities -> collectAppEntities()
+
             is ApplyViewAction.LoadIcon -> loadAppIcon(action.packageName)
+
             is ApplyViewAction.ApplyPackageName -> applyPackageName(action.packageName, action.applied)
+
             is ApplyViewAction.Order -> viewModelScope.launch { updateSetting(StringSetting.ApplyOrderType, action.type.name) }
 
             is ApplyViewAction.OrderInReverse -> viewModelScope.launch {

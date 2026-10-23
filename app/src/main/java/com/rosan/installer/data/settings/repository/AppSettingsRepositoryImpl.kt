@@ -278,9 +278,7 @@ class AppSettingsRepositoryImpl(
         BooleanSetting.DialogDisableNotificationOnDismiss -> AppDataStore.DIALOG_DISABLE_NOTIFICATION_ON_DISMISS
         BooleanSetting.DialogShowOppoSpecial -> AppDataStore.DIALOG_SHOW_OPPO_SPECIAL
         BooleanSetting.CheckAppSignature -> AppDataStore.CHECK_APP_SIGNATURE
-
         BooleanSetting.CheckSourceStamp -> AppDataStore.CHECK_SOURCE_STAMP
-
         BooleanSetting.CheckSplitPackageSignatures -> AppDataStore.CHECK_SPLIT_PACKAGE_SIGNATURES
         BooleanSetting.ShowSignatureInfoOnMatch -> AppDataStore.SHOW_SIGNATURE_INFO_ON_MATCH
         BooleanSetting.ShowSignatureDetails -> AppDataStore.SHOW_SIGNATURE_DETAILS
@@ -296,11 +294,8 @@ class AppSettingsRepositoryImpl(
         BooleanSetting.LabShowInstallInitiator -> AppDataStore.LAB_SHOW_INSTALL_INITIATOR
         BooleanSetting.LabInstallWithoutUserAction -> AppDataStore.LAB_INSTALL_WITHOUT_USER_ACTION
         BooleanSetting.LabRespectPlatformInstallPolicy -> AppDataStore.LAB_RESPECT_PLATFORM_INSTALL_POLICY
-
         BooleanSetting.LabEnableAbiOverride -> AppDataStore.LAB_ENABLE_ABI_OVERRIDE
-
         BooleanSetting.LabTryDifferentArchitecture -> AppDataStore.LAB_TRY_DIFFERENT_ARCHITECTURE
-
         BooleanSetting.DetectXposedModule -> AppDataStore.DETECT_XPOSED_MODULE
         BooleanSetting.QuickOpenLSPosed -> AppDataStore.QUICK_OPEN_LSPOSED
         BooleanSetting.EnableFileLogging -> AppDataStore.ENABLE_FILE_LOGGING
