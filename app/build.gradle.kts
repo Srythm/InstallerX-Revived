@@ -257,7 +257,6 @@ dependencies {
 
     // coui: the ColorOS-styled component family (second UI family)
     implementation(libs.coui.ui)
-    implementation(libs.coui.blur)
     implementation(libs.coui.preference)
     implementation(libs.coui.icons)
 

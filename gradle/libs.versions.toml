@@ -138,7 +138,6 @@ miuix-navigation = { group = "top.yukonga.miuix.kmp", name = "miuix-nav-android"
 
 # coui (ColorOS-styled component family; fork of miuix, Maven Central)
 coui-ui = { group = "io.github.suqi8.coui.kmp", name = "coui-ui-android", version.ref = "coui" }
-coui-blur = { group = "io.github.suqi8.coui.kmp", name = "coui-blur-android", version.ref = "coui" }
 coui-preference = { group = "io.github.suqi8.coui.kmp", name = "coui-preference-android", version.ref = "coui" }
 coui-icons = { group = "io.github.suqi8.coui.kmp", name = "coui-icons-android", version.ref = "coui" }
 

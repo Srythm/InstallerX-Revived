@@ -28,14 +28,14 @@ import androidx.compose.ui.unit.dp
 import com.rosan.installer.ui.icons.AppCOUIIcons
 import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.Text
-import io.github.suqi8.coui.kmp.blur.Backdrop
-import io.github.suqi8.coui.kmp.blur.colorControls
-import io.github.suqi8.coui.kmp.blur.drawBackdrop
-import io.github.suqi8.coui.kmp.blur.highlight.Highlight
-import io.github.suqi8.coui.kmp.blur.layerBackdrop
-import io.github.suqi8.coui.kmp.blur.rememberLayerBackdrop
-import io.github.suqi8.coui.kmp.shader.isRuntimeShaderSupported
 import io.github.suqi8.coui.kmp.theme.COUITheme
+import top.yukonga.miuix.kmp.blur.Backdrop
+import top.yukonga.miuix.kmp.blur.colorControls
+import top.yukonga.miuix.kmp.blur.drawBackdrop
+import top.yukonga.miuix.kmp.blur.highlight.Highlight
+import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * Height of the bottom action area.
