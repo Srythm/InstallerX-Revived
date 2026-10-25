@@ -28,6 +28,13 @@ import androidx.compose.ui.unit.dp
 import com.rosan.installer.ui.icons.AppCOUIIcons
 import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.Text
+import io.github.suqi8.coui.kmp.blur.Backdrop
+import io.github.suqi8.coui.kmp.blur.colorControls
+import io.github.suqi8.coui.kmp.blur.drawBackdrop
+import io.github.suqi8.coui.kmp.blur.highlight.Highlight
+import io.github.suqi8.coui.kmp.blur.layerBackdrop
+import io.github.suqi8.coui.kmp.blur.rememberLayerBackdrop
+import io.github.suqi8.coui.kmp.shader.isRuntimeShaderSupported
 import io.github.suqi8.coui.kmp.theme.COUITheme
 
 /**
@@ -71,34 +78,50 @@ fun CouiPositionFullScreen(
     bottomBar: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(
+    // The chrome glass has nothing to refract against a flat page colour, so the
+    // layer is seeded with the surface colour before the content is captured.
+    val surfaceColor = COUITheme.colorScheme.surface
+    val backdrop = rememberLayerBackdrop {
+        drawRect(surfaceColor)
+        drawContent()
+    }
+    val glassBackdrop = if (isRuntimeShaderSupported()) backdrop else null
+
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(COUITheme.colorScheme.surface)
-            .windowInsetsPadding(WindowInsets.systemBars),
+            .layerBackdrop(backdrop),
     ) {
-        CouiFullScreenTopBar(
-            title = title,
-            onBack = onBack,
-            onMore = onMore,
-        )
-
-        header?.invoke()
-
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            content = content,
-        )
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.systemBars),
+        ) {
+            CouiFullScreenTopBar(
+                title = title,
+                onBack = onBack,
+                onMore = onMore,
+                backdrop = glassBackdrop,
+            )
 
-        if (bottomBar != null) {
-            Box(
+            header?.invoke()
+
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(FullScreenBottomBarHeight),
-            ) {
-                bottomBar()
+                    .weight(1f),
+                content = content,
+            )
+
+            if (bottomBar != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(FullScreenBottomBarHeight),
+                ) {
+                    bottomBar()
+                }
             }
         }
     }
@@ -109,6 +132,7 @@ private fun CouiFullScreenTopBar(
     title: String,
     onBack: (() -> Unit)?,
     onMore: (() -> Unit)?,
+    backdrop: Backdrop?,
 ) {
     Box(
         modifier = Modifier
@@ -122,6 +146,7 @@ private fun CouiFullScreenTopBar(
             enabled = onBack != null,
             onClick = { onBack?.invoke() },
             modifier = Modifier.align(Alignment.CenterStart),
+            backdrop = backdrop,
         )
 
         Text(
@@ -142,6 +167,7 @@ private fun CouiFullScreenTopBar(
                 enabled = true,
                 onClick = onMore,
                 modifier = Modifier.align(Alignment.CenterEnd),
+                backdrop = backdrop,
             )
         }
     }
@@ -163,13 +189,28 @@ private fun RoundIconAction(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     size: Dp = ActionButtonSize,
+    backdrop: Backdrop? = null,
 ) {
-    Box(
-        modifier = modifier
-            .size(size)
-            .clip(CircleShape)
+    val shape = CircleShape
+
+    val chrome = if (backdrop != null) {
+        modifier
+            .drawBackdrop(
+                backdrop = backdrop,
+                shape = { shape },
+                effects = { colorControls(brightness = 0.18f) },
+                highlight = { Highlight.GlassStrokeSmallLight },
+            )
+    } else {
+        modifier
             .background(COUITheme.colorScheme.surfaceVariant)
-            .border(0.5.dp, COUITheme.colorScheme.outline, CircleShape)
+            .border(0.5.dp, COUITheme.colorScheme.outline, shape)
+    }
+
+    Box(
+        modifier = chrome
+            .size(size)
+            .clip(shape)
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
