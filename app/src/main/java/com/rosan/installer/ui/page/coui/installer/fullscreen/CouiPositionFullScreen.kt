@@ -38,8 +38,12 @@ import io.github.suqi8.coui.kmp.theme.COUITheme
  */
 val FullScreenBottomBarHeight = 70.dp
 
-private val TopBarHeight = 44.dp
+/** Single horizontal rhythm shared by the top bar, header, cards and actions. */
+val FullScreenHorizontalPadding = 16.dp
+
+private val TopBarHeight = 48.dp
 private val ActionButtonSize = 34.dp
+private val TopBarButtonPadding = 12.dp
 
 /**
  * Full-screen installer shell.
@@ -117,7 +121,7 @@ private fun CouiFullScreenTopBar(
             onClick = { onBack?.invoke() },
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .padding(start = 8.dp),
+                .padding(start = TopBarButtonPadding),
             size = ActionButtonSize,
         )
 
@@ -136,7 +140,7 @@ private fun CouiFullScreenTopBar(
                 onClick = onMore,
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(end = 8.dp),
+                    .padding(end = TopBarButtonPadding),
                 size = ActionButtonSize,
             )
         }

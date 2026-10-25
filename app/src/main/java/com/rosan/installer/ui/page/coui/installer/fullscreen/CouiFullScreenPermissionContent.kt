@@ -89,7 +89,12 @@ private fun PermissionSectionTitle(text: String) {
         text = text,
         style = COUITheme.textStyles.footnote1,
         color = COUITheme.colorScheme.onSurfaceVariantSummary,
-        modifier = Modifier.padding(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 6.dp),
+        modifier = Modifier.padding(
+            start = FullScreenHorizontalPadding,
+            end = FullScreenHorizontalPadding,
+            top = 6.dp,
+            bottom = 6.dp,
+        ),
     )
 }
 
@@ -103,7 +108,7 @@ private fun PermissionCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = FullScreenHorizontalPadding),
     ) {
         Column(modifier = Modifier.padding(horizontal = 14.dp)) {
             permissions.forEachIndexed { index, permission ->

@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -294,7 +295,7 @@ fun CouiInstallerPage(
                     showPermissions = showPermissions,
                     showSettings = showSettings,
                     viewModel = viewModel,
-                    onClose = closeSheet,
+                    onClose = { viewModel.dispatch(InstallerViewAction.Close) },
                 )
                 return@InstallerCOUITheme
             }
@@ -845,6 +846,7 @@ private fun CouiFullScreenInstaller(
     onClose: () -> Unit,
 ) {
     val subPage = showPermissions || showSettings
+
     val headerContent: (@Composable () -> Unit)? = if (subPage) {
         null
     } else {
@@ -855,10 +857,19 @@ private fun CouiFullScreenInstaller(
     } else {
         { CouiFullScreenActionRow(stage = stage, viewModel = viewModel, onClose = onClose) }
     }
+
     val pageTitle = when {
         showPermissions -> stringResource(R.string.permission_list)
         showSettings -> stringResource(R.string.installer_settings)
         else -> title
+    }
+
+    // Keyed by page rather than by stage instance so a progress tick does not
+    // re-run the transition, while any real page change still cross-fades.
+    val pageKey: Any = when {
+        stage is InstallerStage.InstallPrepare && showSettings -> "settings"
+        stage is InstallerStage.InstallPrepare && showPermissions -> "permissions"
+        else -> stage.javaClass
     }
 
     CouiPositionFullScreen(
@@ -878,49 +889,65 @@ private fun CouiFullScreenInstaller(
         header = headerContent,
         bottomBar = bottomBarContent,
     ) {
-        when {
-            stage is InstallerStage.InstallPrepare && showSettings -> {
-                PrepareSettingsContent(viewModel = viewModel)
-            }
+        AnimatedContent(
+            targetState = pageKey,
+            modifier = Modifier.fillMaxSize(),
+            label = "CouiFullScreenPage",
+            transitionSpec = {
+                fadeIn(animationSpec = tween(durationMillis = 180)) togetherWith
+                    fadeOut(animationSpec = tween(durationMillis = 120))
+            },
+        ) { _ ->
+            when {
+                stage is InstallerStage.InstallPrepare && showSettings -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 8.dp),
+                    ) {
+                        PrepareSettingsContent(viewModel = viewModel)
+                    }
+                }
 
-            stage is InstallerStage.InstallPrepare && showPermissions -> {
-                CouiFullScreenPermissionContent(permissions = permissions)
-            }
+                stage is InstallerStage.InstallPrepare && showPermissions -> {
+                    CouiFullScreenPermissionContent(permissions = permissions)
+                }
 
-            stage is InstallerStage.InstallPrepare -> {
-                CouiFullScreenPrepareContent(
-                    entity = entity,
-                    sourceLabel = sourceLabel,
-                    permissionCount = permissions.size,
-                    sensitivePermissionCount = permissions.sensitiveCount(),
-                    onOpenPermissions = { viewModel.dispatch(InstallerViewAction.ShowCouiPermissionList) },
-                )
-            }
+                stage is InstallerStage.InstallPrepare -> {
+                    CouiFullScreenPrepareContent(
+                        entity = entity,
+                        sourceLabel = sourceLabel,
+                        permissionCount = permissions.size,
+                        sensitivePermissionCount = permissions.sensitiveCount(),
+                        onOpenPermissions = { viewModel.dispatch(InstallerViewAction.ShowCouiPermissionList) },
+                    )
+                }
 
-            stage is InstallerStage.Installing -> {
-                CouiFullScreenStatusContent(
-                    title = stringResource(R.string.installer_installing),
-                    subtitle = "${(stage.progress.coerceIn(0f, 1f) * 100).toInt()}%",
-                    progress = stage.progress,
-                )
-            }
+                stage is InstallerStage.Installing -> {
+                    CouiFullScreenStatusContent(
+                        title = stringResource(R.string.installer_installing),
+                        subtitle = "${(stage.progress.coerceIn(0f, 1f) * 100).toInt()}%",
+                        progress = stage.progress,
+                    )
+                }
 
-            stage is InstallerStage.InstallCompleted || stage is InstallerStage.InstallSuccess -> {
-                CouiFullScreenStatusContent(
-                    title = stringResource(R.string.installer_install_success),
-                    icon = AppCOUIIcons.Ok,
-                    iconTint = FullScreenSuccessColor,
-                    haloColor = FullScreenSuccessHaloColor,
-                )
-            }
+                stage is InstallerStage.InstallCompleted || stage is InstallerStage.InstallSuccess -> {
+                    CouiFullScreenStatusContent(
+                        title = stringResource(R.string.installer_install_success),
+                        icon = AppCOUIIcons.Ok,
+                        iconTint = FullScreenSuccessColor,
+                        haloColor = FullScreenSuccessHaloColor,
+                    )
+                }
 
-            stage is InstallerStage.InstallFailed -> {
-                CouiFullScreenStatusContent(
-                    title = stringResource(R.string.installer_install_failed),
-                    icon = AppCOUIIcons.Close,
-                    iconTint = COUITheme.colorScheme.error,
-                    haloColor = COUITheme.colorScheme.errorContainer,
-                )
+                stage is InstallerStage.InstallFailed -> {
+                    CouiFullScreenStatusContent(
+                        title = stringResource(R.string.installer_install_failed),
+                        icon = AppCOUIIcons.Close,
+                        iconTint = COUITheme.colorScheme.error,
+                        haloColor = COUITheme.colorScheme.errorContainer,
+                    )
+                }
             }
         }
     }
