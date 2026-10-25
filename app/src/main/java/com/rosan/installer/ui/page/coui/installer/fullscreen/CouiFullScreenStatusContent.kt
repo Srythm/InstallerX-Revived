@@ -47,6 +47,8 @@ fun CouiFullScreenStatusContent(
     haloColor: Color = COUITheme.colorScheme.secondaryContainer,
     progress: Float? = null,
 ) {
+    val colorScheme = COUITheme.colorScheme
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -65,7 +67,7 @@ fun CouiFullScreenStatusContent(
                     val diameter = size.minDimension - stroke
                     val topLeft = Offset(inset, inset)
                     drawArc(
-                        color = COUITheme.colorScheme.secondaryContainer,
+                        color = colorScheme.secondaryContainer,
                         startAngle = 0f,
                         sweepAngle = 360f,
                         useCenter = false,
@@ -75,7 +77,7 @@ fun CouiFullScreenStatusContent(
                     )
                     if (progress > 0f) {
                         drawArc(
-                            color = COUITheme.colorScheme.primary,
+                            color = colorScheme.primary,
                             startAngle = -90f,
                             sweepAngle = 360f * progress.coerceIn(0f, 1f),
                             useCenter = false,

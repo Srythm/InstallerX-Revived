@@ -19,7 +19,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -99,6 +101,7 @@ import io.github.suqi8.coui.kmp.basic.IconButton
 import io.github.suqi8.coui.kmp.basic.ListPopupColumn
 import io.github.suqi8.coui.kmp.basic.ListPopupDefaults
 import io.github.suqi8.coui.kmp.basic.PopupPositionProvider
+import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.theme.COUITheme.isDynamicColor
 import io.github.suqi8.coui.kmp.window.WindowBottomSheet
@@ -805,7 +808,6 @@ fun CouiInstallerPage(
     }
 }
 
-
 private fun isFullScreenStage(stage: InstallerStage): Boolean = when (stage) {
     is InstallerStage.InstallPrepare,
     is InstallerStage.Installing,
@@ -901,9 +903,7 @@ private fun CouiFullScreenInstaller(
                 )
             }
 
-            stage is InstallerStage.InstallCompleted,
-            stage is InstallerStage.InstallSuccess,
-            -> {
+            stage is InstallerStage.InstallCompleted || stage is InstallerStage.InstallSuccess -> {
                 CouiFullScreenStatusContent(
                     title = stringResource(R.string.installer_install_success),
                     icon = AppCOUIIcons.Ok,
