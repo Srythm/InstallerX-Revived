@@ -227,7 +227,7 @@ private fun DataItemWidget(viewModel: AllViewModel, entity: ConfigModel, isDefau
             IconButton(
                 minHeight = 35.dp,
                 minWidth = 35.dp,
-                backgroundColor = COUITheme.colorScheme.secondaryContainer.copy(alpha = 0.8f),
+                backgroundColor = COUITheme.colorScheme.secondaryContainer,
                 onClick = { viewModel.dispatch(AllViewAction.EditDataConfig(entity)) },
             ) {
                 Icon(
@@ -241,7 +241,7 @@ private fun DataItemWidget(viewModel: AllViewModel, entity: ConfigModel, isDefau
                 IconButton(
                     minHeight = 35.dp,
                     minWidth = 35.dp,
-                    backgroundColor = COUITheme.colorScheme.secondaryContainer.copy(alpha = 0.8f),
+                    backgroundColor = COUITheme.colorScheme.secondaryContainer,
                     onClick = { viewModel.dispatch(AllViewAction.DeleteDataConfig(entity)) },
                 ) {
                     Icon(
@@ -255,7 +255,7 @@ private fun DataItemWidget(viewModel: AllViewModel, entity: ConfigModel, isDefau
                 IconButton(
                     minHeight = 35.dp,
                     minWidth = 35.dp,
-                    backgroundColor = COUITheme.colorScheme.secondaryContainer.copy(alpha = 0.8f),
+                    backgroundColor = COUITheme.colorScheme.secondaryContainer,
                     onClick = { viewModel.dispatch(AllViewAction.ApplyConfig(entity)) },
                 ) {
                     Row(
