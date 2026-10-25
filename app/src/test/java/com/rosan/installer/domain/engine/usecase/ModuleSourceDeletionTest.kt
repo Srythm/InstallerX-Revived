@@ -21,6 +21,7 @@ import com.rosan.installer.domain.session.model.SelectInstallEntity
 import com.rosan.installer.domain.settings.model.config.Authorizer
 import com.rosan.installer.domain.settings.model.config.ConfigModel
 import com.rosan.installer.domain.settings.repository.AppSettingsRepository
+import com.rosan.installer.testing.testAppPreferences
 import java.io.IOException
 import java.lang.reflect.Proxy
 import kotlin.test.Test
@@ -30,7 +31,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 
@@ -109,8 +109,8 @@ class ModuleSourceDeletionTest {
             val useCase = ProcessInstallationUseCase(
                 appSettingsRepo = stub<AppSettingsRepository> { method ->
                     when (method) {
-                        "getBoolean" -> flowOf(false)
-                        "getString" -> flowOf("")
+                        // ProcessInstallationUseCase reads one bulk snapshot, not per-key values.
+                        "snapshot" -> testAppPreferences()
                         else -> error("Unexpected settings call: $method")
                     }
                 },
