@@ -3,6 +3,7 @@
 package com.rosan.installer.ui.page.coui.installer.fullscreen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.rosan.installer.ui.icons.AppCOUIIcons
@@ -41,9 +43,8 @@ val FullScreenBottomBarHeight = 70.dp
 /** Single horizontal rhythm shared by the top bar, header, cards and actions. */
 val FullScreenHorizontalPadding = 16.dp
 
-private val TopBarHeight = 48.dp
-private val ActionButtonSize = 34.dp
-private val TopBarButtonPadding = 12.dp
+private val TopBarHeight = 60.dp
+private val ActionButtonSize = 44.dp
 
 /**
  * Full-screen installer shell.
@@ -112,24 +113,26 @@ private fun CouiFullScreenTopBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(TopBarHeight),
+            .height(TopBarHeight)
+            .padding(horizontal = FullScreenHorizontalPadding),
     ) {
         RoundIconAction(
             icon = AppCOUIIcons.Back,
             contentDescription = null,
             enabled = onBack != null,
             onClick = { onBack?.invoke() },
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .padding(start = TopBarButtonPadding),
-            size = ActionButtonSize,
+            modifier = Modifier.align(Alignment.CenterStart),
         )
 
         Text(
             text = title,
-            style = COUITheme.textStyles.title4,
+            style = COUITheme.textStyles.title3,
             color = COUITheme.colorScheme.onSurface,
-            modifier = Modifier.align(Alignment.Center),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .padding(horizontal = ActionButtonSize + 12.dp),
         )
 
         if (onMore != null) {
@@ -138,15 +141,20 @@ private fun CouiFullScreenTopBar(
                 contentDescription = null,
                 enabled = true,
                 onClick = onMore,
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = TopBarButtonPadding),
-                size = ActionButtonSize,
+                modifier = Modifier.align(Alignment.CenterEnd),
             )
         }
     }
 }
 
+/**
+ * Circular chrome button.
+ *
+ * The COUI palette defines `secondaryContainer` as an 8% on-surface tint, which
+ * reads as a grey blob on a light page. Chrome buttons instead use the solid
+ * `surfaceVariant` fill plus a hairline `outline` edge, so they stay readable on
+ * both the plain page and over a blurred backdrop.
+ */
 @Composable
 private fun RoundIconAction(
     icon: ImageVector,
@@ -160,7 +168,8 @@ private fun RoundIconAction(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
-            .background(COUITheme.colorScheme.secondaryContainer)
+            .background(COUITheme.colorScheme.surfaceVariant)
+            .border(0.5.dp, COUITheme.colorScheme.outline, CircleShape)
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -172,7 +181,7 @@ private fun RoundIconAction(
             } else {
                 COUITheme.colorScheme.disabledOnSurface
             },
-            modifier = Modifier.size(size * 0.44f),
+            modifier = Modifier.size(size * 0.46f),
         )
     }
 }

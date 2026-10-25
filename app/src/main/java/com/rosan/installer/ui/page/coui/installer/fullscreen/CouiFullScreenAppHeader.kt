@@ -40,7 +40,7 @@ fun CouiFullScreenAppHeader(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = FullScreenHorizontalPadding, end = FullScreenHorizontalPadding, top = 4.dp, bottom = 14.dp),
+            .padding(start = FullScreenHorizontalPadding, end = FullScreenHorizontalPadding, top = 10.dp, bottom = 18.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val iconShape = RoundedCornerShape(14.dp)
