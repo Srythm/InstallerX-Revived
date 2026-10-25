@@ -111,6 +111,7 @@ class ModuleSourceDeletionTest {
                     when (method) {
                         // ProcessInstallationUseCase reads one bulk snapshot, not per-key values.
                         "snapshot" -> testAppPreferences()
+
                         else -> error("Unexpected settings call: $method")
                     }
                 },
