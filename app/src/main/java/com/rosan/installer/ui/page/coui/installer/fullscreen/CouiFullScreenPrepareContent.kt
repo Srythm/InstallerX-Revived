@@ -209,5 +209,4 @@ private fun DetailRow(
     }
 }
 
-private fun String.toShortFingerprint(): String =
-    if (length <= 14) this else "${take(6)}…${takeLast(4)}"
+private fun String.toShortFingerprint(): String = if (length <= 14) this else "${take(6)}…${takeLast(4)}"
