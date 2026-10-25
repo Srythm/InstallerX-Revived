@@ -15,8 +15,14 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -25,7 +31,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpSize
@@ -38,9 +47,17 @@ import com.rosan.installer.domain.engine.model.packageinfo.AppEntity
 import com.rosan.installer.domain.engine.model.source.DataType
 import com.rosan.installer.domain.session.model.ConfirmationRequestType
 import com.rosan.installer.domain.session.repository.InstallerSessionRepository
+import com.rosan.installer.domain.settings.model.config.InstallMode
 import com.rosan.installer.domain.settings.model.preferences.RootMode
 import com.rosan.installer.ui.icons.AppCOUIIcons
+import com.rosan.installer.ui.page.coui.installer.components.AppInfoState
 import com.rosan.installer.ui.page.coui.installer.components.rememberAppInfoState
+import com.rosan.installer.ui.page.coui.installer.fullscreen.CouiFullScreenAppHeader
+import com.rosan.installer.ui.page.coui.installer.fullscreen.CouiFullScreenPermissionContent
+import com.rosan.installer.ui.page.coui.installer.fullscreen.CouiFullScreenPrepareContent
+import com.rosan.installer.ui.page.coui.installer.fullscreen.CouiFullScreenStatusContent
+import com.rosan.installer.ui.page.coui.installer.fullscreen.CouiPositionFullScreen
+import com.rosan.installer.ui.page.coui.installer.fullscreen.sensitiveCount
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.InstallChoiceContent
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.InstallCompletedContent
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.InstallConfirmContent
@@ -258,6 +275,25 @@ fun CouiInstallerPage(
             useDynamicColor = useDynamicColor && temporarySeedColor == null,
             compatStatusBarColor = false,
         ) {
+            // Full-screen install mode. Only the stages migrated so far take this
+            // branch; anything else keeps the bottom sheet so no flow loses its UI.
+            if (uiState.config.installMode == InstallMode.FullScreen && isFullScreenStage(stage)) {
+                CouiFullScreenInstaller(
+                    stage = stage,
+                    title = sheetTitle,
+                    appInfo = appInfoState,
+                    entity = appInfoState.primaryEntity as? AppEntity.BaseEntity,
+                    versionName = (appInfoState.primaryEntity as? AppEntity.BaseEntity)?.versionName,
+                    sourceLabel = uiState.initiatorAppLabel,
+                    permissions = (appInfoState.primaryEntity as? AppEntity.BaseEntity)?.permissions.orEmpty(),
+                    showPermissions = showPermissions,
+                    showSettings = showSettings,
+                    viewModel = viewModel,
+                    onClose = closeSheet,
+                )
+                return@InstallerCOUITheme
+            }
+
             WindowBottomSheet(
                 show = showBottomSheet.value, // Always true as long as this page is composed.
                 backgroundColor = if (isDynamicColor) {
@@ -766,6 +802,211 @@ fun CouiInstallerPage(
                 }
             }
         }
+    }
+}
+
+
+private fun isFullScreenStage(stage: InstallerStage): Boolean = when (stage) {
+    is InstallerStage.InstallPrepare,
+    is InstallerStage.Installing,
+    is InstallerStage.InstallCompleted,
+    is InstallerStage.InstallSuccess,
+    is InstallerStage.InstallFailed,
+    -> true
+
+    else -> false
+}
+
+/**
+ * Full-screen install flow.
+ *
+ * Mirrors the sheet's state machine for the migrated stages but keeps its own
+ * information hierarchy: the app identity stays pinned, the body carries the
+ * stage, and the container owns the action row so the status marks line up.
+ * [sheetcontent] is untouched by design, so the sheet presentation keeps
+ * behaving exactly as before.
+ */
+@Composable
+private fun CouiFullScreenInstaller(
+    stage: InstallerStage,
+    title: String,
+    appInfo: AppInfoState,
+    entity: AppEntity.BaseEntity?,
+    versionName: String?,
+    sourceLabel: String?,
+    permissions: List<String>,
+    showPermissions: Boolean,
+    showSettings: Boolean,
+    viewModel: InstallerViewModel,
+    onClose: () -> Unit,
+) {
+    val subPage = showPermissions || showSettings
+    val headerContent: (@Composable () -> Unit)? = if (subPage) {
+        null
+    } else {
+        { CouiFullScreenAppHeader(appInfo = appInfo, versionName = versionName) }
+    }
+    val bottomBarContent: (@Composable () -> Unit)? = if (subPage) {
+        null
+    } else {
+        { CouiFullScreenActionRow(stage = stage, viewModel = viewModel, onClose = onClose) }
+    }
+    val pageTitle = when {
+        showPermissions -> stringResource(R.string.permission_list)
+        showSettings -> stringResource(R.string.installer_settings)
+        else -> title
+    }
+
+    CouiPositionFullScreen(
+        title = pageTitle,
+        onBack = {
+            when {
+                showPermissions -> viewModel.dispatch(InstallerViewAction.HideCouiPermissionList)
+                showSettings -> viewModel.dispatch(InstallerViewAction.HideCouiSheetRightActionSettings)
+                else -> onClose()
+            }
+        },
+        onMore = if (!subPage && stage is InstallerStage.InstallPrepare) {
+            { viewModel.dispatch(InstallerViewAction.ShowCouiSheetRightActionSettings) }
+        } else {
+            null
+        },
+        header = headerContent,
+        bottomBar = bottomBarContent,
+    ) {
+        when {
+            stage is InstallerStage.InstallPrepare && showSettings -> {
+                PrepareSettingsContent(viewModel = viewModel)
+            }
+
+            stage is InstallerStage.InstallPrepare && showPermissions -> {
+                CouiFullScreenPermissionContent(permissions = permissions)
+            }
+
+            stage is InstallerStage.InstallPrepare -> {
+                CouiFullScreenPrepareContent(
+                    entity = entity,
+                    sourceLabel = sourceLabel,
+                    permissionCount = permissions.size,
+                    sensitivePermissionCount = permissions.sensitiveCount(),
+                    onOpenPermissions = { viewModel.dispatch(InstallerViewAction.ShowCouiPermissionList) },
+                )
+            }
+
+            stage is InstallerStage.Installing -> {
+                CouiFullScreenStatusContent(
+                    title = stringResource(R.string.installer_installing),
+                    subtitle = "${(stage.progress.coerceIn(0f, 1f) * 100).toInt()}%",
+                    progress = stage.progress,
+                )
+            }
+
+            stage is InstallerStage.InstallCompleted,
+            stage is InstallerStage.InstallSuccess,
+            -> {
+                CouiFullScreenStatusContent(
+                    title = stringResource(R.string.installer_install_success),
+                    icon = AppCOUIIcons.Ok,
+                    iconTint = FullScreenSuccessColor,
+                    haloColor = FullScreenSuccessHaloColor,
+                )
+            }
+
+            stage is InstallerStage.InstallFailed -> {
+                CouiFullScreenStatusContent(
+                    title = stringResource(R.string.installer_install_failed),
+                    icon = AppCOUIIcons.Close,
+                    iconTint = COUITheme.colorScheme.error,
+                    haloColor = COUITheme.colorScheme.errorContainer,
+                )
+            }
+        }
+    }
+}
+
+private val FullScreenSuccessColor = Color(0xFF16A34A)
+private val FullScreenSuccessHaloColor = Color(0x1F16A34A)
+
+@Composable
+private fun CouiFullScreenActionRow(
+    stage: InstallerStage,
+    viewModel: InstallerViewModel,
+    onClose: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        when (stage) {
+            is InstallerStage.InstallPrepare -> {
+                FullScreenAction(
+                    text = stringResource(R.string.cancel),
+                    filled = false,
+                    weight = 1f,
+                    onClick = onClose,
+                )
+                FullScreenAction(
+                    text = stringResource(R.string.install),
+                    filled = true,
+                    weight = 1.6f,
+                    onClick = { viewModel.dispatch(InstallerViewAction.Install(true)) },
+                )
+            }
+
+            is InstallerStage.Installing -> {
+                FullScreenAction(
+                    text = stringResource(R.string.cancel),
+                    filled = false,
+                    weight = 1f,
+                    onClick = { viewModel.dispatch(InstallerViewAction.Cancel) },
+                )
+            }
+
+            else -> {
+                FullScreenAction(
+                    text = stringResource(R.string.finish),
+                    filled = true,
+                    weight = 1f,
+                    onClick = onClose,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RowScope.FullScreenAction(
+    text: String,
+    filled: Boolean,
+    weight: Float,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .weight(weight)
+            .height(44.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(
+                if (filled) {
+                    COUITheme.colorScheme.primary
+                } else {
+                    COUITheme.colorScheme.secondaryContainer
+                },
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            style = COUITheme.textStyles.button,
+            color = if (filled) {
+                COUITheme.colorScheme.onPrimary
+            } else {
+                COUITheme.colorScheme.onSurface
+            },
+        )
     }
 }
 

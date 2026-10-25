@@ -13,6 +13,7 @@ import io.github.suqi8.coui.kmp.icon.COUIIcons
 import io.github.suqi8.coui.kmp.icon.extended.Back
 import io.github.suqi8.coui.kmp.icon.extended.Delete
 import io.github.suqi8.coui.kmp.icon.extended.Info
+import io.github.suqi8.coui.kmp.icon.extended.More
 import io.github.suqi8.coui.kmp.icon.extended.Ok
 import io.github.suqi8.coui.kmp.icon.extended.Refresh
 import io.github.suqi8.coui.kmp.icon.extended.Settings
@@ -29,6 +30,8 @@ object AppCOUIIcons {
 
     // --- Navigation Icons ---
     val Back = COUIIcons.Regular.Back
+
+    val More = COUIIcons.Regular.More
 
     val Close: ImageVector
         get() {
