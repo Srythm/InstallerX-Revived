@@ -29,10 +29,9 @@ import com.rosan.installer.domain.settings.model.preferences.theme.ThemeMode
 import com.rosan.installer.ui.theme.material.animateAsState
 import com.rosan.installer.ui.theme.material.dynamicColorScheme
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import io.github.suqi8.coui.kmp.theme.ColorSchemeMode
-import io.github.suqi8.coui.kmp.theme.ThemeColorSpec as CouiColorSpec
-import io.github.suqi8.coui.kmp.theme.ThemeController
-import io.github.suqi8.coui.kmp.theme.ThemePaletteStyle as CouiPaletteStyle
+import io.github.suqi8.coui.kmp.theme.Colors
+import io.github.suqi8.coui.kmp.theme.darkColorScheme as couiDarkColorScheme
+import io.github.suqi8.coui.kmp.theme.lightColorScheme as couiLightColorScheme
 
 private val LocalIsDark = staticCompositionLocalOf { false }
 private val LocalPaletteStyle = staticCompositionLocalOf { PaletteStyle.Expressive }
@@ -206,69 +205,106 @@ fun InstallerCOUITheme(
         }
     }
 
-    val controller = if (useCouiMonet) {
-        // --- Monet Engine Path ---
+    val isDark = when (themeMode) {
+        ThemeMode.SYSTEM -> darkTheme
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+
+    /*
+     * COUI 1.1.0 derives its palette through material-color-utilities 5.x, whose
+     * DynamicScheme no longer exists in the 6.x line this module depends on.
+     * Calling ThemeController with a key color would therefore fail at runtime,
+     * so the palette is produced by our own material-kolor pipeline and handed
+     * to COUI as a finished Colors instance.
+     */
+    val colors = if (useCouiMonet) {
         val keyColor = if (useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             colorResource(id = android.R.color.system_accent1_500)
         } else {
             seedColor
         }
-
-        val colorSchemeMode = when (themeMode) {
-            ThemeMode.SYSTEM -> ColorSchemeMode.MonetSystem
-            ThemeMode.LIGHT -> ColorSchemeMode.MonetLight
-            ThemeMode.DARK -> ColorSchemeMode.MonetDark
+        remember(keyColor, isDark, paletteStyle, colorSpec) {
+            dynamicColorScheme(keyColor, isDark, paletteStyle, 0.0, colorSpec).toCouiColors()
         }
-
-        // COUI has no CMF style and stops at the 2025 color spec, so both are
-        // degraded here instead of branching at every call site.
-        val style = when (paletteStyle) {
-            PaletteStyle.TonalSpot -> CouiPaletteStyle.TonalSpot
-            PaletteStyle.Neutral -> CouiPaletteStyle.Neutral
-            PaletteStyle.Vibrant -> CouiPaletteStyle.Vibrant
-            PaletteStyle.Expressive -> CouiPaletteStyle.Expressive
-            PaletteStyle.Rainbow -> CouiPaletteStyle.Rainbow
-            PaletteStyle.FruitSalad -> CouiPaletteStyle.FruitSalad
-            PaletteStyle.Monochrome -> CouiPaletteStyle.Monochrome
-            PaletteStyle.Fidelity -> CouiPaletteStyle.Fidelity
-            PaletteStyle.Content -> CouiPaletteStyle.Content
-            PaletteStyle.Cmf -> CouiPaletteStyle.TonalSpot
-        }
-
-        val colorSpecVersion = when (paletteStyle.effectiveSpec(colorSpec)) {
-            ThemeColorSpec.SPEC_2026 -> CouiColorSpec.Spec2025
-            ThemeColorSpec.SPEC_2025 -> CouiColorSpec.Spec2025
-            ThemeColorSpec.SPEC_2021 -> CouiColorSpec.Spec2021
-        }
-
-        remember(colorSchemeMode, keyColor, paletteStyle, colorSpecVersion, darkTheme) {
-            ThemeController(
-                colorSchemeMode = colorSchemeMode,
-                keyColor = keyColor,
-                paletteStyle = style,
-                colorSpec = colorSpecVersion,
-                isDark = darkTheme,
-            )
-        }
+    } else if (isDark) {
+        couiDarkColorScheme()
     } else {
-        // --- Default Coui Theme Path ---
-        val colorSchemeMode = when (themeMode) {
-            ThemeMode.SYSTEM -> ColorSchemeMode.System
-            ThemeMode.LIGHT -> ColorSchemeMode.Light
-            ThemeMode.DARK -> ColorSchemeMode.Dark
-        }
-
-        remember(colorSchemeMode, darkTheme) {
-            ThemeController(
-                colorSchemeMode = colorSchemeMode,
-                isDark = darkTheme,
-            )
-        }
+        couiLightColorScheme()
     }
 
     COUITheme(
-        controller = controller,
+        colors = colors,
         content = content,
+    )
+}
+
+/**
+ * Maps a Material 3 [ColorScheme] onto COUI's role palette.
+ *
+ * The two designs share most of the Material 3 role model, so the mapping is
+ * direct where a role exists in both and falls back to the closest M3 role
+ * (container roles for the "variant" slots, onSurface alpha steps for the
+ * disabled slots) where COUI has no counterpart.
+ */
+private fun ColorScheme.toCouiColors(): Colors {
+    val disabledContainer = onSurface.copy(alpha = 0.12f)
+    val disabledContent = onSurface.copy(alpha = 0.38f)
+
+    return Colors(
+        primary = primary,
+        onPrimary = onPrimary,
+        primaryVariant = primaryContainer,
+        onPrimaryVariant = onPrimaryContainer,
+        error = error,
+        onError = onError,
+        errorContainer = errorContainer,
+        onErrorContainer = onErrorContainer,
+        disabledPrimary = disabledContainer,
+        disabledOnPrimary = disabledContent,
+        disabledPrimaryButton = disabledContainer,
+        disabledOnPrimaryButton = disabledContent,
+        disabledPrimarySlider = disabledContainer,
+        primaryContainer = primaryContainer,
+        onPrimaryContainer = onPrimaryContainer,
+        secondary = secondary,
+        onSecondary = onSecondary,
+        secondaryVariant = secondaryContainer,
+        onSecondaryVariant = onSecondaryContainer,
+        disabledSecondary = disabledContainer,
+        disabledOnSecondary = disabledContent,
+        disabledSecondaryVariant = disabledContainer,
+        disabledOnSecondaryVariant = disabledContent,
+        secondaryContainer = secondaryContainer,
+        onSecondaryContainer = onSecondaryContainer,
+        secondaryContainerVariant = secondaryContainer,
+        onSecondaryContainerVariant = onSecondaryContainer,
+        tertiaryContainer = tertiaryContainer,
+        onTertiaryContainer = onTertiaryContainer,
+        tertiaryContainerVariant = tertiaryContainer,
+        background = background,
+        onBackground = onBackground,
+        onBackgroundVariant = onSurfaceVariant,
+        surface = surface,
+        onSurface = onSurface,
+        surfaceVariant = surfaceVariant,
+        onSurfaceSecondary = onSurfaceVariant,
+        onSurfaceVariantSummary = onSurfaceVariant,
+        onSurfaceVariantActions = primary,
+        disabledOnSurface = disabledContent,
+        surfaceContainer = surfaceContainer,
+        onSurfaceContainer = onSurface,
+        onSurfaceContainerVariant = onSurfaceVariant,
+        surfaceContainerHigh = surfaceContainerHigh,
+        onSurfaceContainerHigh = onSurface,
+        surfaceContainerHighest = surfaceContainerHighest,
+        onSurfaceContainerHighest = onSurface,
+        outline = outline,
+        dividerLine = outlineVariant,
+        windowDimming = scrim,
+        sliderKeyPoint = primary,
+        sliderKeyPointForeground = onPrimary,
+        sliderBackground = surfaceVariant,
     )
 }
 
