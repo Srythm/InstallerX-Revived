@@ -35,7 +35,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,10 +45,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -63,11 +60,13 @@ import com.rosan.installer.ui.icons.AppIcons
 import com.rosan.installer.ui.navigation.LocalNavigator
 import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
 import com.rosan.installer.ui.page.coui.widgets.CouiDropdown
+import com.rosan.installer.ui.page.coui.widgets.CouiSettingsGroupItem
 import com.rosan.installer.ui.page.main.settings.config.apply.ApplyViewAction
 import com.rosan.installer.ui.page.main.settings.config.apply.ApplyViewApp
 import com.rosan.installer.ui.page.main.settings.config.apply.ApplyViewModel
 import com.rosan.installer.ui.page.main.settings.config.apply.ApplyViewState
 import com.rosan.installer.ui.page.main.settings.config.apply.ViewContent
+import com.rosan.installer.ui.theme.CouiTokens
 import com.rosan.installer.ui.theme.getCouiAppBarColor
 import com.rosan.installer.ui.theme.installerCouiBlurEffect
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
@@ -88,6 +87,7 @@ import io.github.suqi8.coui.kmp.icon.COUIIcons
 import io.github.suqi8.coui.kmp.icon.extended.Close
 import io.github.suqi8.coui.kmp.icon.extended.More
 import io.github.suqi8.coui.kmp.menu.WindowIconDropdownMenu
+import io.github.suqi8.coui.kmp.squircle.squircleSurface
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
@@ -312,27 +312,8 @@ fun CouiApplyPage(id: Long, useBlur: Boolean, viewModel: ApplyViewModel = koinVi
                                 key = { _, app -> app.packageName },
                                 contentType = { _, _ -> "app_item" },
                             ) { index, app ->
-                                val cardRadius = CardDefaults.CornerRadius
-                                val shape = when {
-                                    apps.size == 1 -> RoundedCornerShape(cardRadius)
-
-                                    index == 0 -> RoundedCornerShape(
-                                        topStart = cardRadius,
-                                        topEnd = cardRadius,
-                                        bottomStart = 0.dp,
-                                        bottomEnd = 0.dp,
-                                    )
-
-                                    index == apps.lastIndex -> RoundedCornerShape(
-                                        topStart = 0.dp,
-                                        topEnd = 0.dp,
-                                        bottomStart = cardRadius,
-                                        bottomEnd = cardRadius,
-                                    )
-
-                                    else -> RoundedCornerShape(0.dp)
-                                }
-
+                                // Rows are drawn as one joined group: CouiSettingsGroupItem rounds
+                                // the first and last row and keeps the rows between them square.
                                 val isApplied = appliedPackageSet.contains(app.packageName)
                                 // Dispatch action to load the icon when the item becomes visible
                                 LaunchedEffect(app.packageName) {
@@ -357,7 +338,8 @@ fun CouiApplyPage(id: Long, useBlur: Boolean, viewModel: ApplyViewModel = koinVi
                                     app = app,
                                     icon = iconBitmap, // Pass the managed state
                                     isApplied = isApplied,
-                                    shape = shape,
+                                    index = index,
+                                    count = apps.size,
                                     onToggle = { isChecked ->
                                         viewModel.dispatch(ApplyViewAction.ApplyPackageName(app.packageName, isChecked))
                                     },
@@ -382,16 +364,16 @@ private fun ItemWidget(
     app: ApplyViewApp,
     icon: ImageBitmap?,
     isApplied: Boolean,
-    shape: Shape,
+    index: Int,
+    count: Int,
     onToggle: (Boolean) -> Unit,
     onClick: () -> Unit,
     showPackageName: Boolean,
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(CardDefaults.defaultColors().color),
+    CouiSettingsGroupItem(
+        index = index,
+        count = count,
+        modifier = modifier,
     ) {
         Row(
             modifier = Modifier
@@ -456,11 +438,11 @@ private fun UnknownScopeItemWidget(
     onToggle: (Boolean) -> Unit,
     onClick: () -> Unit,
 ) {
+    val containerColor = CardDefaults.defaultColors().color
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(CardDefaults.CornerRadius))
-            .background(CardDefaults.defaultColors().color),
+            .squircleSurface(containerColor, CouiTokens.CardCornerRadius),
     ) {
         Row(
             modifier = Modifier

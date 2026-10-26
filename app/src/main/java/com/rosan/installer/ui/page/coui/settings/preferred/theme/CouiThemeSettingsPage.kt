@@ -50,6 +50,7 @@ import com.rosan.installer.domain.settings.model.preferences.theme.ThemeColorSpe
 import com.rosan.installer.domain.settings.model.preferences.theme.ThemeMode
 import com.rosan.installer.ui.navigation.LocalNavigator
 import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
+import com.rosan.installer.ui.page.coui.widgets.CouiSettingsCard
 import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
 import com.rosan.installer.ui.page.main.settings.preferred.theme.ThemeSettingsAction
 import com.rosan.installer.ui.page.main.settings.preferred.theme.ThemeSettingsViewModel
@@ -59,7 +60,6 @@ import com.rosan.installer.ui.theme.installerCouiBlurEffect
 import com.rosan.installer.ui.theme.material.PresetColors
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
 import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
-import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.DropdownItem
 import io.github.suqi8.coui.kmp.basic.Scaffold
 import io.github.suqi8.coui.kmp.basic.SmallTitle
@@ -114,7 +114,7 @@ fun COUIThemeSettingsPage(
             item { Spacer(modifier = Modifier.size(12.dp)) }
             item { SmallTitle(stringResource(R.string.theme_settings_ui_style)) }
             item {
-                Card(
+                CouiSettingsCard(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
                         .padding(bottom = 12.dp),
@@ -137,7 +137,7 @@ fun COUIThemeSettingsPage(
             }
             item { SmallTitle(stringResource(R.string.theme_settings_coui_ui)) }
             item {
-                Card(
+                CouiSettingsCard(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
                         .padding(bottom = 12.dp),
@@ -240,7 +240,7 @@ fun COUIThemeSettingsPage(
                 ) {
                     Column {
                         SmallTitle(stringResource(R.string.theme_settings_theme_color))
-                        Card(
+                        CouiSettingsCard(
                             modifier = Modifier
                                 .padding(horizontal = 12.dp)
                                 .padding(bottom = 12.dp),
@@ -309,7 +309,7 @@ fun COUIThemeSettingsPage(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 item { SmallTitle(stringResource(R.string.theme_settings_predictive_back)) }
                 item {
-                    Card(
+                    CouiSettingsCard(
                         modifier = Modifier
                             .padding(horizontal = 12.dp)
                             .padding(bottom = 12.dp),
@@ -339,7 +339,7 @@ fun COUIThemeSettingsPage(
 
             item { SmallTitle(stringResource(R.string.theme_settings_package_icons)) }
             item {
-                Card(
+                CouiSettingsCard(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
                         .padding(bottom = 12.dp),
