@@ -72,6 +72,7 @@ class ThemeSettingsViewModel(
             useBlur = prefs.useBlur,
             showCouiUI = prefs.showCouiUI,
             themeMode = prefs.themeMode,
+            useAmoled = prefs.useAmoled,
             paletteStyle = prefs.paletteStyle,
             colorSpec = prefs.colorSpec,
             useDynamicColor = prefs.useDynamicColor,
@@ -101,6 +102,10 @@ class ThemeSettingsViewModel(
             is ThemeSettingsAction.SetUseBlur -> viewModelScope.launch { updateSetting(BooleanSetting.UiUseBlur, action.enable) }
 
             is ThemeSettingsAction.SetThemeMode -> viewModelScope.launch { updateSetting(StringSetting.ThemeMode, action.mode.name) }
+
+            is ThemeSettingsAction.SetUseAmoled -> viewModelScope.launch {
+                updateSetting(BooleanSetting.ThemeUseAmoled, action.use)
+            }
 
             is ThemeSettingsAction.SetPaletteStyle -> viewModelScope.launch { updateSetting(StringSetting.ThemePaletteStyle, action.style.name) }
 

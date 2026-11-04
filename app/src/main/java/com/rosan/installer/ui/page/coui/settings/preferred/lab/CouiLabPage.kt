@@ -11,6 +11,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -30,6 +31,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -68,12 +70,15 @@ import io.github.suqi8.coui.kmp.basic.CheckboxDefaults
 import io.github.suqi8.coui.kmp.basic.DropdownItem
 import io.github.suqi8.coui.kmp.basic.Scaffold
 import io.github.suqi8.coui.kmp.basic.SmallTitle
+import io.github.suqi8.coui.kmp.basic.Text
+import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.basic.TopAppBar
 import io.github.suqi8.coui.kmp.preference.WindowSpinnerPreference
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
 import io.github.suqi8.coui.kmp.window.WindowBottomSheet
+import io.github.suqi8.coui.kmp.window.WindowDialog
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.blur.layerBackdrop
@@ -93,6 +98,38 @@ fun CouiLabPage(useBlur: Boolean, viewModel: LabSettingsViewModel = koinViewMode
     val scrollBehavior = COUIScrollBehavior()
     val showRootImplementationDialog = remember { mutableStateOf(false) }
     val showSmartAuthorizerSheet = remember { mutableStateOf(false) }
+    var showNonAdbConfirmation by rememberSaveable { mutableStateOf(false) }
+
+    WindowDialog(
+        show = showNonAdbConfirmation,
+        onDismissRequest = { showNonAdbConfirmation = false },
+        title = stringResource(R.string.lab_shizuku_non_adb_install),
+        content = {
+            Column {
+                Text(stringResource(R.string.lab_shizuku_non_adb_install_confirmation, context.packageName))
+                Spacer(modifier = Modifier.size(24.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    TextButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = { showNonAdbConfirmation = false },
+                        text = stringResource(R.string.cancel),
+                    )
+                    TextButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            showNonAdbConfirmation = false
+                            viewModel.dispatch(LabSettingsAction.LabChangeShizukuNonAdbInstall(true))
+                        },
+                        text = stringResource(R.string.confirm),
+                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                    )
+                }
+            }
+        },
+    )
 
     CouiRootImplementationDialog(
         showState = showRootImplementationDialog,
@@ -252,6 +289,18 @@ fun CouiLabPage(useBlur: Boolean, viewModel: LabSettingsViewModel = koinViewMode
                         .padding(horizontal = 12.dp)
                         .padding(bottom = 12.dp),
                 ) {
+                    CouiSwitchWidget(
+                        title = stringResource(R.string.lab_shizuku_non_adb_install),
+                        description = stringResource(R.string.lab_shizuku_non_adb_install_desc),
+                        checked = uiState.labShizukuNonAdbInstall,
+                        onCheckedChange = { enabled ->
+                            if (enabled) {
+                                showNonAdbConfirmation = true
+                            } else {
+                                viewModel.dispatch(LabSettingsAction.LabChangeShizukuNonAdbInstall(false))
+                            }
+                        },
+                    )
                     CouiSwitchWidget(
                         title = stringResource(R.string.lab_enable_abi_override),
                         description = stringResource(R.string.lab_enable_abi_override_desc),

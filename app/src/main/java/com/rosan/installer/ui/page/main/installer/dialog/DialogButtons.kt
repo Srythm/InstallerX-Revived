@@ -106,6 +106,7 @@ private fun InnerButton(
             if (!hasLongPressed) {
                 button.onClick()
             }
+            hasLongPressed = false
         },
         modifier = modifier.fillMaxWidth(),
         interactionSource = interactionSource, // Bind the interaction source

@@ -8,6 +8,7 @@ import com.rosan.installer.domain.settings.model.config.NetworkSourceMode
 import com.rosan.installer.domain.settings.model.preferences.AppPreferences
 import com.rosan.installer.domain.settings.model.preferences.GithubUpdateChannel
 import com.rosan.installer.domain.settings.model.preferences.HttpProfile
+import com.rosan.installer.domain.settings.model.preferences.NetworkAppNameSource
 import com.rosan.installer.domain.settings.model.preferences.PredictiveBackAnimation
 import com.rosan.installer.domain.settings.model.preferences.PredictiveBackExitDirection
 import com.rosan.installer.domain.settings.model.preferences.RootMode
@@ -39,7 +40,6 @@ fun testAppPreferences(checkSourceStamp: Boolean = false) = AppPreferences(
     showOPPOSpecial = false,
     checkAppSignature = false,
     checkSourceStamp = checkSourceStamp,
-    checkSplitPackageSignatures = false,
     showSignatureInfoOnMatch = false,
     showSignatureDetails = false,
     installerRequireBiometricAuth = BiometricAuthMode.entries.first(),
@@ -66,6 +66,8 @@ fun testAppPreferences(checkSourceStamp: Boolean = false) = AppPreferences(
     uninstallFlags = 0,
     networkSourceMode = NetworkSourceMode.entries.first(),
     networkSourceModeWarningAcknowledged = false,
+    networkLoadAppIcon = false,
+    networkAppNameSource = NetworkAppNameSource.ServerFilename,
     allowInternetAccess = false,
     githubUpdateChannel = GithubUpdateChannel.entries.first(),
     customGithubProxyUrl = "",
@@ -80,10 +82,12 @@ fun testAppPreferences(checkSourceStamp: Boolean = false) = AppPreferences(
     labShowInstallInitiator = false,
     labInstallWithoutUserAction = false,
     labRespectPlatformInstallPolicy = false,
+    labShizukuNonAdbInstall = false,
     labEnableAbiOverride = false,
     labTryDifferentArchitecture = false,
     enableFileLogging = false,
     themeMode = ThemeMode.entries.first(),
+    useAmoled = false,
     paletteStyle = PaletteStyle.entries.first(),
     colorSpec = ThemeColorSpec.entries.first(),
     useDynamicColor = false,

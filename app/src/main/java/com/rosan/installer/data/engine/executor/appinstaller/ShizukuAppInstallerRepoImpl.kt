@@ -12,7 +12,7 @@ import com.rosan.installer.framework.privileged.core.execution.authorization.req
 import kotlinx.coroutines.CoroutineScope
 import rikka.shizuku.ShizukuBinderWrapper
 
-class ShizukuAppInstallerRepoImpl(
+open class ShizukuAppInstallerRepoImpl(
     context: Context,
     reflect: ReflectionProvider,
     capabilityProvider: DeviceCapabilityProvider,

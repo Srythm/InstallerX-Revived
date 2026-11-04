@@ -86,6 +86,7 @@ fun InstallerTheme(
     useDynamicColor: Boolean,
     useCouiMonet: Boolean,
     seedColor: Color,
+    useAmoled: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val preservedContent = remember {
@@ -116,8 +117,19 @@ fun InstallerTheme(
         )
     }
 
+    // Only callers that opt in use AMOLED backgrounds, and only in dark mode.
+    val colorScheme = if (useAmoled && isDark) {
+        baseColorScheme.copy(
+            background = Color.Black,
+            surface = Color.Black,
+            surfaceContainer = Color.Black,
+        )
+    } else {
+        baseColorScheme
+    }
+
     // 2. Wrap it with smooth transitions
-    val animatedColorScheme = baseColorScheme.animateAsState()
+    val animatedColorScheme = colorScheme.animateAsState()
 
     CompositionLocalProvider(
         LocalIsDark provides isDark,
@@ -143,6 +155,7 @@ fun InstallerTheme(
                 seedColor = seedColor,
                 paletteStyle = paletteStyle,
                 colorSpec = colorSpec,
+                useAmoled = useAmoled,
             ) {
                 preservedContent(content)
             }
@@ -193,6 +206,7 @@ fun InstallerCOUITheme(
     seedColor: Color,
     paletteStyle: PaletteStyle,
     colorSpec: ThemeColorSpec,
+    useAmoled: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     if (compatStatusBarColor) {
@@ -224,8 +238,20 @@ fun InstallerCOUITheme(
         } else {
             seedColor
         }
-        remember(keyColor, isDark, paletteStyle, colorSpec) {
-            dynamicColorScheme(keyColor, isDark, paletteStyle, 0.0, colorSpec).toCouiColors()
+        remember(keyColor, isDark, paletteStyle, colorSpec, useAmoled) {
+            val scheme = dynamicColorScheme(keyColor, isDark, paletteStyle, 0.0, colorSpec)
+            // AMOLED only applies to the generated palette; the built-in COUI
+            // schemes below are fixed and stay as they are.
+            val amoledScheme = if (useAmoled && isDark) {
+                scheme.copy(
+                    background = Color.Black,
+                    surface = Color.Black,
+                    surfaceContainer = Color.Black,
+                )
+            } else {
+                scheme
+            }
+            amoledScheme.toCouiColors()
         }
     } else if (isDark) {
         couiDarkColorScheme()

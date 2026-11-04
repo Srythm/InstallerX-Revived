@@ -148,6 +148,12 @@ fun COUIThemeSettingsPage(
                             viewModel.dispatch(ThemeSettingsAction.SetThemeMode(newMode))
                         },
                     )
+                    CouiSwitchWidget(
+                        title = stringResource(R.string.theme_settings_use_amoled),
+                        description = stringResource(R.string.theme_settings_use_amoled_desc),
+                        checked = uiState.useAmoled,
+                        onCheckedChange = { viewModel.dispatch(ThemeSettingsAction.SetUseAmoled(it)) },
+                    )
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         CouiSwitchWidget(
                             title = stringResource(R.string.theme_settings_use_blur),
