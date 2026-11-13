@@ -191,10 +191,10 @@ fun CouiInstallerPage(
             )
         }
 
-        is InstallerStage.InstallingModule -> if (stage.isFinished) {
-            stringResource(R.string.installer_install_complete)
-        } else {
-            stringResource(R.string.installer_installing_module)
+        is InstallerStage.InstallingModule -> when {
+            stage.failed -> stringResource(R.string.installer_install_failed)
+            stage.isFinished -> stringResource(R.string.installer_install_complete)
+            else -> stringResource(R.string.installer_installing_module)
         }
 
         is InstallerStage.InstallConfirm -> stringResource(

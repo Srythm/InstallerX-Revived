@@ -353,7 +353,7 @@ class InstallerViewModel(
                     val errorLine = "ERROR: $msg"
                     if (currentOutput.lastOrNull() != errorLine) currentOutput.add(errorLine)
                 }
-                InstallerStage.InstallingModule(output = currentOutput, isFinished = true)
+                InstallerStage.InstallingModule(output = currentOutput, isFinished = true, failed = true)
             } else {
                 InstallerStage.InstallFailed
             }

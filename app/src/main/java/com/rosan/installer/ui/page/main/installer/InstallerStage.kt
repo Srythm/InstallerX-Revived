@@ -25,7 +25,11 @@ sealed interface InstallerStage {
     data object InstallExtendedMenu : InstallerStage
     data object InstallExtendedSubMenu : InstallerStage
     data class Installing(val progress: Float, val current: Int, val total: Int, val appLabel: String?, val phase: InstallPhase) : InstallerStage
-    data class InstallingModule(val output: List<String>, val isFinished: Boolean = false) : InstallerStage
+    data class InstallingModule(
+        val output: List<String>,
+        val isFinished: Boolean = false,
+        val failed: Boolean = false,
+    ) : InstallerStage
     data object InstallWaitingUnknownSource : InstallerStage
     data object InstallSuccess : InstallerStage
     data object InstallFailed : InstallerStage
