@@ -354,6 +354,11 @@ class ModernNotificationBuilder(
         val currentBatchIndex = if (progress.total > 1) progress.current - 1 else null
         return builder.setContentText(context.getString(R.string.installer_installing))
             .setLargeIcon(helper.getLargeIconBitmap(preferSystemIcon, currentBatchIndex))
+            // Every stage of the live notification keeps one action row. ColorOS renders the
+            // promoted card at the previous height while it re-measures, so growing from
+            // "no actions" to "two actions" at the success step showed up as a card with
+            // collapsed top/bottom padding that snapped back a frame later.
+            .addAction(0, context.getString(R.string.cancel), helper.cancelIntent)
     }
 
     private suspend fun onInstallingModule(
@@ -362,6 +367,7 @@ class ModernNotificationBuilder(
         preferSystemIcon: Boolean,
     ): NotificationCompat.Builder = builder.setContentText(progress.output.lastOrNull() ?: context.getString(R.string.installer_installing))
         .setLargeIcon(helper.getLargeIconBitmap(preferSystemIcon))
+        .addAction(0, context.getString(R.string.cancel), helper.cancelIntent)
 
     private suspend fun onWaitingUnknownSource(
         builder: NotificationCompat.Builder,

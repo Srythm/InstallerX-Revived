@@ -536,15 +536,19 @@ fun CouiInstallerPage(
                     WindowBlurEffect(useBlur = settings.useBlur, blurRadius = targetState)
                 }
 
-                // Using stage.javaClass instead of viewModel.state::class for stability
+                // Keyed by stage class for stability, but each slot must render the stage it
+                // was handed: reading the live value made the outgoing page paint the incoming
+                // one, so text appeared to animate along with the cross-fade.
                 AnimatedContent(
-                    targetState = stage.javaClass,
+                    targetState = stage,
                     label = "CouiSheetContentAnimation",
+                    contentKey = { it.javaClass },
                     transitionSpec = {
                         fadeIn(animationSpec = tween(durationMillis = 150)) togetherWith
                             fadeOut(animationSpec = tween(durationMillis = 150))
                     },
-                ) { _ ->
+                ) { targetStage ->
+                    val stage = targetStage
                     when (stage) {
                         is InstallerStage.InstallConfirm -> {
                             InstallConfirmContent(
@@ -851,6 +855,15 @@ private fun isFullScreenStage(stage: InstallerStage): Boolean = when (stage) {
 }
 
 /**
+ * One full-screen page as seen by [AnimatedContent].
+ *
+ * [key] is the animation identity (page class / sub-page), while [stage] is the
+ * snapshot that this slot paints. Keeping them apart lets a cross-fade show two
+ * different pages, while a plain progress tick updates the current page in place.
+ */
+private data class FullScreenPage(val stage: InstallerStage, val key: Any)
+
+/**
  * Full-screen install flow.
  *
  * Mirrors the sheet's state machine for the migrated stages but keeps its own
@@ -942,14 +955,21 @@ private fun CouiFullScreenInstaller(
         bottomBar = bottomBarContent,
     ) {
         AnimatedContent(
-            targetState = pageKey,
+            targetState = FullScreenPage(stage, pageKey),
             modifier = Modifier.fillMaxSize(),
             label = "CouiFullScreenPage",
+            // Page identity drives the cross-fade; a progress tick only re-composes.
+            contentKey = { it.key },
             transitionSpec = {
                 fadeIn(animationSpec = tween(durationMillis = 180)) togetherWith
                     fadeOut(animationSpec = tween(durationMillis = 120))
             },
-        ) { _ ->
+        ) { page ->
+            // Render the snapshot handed to this slot instead of the live `stage`, so the
+            // outgoing page keeps its own content while it fades out. Reading the live value
+            // here made both slots paint the incoming page, which read as the text animating
+            // on its own.
+            val stage = page.stage
             when {
                 stage is InstallerStage.Preparing -> {
                     // The sheet's version carries a "run in background" button;

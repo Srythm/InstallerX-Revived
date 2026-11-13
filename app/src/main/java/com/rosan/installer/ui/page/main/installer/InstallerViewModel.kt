@@ -125,6 +125,18 @@ class InstallerViewModel(
     val isInstallingModule: Boolean
         get() = _localState.value.isInstallingModule
 
+    /**
+     * Latched once the session actually reaches [ProgressEntity.InstallingModule].
+     *
+     * The terminal stage has to survive the success/failure transition: by then the
+     * analysis results may no longer expose a selected module, so `isInstallingModule`
+     * alone would fall back to the regular "install success" page and throw the log
+     * away. A module install asked for a terminal, so it keeps one.
+     */
+    private var moduleInstallStarted = false
+
+    private fun isModuleInstallFlow(): Boolean = moduleInstallStarted || isInstallingModule
+
     private fun List<PackageAnalysisResult>.hasSelectedModule(): Boolean = any { result ->
         result.appEntities.any { entity -> entity.selected && entity.app is AppEntity.ModuleEntity }
     }
@@ -335,7 +347,7 @@ class InstallerViewModel(
         ProgressEntity.InstallWaitingUnknownSource -> InstallerStage.InstallWaitingUnknownSource
 
         ProgressEntity.InstallFailed -> {
-            if (isInstallingModule) {
+            if (isModuleInstallFlow()) {
                 val currentOutput = session.moduleLog.toMutableList()
                 session.error.message?.let { msg ->
                     val errorLine = "ERROR: $msg"
@@ -348,7 +360,7 @@ class InstallerViewModel(
         }
 
         ProgressEntity.InstallSuccess -> {
-            if (isInstallingModule) {
+            if (isModuleInstallFlow()) {
                 InstallerStage.InstallingModule(output = session.moduleLog, isFinished = true)
             } else {
                 InstallerStage.InstallSuccess
@@ -419,7 +431,10 @@ class InstallerViewModel(
     }
 
     private fun collectRepo(session: InstallerSessionRepository) {
-        if (this.session !== session) packageSelectionsBeforeClear.clear()
+        if (this.session !== session) {
+            packageSelectionsBeforeClear.clear()
+            moduleInstallStarted = false
+        }
         this.session = session
         if (session.config.enableCustomizeUser) {
             loadAvailableUsers(session.config.authorizer, session.config.customizeAuthorizer)
@@ -457,6 +472,9 @@ class InstallerViewModel(
             ) { progress, uninstallInfo, confirmationState ->
                 Triple(progress, uninstallInfo, confirmationState)
             }.collect { (progress, uninstallInfo, confirmationState) ->
+
+                // Latch the terminal flow before anything else looks at the stage.
+                if (progress is ProgressEntity.InstallingModule) moduleInstallStarted = true
 
                 if (progress is ProgressEntity.InstallResolving || progress is ProgressEntity.InstallPreparing || progress is ProgressEntity.InstallAnalysing) {
                     if (isInstallingModule) {
