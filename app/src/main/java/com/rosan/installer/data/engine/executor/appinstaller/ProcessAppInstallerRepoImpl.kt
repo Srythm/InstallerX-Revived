@@ -3,6 +3,7 @@
 package com.rosan.installer.data.engine.executor.appinstaller
 
 import android.content.Context
+import android.content.pm.PackageInfo
 import android.os.IBinder
 import com.rosan.installer.core.reflection.ReflectionProvider
 import com.rosan.installer.domain.device.provider.DeviceCapabilityProvider
@@ -57,11 +58,21 @@ class ProcessAppInstallerRepoImpl(
         )
     }
 
+    override suspend fun getUninstallPackageInfo(
+        config: ConfigModel,
+        packageName: String,
+        userId: Int,
+        flags: Long,
+    ): PackageInfo = runWithProcess(config) {
+        super.getUninstallPackageInfo(config, packageName, userId, flags)
+    }
+
     override suspend fun doUninstallWork(
         config: ConfigModel,
         packageName: String,
+        userId: Int,
     ) = runWithProcess(config) {
-        super.doUninstallWork(config, packageName)
+        super.doUninstallWork(config, packageName, userId)
     }
 
     override suspend fun approveSession(
