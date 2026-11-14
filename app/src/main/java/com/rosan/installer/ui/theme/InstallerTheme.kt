@@ -101,8 +101,12 @@ fun InstallerTheme(
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
 
+    // ColorOS and other OPlus ROMs expose the exact palette seed the user picked in the system
+    // settings, which is more accurate than the quantized android.R.color.system_accent1_500
+    // bucket. Roms without the setting fall back to that bucket.
+    val systemSeedColor = rememberSystemSeedColor()
     val keyColor = if (useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        colorResource(id = android.R.color.system_accent1_500)
+        systemSeedColor ?: colorResource(id = android.R.color.system_accent1_500)
     } else {
         seedColor
     }
@@ -156,6 +160,7 @@ fun InstallerTheme(
                 paletteStyle = paletteStyle,
                 colorSpec = colorSpec,
                 useAmoled = useAmoled,
+                systemSeedColor = systemSeedColor,
             ) {
                 preservedContent(content)
             }
@@ -207,6 +212,7 @@ fun InstallerCOUITheme(
     paletteStyle: PaletteStyle,
     colorSpec: ThemeColorSpec,
     useAmoled: Boolean = false,
+    systemSeedColor: Color? = null,
     content: @Composable () -> Unit,
 ) {
     if (compatStatusBarColor) {
@@ -232,9 +238,15 @@ fun InstallerCOUITheme(
      * so the palette is produced by our own material-kolor pipeline and handed
      * to COUI as a finished Colors instance.
      */
+    // Always resolved, even when the caller already passed a seed: making this call conditional
+    // would change the composition's slot structure when a system palette appears or disappears
+    // at runtime.
+    val fallbackSystemSeed = rememberSystemSeedColor()
+
     val colors = if (useCouiMonet) {
+        val resolvedSystemSeed = systemSeedColor ?: fallbackSystemSeed
         val keyColor = if (useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            colorResource(id = android.R.color.system_accent1_500)
+            resolvedSystemSeed ?: colorResource(id = android.R.color.system_accent1_500)
         } else {
             seedColor
         }
