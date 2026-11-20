@@ -16,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -64,7 +65,20 @@ fun CouiFullScreenStatusContent(
                 )
             } else {
                 Box(
-                    Modifier.size(RingDiameter).background(haloColor, CircleShape),
+                    // Soft halo instead of a solid disc: a radial ramp fades out on its own, so
+                    // the mark reads as light rather than as a second circle.
+                    Modifier
+                        .size(MarkSize)
+                        .background(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    haloColor,
+                                    haloColor.copy(alpha = haloColor.alpha * 0.55f),
+                                    Color.Transparent,
+                                ),
+                            ),
+                            shape = CircleShape,
+                        ),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(

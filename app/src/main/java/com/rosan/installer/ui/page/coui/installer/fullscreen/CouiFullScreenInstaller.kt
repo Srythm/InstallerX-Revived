@@ -48,7 +48,6 @@ import com.rosan.installer.ui.page.main.installer.InstallerViewModel
 import com.rosan.installer.ui.util.KeyEventBlocker
 import com.rosan.installer.util.help
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
-import io.github.suqi8.coui.kmp.basic.ButtonMaterial
 import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.CircularProgressIndicator
 import io.github.suqi8.coui.kmp.basic.Icon
@@ -111,6 +110,7 @@ fun CouiFullScreenInstaller(
     CouiFullScreenInstallerContent(
         page = if (isClosing) lastOpenPage.value else currentPage,
         appInfo = appInfo,
+        useBlur = uiState.viewSettings.useBlur,
         entity = entity,
         versionName = versionName,
         sourceLabel = sourceLabel,
@@ -126,6 +126,7 @@ fun CouiFullScreenInstaller(
 internal fun CouiFullScreenInstallerContent(
     page: FullScreenPage,
     appInfo: AppInfoState,
+    useBlur: Boolean = false,
     entity: AppEntity.BaseEntity? = null,
     versionName: String? = null,
     sourceLabel: String? = null,
@@ -153,6 +154,7 @@ internal fun CouiFullScreenInstallerContent(
         },
         isClosing = isClosing,
         onBack = backAction,
+        useBlur = useBlur,
         onMore = if (!subPage && stage is InstallerStage.InstallPrepare && !isClosing) {
             { onAction(InstallerViewAction.ShowCouiSheetRightActionSettings) }
         } else {
@@ -314,8 +316,6 @@ private fun FullScreenActionButton(
         enabled = enabled,
         modifier = modifier,
         colors = if (primary) ButtonDefaults.textButtonColorsPrimary() else ButtonDefaults.textButtonColors(),
-        material = ButtonMaterial.None,
-        materialBackdrop = false,
     )
 }
 
