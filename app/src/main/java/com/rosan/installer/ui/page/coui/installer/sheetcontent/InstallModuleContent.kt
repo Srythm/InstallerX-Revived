@@ -80,6 +80,10 @@ fun InstallModuleContent(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
+                // The reboot button in the title bar is a COUI material button, and its shadow
+                // reaches about 19dp past the button: the title row only leaves 6dp below the
+                // button, so without this gap the log card paints over the lower half of it.
+                .padding(top = 16.dp)
                 .heightIn(min = 300.dp)
                 .weight(1f, fill = false),
             colors = couiSheetCardColors(),
