@@ -44,6 +44,7 @@ import com.rosan.installer.domain.settings.model.config.BiometricAuthMode
 import com.rosan.installer.ui.navigation.LocalNavigator
 import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
 import com.rosan.installer.ui.page.coui.widgets.CouiContentDialog
+import com.rosan.installer.ui.page.coui.widgets.CouiPopupBlurScope
 import com.rosan.installer.ui.page.coui.widgets.CouiSettingsTipCard
 import com.rosan.installer.ui.page.coui.widgets.CouiUnsavedChangesDialog
 import com.rosan.installer.ui.page.main.settings.config.edit.EditViewAction
@@ -215,104 +216,106 @@ fun CouiEditPage(id: Long? = null, viewModel: EditViewModel = koinViewModel { pa
         },
         snackbarHost = { SnackbarHost(state = snackBarHostState) },
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(topBarBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier)
-                .scrollEndHaptic()
-                .overScrollVertical()
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = PaddingValues(
-                start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
-                top = paddingValues.calculateTopPadding(),
-                end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
-            ),
-            overscrollEffect = null,
-        ) {
-            item { Spacer(modifier = Modifier.size(12.dp)) }
-            item { CouiDataNameWidget(state = state, dispatch = dispatch) }
-            item { CouiDataDescriptionWidget(state = state, dispatch = dispatch) }
-            item { SmallTitle(stringResource(R.string.config)) }
-            item {
-                Card(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 12.dp),
-                ) {
-                    CouiDataAuthorizerWidget(state = state, dispatch = dispatch)
-                    CouiDataCustomizeAuthorizerWidget(state = state, dispatch = dispatch)
-                    CouiDataInstallModeWidget(state = state, dispatch = dispatch)
-                    CouiDataAutoApproveSessionWidget(
-                        state = state,
-                        dispatch = dispatch,
-                        onEnableRequest = {
-                            showAutoApproveSessionDialogState.value = true
-                        },
-                    )
-                    if (state.globalInstallerBiometricAuthMode == BiometricAuthMode.FollowConfig) {
-                        CouiDataRequireBiometricAuthWidget(state = state, dispatch = dispatch)
-                    }
-                    CouiToastModeWidget(state = state, dispatch = dispatch)
-                }
-            }
-            if (isNoneActive(stateAuthorizer, globalAuthorizer)) {
-                item { CouiSettingsTipCard(stringResource(R.string.config_authorizer_none_tips)) }
-            }
-            item { SmallTitle(stringResource(R.string.config_label_installer_settings)) }
-            item {
-                Card(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 12.dp),
-                ) {
-                    CouiDataUserWidget(state = state, dispatch = dispatch)
-                    CouiInstallReasonWidget(state = state, dispatch = dispatch)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        CouiDataPackageSourceWidget(state = state, dispatch = dispatch)
-                    }
-                    CouiDataInstallRequesterWidget(state = state, dispatch = dispatch)
-                    CouiDataDeclareInstallerWidget(state = state, dispatch = dispatch)
-                    CouiDataManualDexoptWidget(state = state, dispatch = dispatch)
-                    CouiDataAutoDeleteWidget(state = state, dispatch = dispatch)
-                    CouiDisplaySdkWidget(state = state, dispatch = dispatch)
-                    CouiDisplaySizeWidget(state = state, dispatch = dispatch)
-                }
-            }
-            item { SmallTitle(stringResource(R.string.config_label_install_options)) }
-            item {
-                Card(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 16.dp),
-                ) {
-                    CouiDataForAllUserWidget(state = state, dispatch = dispatch)
-                    CouiDataAllowTestOnlyWidget(state = state, dispatch = dispatch)
-                    CouiDataAllowDowngradeWidget(state = state, dispatch = dispatch)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                        CouiDataBypassLowTargetSdkWidget(state = state, dispatch = dispatch)
-                    }
-                    CouiDataAllowAllRequestedPermissionsWidget(state = state, dispatch = dispatch)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                        CouiRequestUpdateOwnershipWidget(state = state, dispatch = dispatch)
+        CouiPopupBlurScope(topBarBackdrop) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(topBarBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier)
+                    .scrollEndHaptic()
+                    .overScrollVertical()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                contentPadding = PaddingValues(
+                    start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
+                    top = paddingValues.calculateTopPadding(),
+                    end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
+                ),
+                overscrollEffect = null,
+            ) {
+                item { Spacer(modifier = Modifier.size(12.dp)) }
+                item { CouiDataNameWidget(state = state, dispatch = dispatch) }
+                item { CouiDataDescriptionWidget(state = state, dispatch = dispatch) }
+                item { SmallTitle(stringResource(R.string.config)) }
+                item {
+                    Card(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 12.dp),
+                    ) {
+                        CouiDataAuthorizerWidget(state = state, dispatch = dispatch)
+                        CouiDataCustomizeAuthorizerWidget(state = state, dispatch = dispatch)
+                        CouiDataInstallModeWidget(state = state, dispatch = dispatch)
+                        CouiDataAutoApproveSessionWidget(
+                            state = state,
+                            dispatch = dispatch,
+                            onEnableRequest = {
+                                showAutoApproveSessionDialogState.value = true
+                            },
+                        )
+                        if (state.globalInstallerBiometricAuthMode == BiometricAuthMode.FollowConfig) {
+                            CouiDataRequireBiometricAuthWidget(state = state, dispatch = dispatch)
+                        }
+                        CouiToastModeWidget(state = state, dispatch = dispatch)
                     }
                 }
-            }
-            item { SmallTitle(stringResource(R.string.config_label_preferences)) }
-            item {
-                Card(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 16.dp),
-                ) {
-                    CouiDataSplitChooseAllWidget(state = state, dispatch = dispatch)
-                    CouiDataApkChooseAllWidget(state = state, dispatch = dispatch)
-                    if (state.checkAppSignature) {
-                        CouiDataAllowSigMismatchWidget(state = state, dispatch = dispatch)
-                        CouiDataAllowSigUnknownWidget(state = state, dispatch = dispatch)
+                if (isNoneActive(stateAuthorizer, globalAuthorizer)) {
+                    item { CouiSettingsTipCard(stringResource(R.string.config_authorizer_none_tips)) }
+                }
+                item { SmallTitle(stringResource(R.string.config_label_installer_settings)) }
+                item {
+                    Card(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 12.dp),
+                    ) {
+                        CouiDataUserWidget(state = state, dispatch = dispatch)
+                        CouiInstallReasonWidget(state = state, dispatch = dispatch)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            CouiDataPackageSourceWidget(state = state, dispatch = dispatch)
+                        }
+                        CouiDataInstallRequesterWidget(state = state, dispatch = dispatch)
+                        CouiDataDeclareInstallerWidget(state = state, dispatch = dispatch)
+                        CouiDataManualDexoptWidget(state = state, dispatch = dispatch)
+                        CouiDataAutoDeleteWidget(state = state, dispatch = dispatch)
+                        CouiDisplaySdkWidget(state = state, dispatch = dispatch)
+                        CouiDisplaySizeWidget(state = state, dispatch = dispatch)
                     }
                 }
+                item { SmallTitle(stringResource(R.string.config_label_install_options)) }
+                item {
+                    Card(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 16.dp),
+                    ) {
+                        CouiDataForAllUserWidget(state = state, dispatch = dispatch)
+                        CouiDataAllowTestOnlyWidget(state = state, dispatch = dispatch)
+                        CouiDataAllowDowngradeWidget(state = state, dispatch = dispatch)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                            CouiDataBypassLowTargetSdkWidget(state = state, dispatch = dispatch)
+                        }
+                        CouiDataAllowAllRequestedPermissionsWidget(state = state, dispatch = dispatch)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                            CouiRequestUpdateOwnershipWidget(state = state, dispatch = dispatch)
+                        }
+                    }
+                }
+                item { SmallTitle(stringResource(R.string.config_label_preferences)) }
+                item {
+                    Card(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 16.dp),
+                    ) {
+                        CouiDataSplitChooseAllWidget(state = state, dispatch = dispatch)
+                        CouiDataApkChooseAllWidget(state = state, dispatch = dispatch)
+                        if (state.checkAppSignature) {
+                            CouiDataAllowSigMismatchWidget(state = state, dispatch = dispatch)
+                            CouiDataAllowSigUnknownWidget(state = state, dispatch = dispatch)
+                        }
+                    }
+                }
+                item { Spacer(Modifier.navigationBarsPadding()) }
             }
-            item { Spacer(Modifier.navigationBarsPadding()) }
         }
     }
 }

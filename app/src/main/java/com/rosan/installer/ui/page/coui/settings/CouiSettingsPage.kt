@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +47,7 @@ import com.rosan.installer.ui.page.coui.settings.history.CouiHistoryPage
 import com.rosan.installer.ui.page.coui.settings.home.CouiHomePage
 import com.rosan.installer.ui.page.coui.settings.preferred.CouiPreferredPage
 import com.rosan.installer.ui.theme.ProvideCouiMaterialBackdrop
+import com.rosan.installer.ui.theme.rememberCouiPopupBlurProvider
 import io.github.suqi8.coui.kmp.basic.FloatingActionButton
 import io.github.suqi8.coui.kmp.basic.FloatingNavigationBar
 import io.github.suqi8.coui.kmp.basic.FloatingNavigationBarItem
@@ -60,6 +62,7 @@ import io.github.suqi8.coui.kmp.basic.Scaffold
 import io.github.suqi8.coui.kmp.basic.SnackbarHost
 import io.github.suqi8.coui.kmp.basic.SnackbarHostState
 import io.github.suqi8.coui.kmp.basic.Text
+import io.github.suqi8.coui.kmp.effect.LocalPopupMaterialBlur
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import top.yukonga.miuix.kmp.blur.BlendColorEntry
 import top.yukonga.miuix.kmp.blur.BlurColors
@@ -101,6 +104,14 @@ fun SettingsCompactLayout(
     couiBackdrop: CouiLayerBackdrop?,
 ) {
     val navigator = LocalNavigator.current
+    // Where this provider sits matters twice over. COUI resolves the popup surface where the popup
+    // is *called* (rememberPopupSurface runs in ListPopupLayout, not in the host), so the provider
+    // has to be visible inside the page content. But Scaffold also reads the same local to decide
+    // whether a popup would blur a page that is recording it
+    // (`hostInsideBackdrop = LocalPopupMaterialBlur.current != null`), so it must NOT be visible at
+    // the Scaffold itself. Providing it around the pager content satisfies both: the menus sit in
+    // the popup host, outside the recording, and can sample the page.
+    val popupBlurProvider = rememberCouiPopupBlurProvider(couiBackdrop)
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -174,17 +185,19 @@ fun SettingsCompactLayout(
             }
         },
     ) { paddingValues ->
-        SettingsPagerContent(
-            configCount = configCount,
-            mainPagerState = mainPagerState,
-            navigationItems = navigationItems,
-            snackbarHostState = snackbarHostState,
-            modifier = Modifier.fillMaxSize(),
-            outerPadding = paddingValues,
-            useFloatingBottomBar = useFloatingBottomBar,
-            floatingBackdrop = floatingBackdrop,
-            couiBackdrop = couiBackdrop,
-        )
+        CompositionLocalProvider(LocalPopupMaterialBlur provides popupBlurProvider) {
+            SettingsPagerContent(
+                configCount = configCount,
+                mainPagerState = mainPagerState,
+                navigationItems = navigationItems,
+                snackbarHostState = snackbarHostState,
+                modifier = Modifier.fillMaxSize(),
+                outerPadding = paddingValues,
+                useFloatingBottomBar = useFloatingBottomBar,
+                floatingBackdrop = floatingBackdrop,
+                couiBackdrop = couiBackdrop,
+            )
+        }
     }
 }
 
@@ -275,6 +288,14 @@ private fun SettingsWideContent(
     contentWindowInsets: WindowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout),
 ) {
     val navigator = LocalNavigator.current
+    // Where this provider sits matters twice over. COUI resolves the popup surface where the popup
+    // is *called* (rememberPopupSurface runs in ListPopupLayout, not in the host), so the provider
+    // has to be visible inside the page content. But Scaffold also reads the same local to decide
+    // whether a popup would blur a page that is recording it
+    // (`hostInsideBackdrop = LocalPopupMaterialBlur.current != null`), so it must NOT be visible at
+    // the Scaffold itself. Providing it around the pager content satisfies both: the menus sit in
+    // the popup host, outside the recording, and can sample the page.
+    val popupBlurProvider = rememberCouiPopupBlurProvider(couiBackdrop)
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         contentWindowInsets = contentWindowInsets,
@@ -310,17 +331,19 @@ private fun SettingsWideContent(
             }
         },
     ) { paddingValues ->
-        SettingsPagerContent(
-            configCount = configCount,
-            mainPagerState = mainPagerState,
-            navigationItems = navigationItems,
-            snackbarHostState = snackbarHostState,
-            modifier = Modifier.fillMaxSize(),
-            outerPadding = paddingValues,
-            useFloatingBottomBar = useFloatingBottomBar,
-            floatingBackdrop = floatingBackdrop,
-            couiBackdrop = couiBackdrop,
-        )
+        CompositionLocalProvider(LocalPopupMaterialBlur provides popupBlurProvider) {
+            SettingsPagerContent(
+                configCount = configCount,
+                mainPagerState = mainPagerState,
+                navigationItems = navigationItems,
+                snackbarHostState = snackbarHostState,
+                modifier = Modifier.fillMaxSize(),
+                outerPadding = paddingValues,
+                useFloatingBottomBar = useFloatingBottomBar,
+                floatingBackdrop = floatingBackdrop,
+                couiBackdrop = couiBackdrop,
+            )
+        }
     }
 }
 

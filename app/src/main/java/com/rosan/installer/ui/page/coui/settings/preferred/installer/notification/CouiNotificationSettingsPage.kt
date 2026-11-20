@@ -37,6 +37,7 @@ import com.rosan.installer.domain.device.provider.DeviceCapabilityProvider
 import com.rosan.installer.ui.navigation.LocalNavigator
 import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
 import com.rosan.installer.ui.page.coui.widgets.CouiIntNumberPickerWidget
+import com.rosan.installer.ui.page.coui.widgets.CouiPopupBlurScope
 import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
 import com.rosan.installer.ui.page.main.settings.preferred.installer.notification.NotificationSettingsAction
 import com.rosan.installer.ui.page.main.settings.preferred.installer.notification.NotificationSettingsViewModel
@@ -50,7 +51,7 @@ import io.github.suqi8.coui.kmp.basic.DropdownItem
 import io.github.suqi8.coui.kmp.basic.Scaffold
 import io.github.suqi8.coui.kmp.basic.SmallTitle
 import io.github.suqi8.coui.kmp.basic.TopAppBar
-import io.github.suqi8.coui.kmp.preference.WindowSpinnerPreference
+import io.github.suqi8.coui.kmp.preference.OverlaySpinnerPreference
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
 import org.koin.androidx.compose.koinViewModel
@@ -87,7 +88,7 @@ fun CouiNotificationSettingsPage(useBlur: Boolean, viewModel: NotificationSettin
         }
     }
 
-    // Convert the string list to DropdownItem list for WindowSpinnerPreference
+    // Convert the string list to DropdownItem list for OverlaySpinnerPreference
     val spinnerEntries = remember(styleNames) {
         styleNames.map { DropdownItem(text = it) }
     }
@@ -118,124 +119,126 @@ fun CouiNotificationSettingsPage(useBlur: Boolean, viewModel: NotificationSettin
             )
         },
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(topBarBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier)
-                .scrollEndHaptic()
-                .overScrollVertical()
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = PaddingValues(
-                start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
-                top = paddingValues.calculateTopPadding(),
-                end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
-            ),
-            overscrollEffect = null,
-        ) {
-            item { Spacer(modifier = Modifier.size(12.dp)) }
-            item { SmallTitle(stringResource(R.string.notification_style)) }
+        CouiPopupBlurScope(topBarBackdrop) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(topBarBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier)
+                    .scrollEndHaptic()
+                    .overScrollVertical()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                contentPadding = PaddingValues(
+                    start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
+                    top = paddingValues.calculateTopPadding(),
+                    end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
+                ),
+                overscrollEffect = null,
+            ) {
+                item { Spacer(modifier = Modifier.size(12.dp)) }
+                item { SmallTitle(stringResource(R.string.notification_style)) }
 
-            item {
-                Card(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 12.dp),
-                ) {
-                    // 1. Notification style dropdown
-                    val isStyleSelectionEnabled = isModernEligible || isMiIslandSupported
-
-                    WindowSpinnerPreference(
-                        title = stringResource(R.string.notification_style),
-                        // Show "unsupported" only if no advanced styles are available
-                        summary = if (isStyleSelectionEnabled) {
-                            styleNames.getOrNull(selectedIndex) ?: ""
-                        } else {
-                            stringResource(R.string.notification_style_unsupported_desc)
-                        },
-                        enabled = isStyleSelectionEnabled,
-                        items = spinnerEntries,
-                        selectedIndex = selectedIndex,
-                        onSelectedIndexChange = { index ->
-                            val selectedStyle = styleOptions[index]
-                            viewModel.dispatch(NotificationSettingsAction.ChangeStyle(selectedStyle))
-                        },
-                    )
-                    // 2. Mi Island bypass restriction (animated visibility)
-                    AnimatedVisibility(
-                        visible = activeStyle == NotificationStyle.MI_ISLAND,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically(),
+                item {
+                    Card(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 12.dp),
                     ) {
-                        CouiSwitchWidget(
-                            title = stringResource(id = R.string.lab_mi_island_bypass_restriction),
-                            description = stringResource(id = R.string.lab_mi_island_bypass_restriction_desc),
-                            checked = uiState.miIslandBypassRestriction,
-                            onCheckedChange = {
-                                viewModel.dispatch(NotificationSettingsAction.ChangeMiIslandBypassRestriction(it))
+                        // 1. Notification style dropdown
+                        val isStyleSelectionEnabled = isModernEligible || isMiIslandSupported
+
+                        OverlaySpinnerPreference(
+                            title = stringResource(R.string.notification_style),
+                            // Show "unsupported" only if no advanced styles are available
+                            summary = if (isStyleSelectionEnabled) {
+                                styleNames.getOrNull(selectedIndex) ?: ""
+                            } else {
+                                stringResource(R.string.notification_style_unsupported_desc)
+                            },
+                            enabled = isStyleSelectionEnabled,
+                            items = spinnerEntries,
+                            selectedIndex = selectedIndex,
+                            onSelectedIndexChange = { index ->
+                                val selectedStyle = styleOptions[index]
+                                viewModel.dispatch(NotificationSettingsAction.ChangeStyle(selectedStyle))
                             },
                         )
-                    }
-                    // 3. Mi Island network blocking duration (animated visibility)
-                    AnimatedVisibility(
-                        visible = activeStyle == NotificationStyle.MI_ISLAND && uiState.miIslandBypassRestriction,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically(),
-                    ) {
-                        CouiIntNumberPickerWidget(
-                            title = stringResource(R.string.lab_mi_island_countdown),
-                            description = stringResource(R.string.lab_mi_island_countdown_desc),
-                            value = uiState.miIslandBlockingInterval,
-                            startInt = 50,
-                            endInt = 350,
+                        // 2. Mi Island bypass restriction (animated visibility)
+                        AnimatedVisibility(
+                            visible = activeStyle == NotificationStyle.MI_ISLAND,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically(),
                         ) {
-                            viewModel.dispatch(NotificationSettingsAction.ChangeMiIslandBlockingInterval(it))
+                            CouiSwitchWidget(
+                                title = stringResource(id = R.string.lab_mi_island_bypass_restriction),
+                                description = stringResource(id = R.string.lab_mi_island_bypass_restriction_desc),
+                                checked = uiState.miIslandBypassRestriction,
+                                onCheckedChange = {
+                                    viewModel.dispatch(NotificationSettingsAction.ChangeMiIslandBypassRestriction(it))
+                                },
+                            )
+                        }
+                        // 3. Mi Island network blocking duration (animated visibility)
+                        AnimatedVisibility(
+                            visible = activeStyle == NotificationStyle.MI_ISLAND && uiState.miIslandBypassRestriction,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically(),
+                        ) {
+                            CouiIntNumberPickerWidget(
+                                title = stringResource(R.string.lab_mi_island_countdown),
+                                description = stringResource(R.string.lab_mi_island_countdown_desc),
+                                value = uiState.miIslandBlockingInterval,
+                                startInt = 50,
+                                endInt = 350,
+                            ) {
+                                viewModel.dispatch(NotificationSettingsAction.ChangeMiIslandBlockingInterval(it))
+                            }
+                        }
+                        // 4. Mi Island outer glow (animated visibility)
+                        AnimatedVisibility(
+                            visible = activeStyle == NotificationStyle.MI_ISLAND,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically(),
+                        ) {
+                            CouiSwitchWidget(
+                                title = stringResource(id = R.string.lab_mi_island_outer_glow),
+                                description = stringResource(id = R.string.lab_mi_island_outer_glow_desc),
+                                checked = uiState.miIslandOuterGlow,
+                                onCheckedChange = {
+                                    viewModel.dispatch(NotificationSettingsAction.ChangeMiIslandOuterGlow(it))
+                                },
+                            )
                         }
                     }
-                    // 4. Mi Island outer glow (animated visibility)
-                    AnimatedVisibility(
-                        visible = activeStyle == NotificationStyle.MI_ISLAND,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically(),
+                }
+                item { SmallTitle(stringResource(R.string.config_label_preferences)) }
+                item {
+                    Card(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 12.dp),
                     ) {
+                        // 3. Show dialog when pressing notification
                         CouiSwitchWidget(
-                            title = stringResource(id = R.string.lab_mi_island_outer_glow),
-                            description = stringResource(id = R.string.lab_mi_island_outer_glow_desc),
-                            checked = uiState.miIslandOuterGlow,
+                            title = stringResource(id = R.string.show_dialog_when_pressing_notification),
+                            description = stringResource(id = R.string.change_notification_touch_behavior),
+                            checked = uiState.showDialogOnPress,
                             onCheckedChange = {
-                                viewModel.dispatch(NotificationSettingsAction.ChangeMiIslandOuterGlow(it))
+                                viewModel.dispatch(NotificationSettingsAction.ChangeShowDialogOnPress(it))
+                            },
+                        )
+
+                        // 4. Auto-clear success notification time
+                        CouiAutoClearNotificationTimeWidget(
+                            currentValue = uiState.successAutoClearSeconds,
+                            onValueChange = { seconds ->
+                                viewModel.dispatch(NotificationSettingsAction.ChangeAutoClearSeconds(seconds))
                             },
                         )
                     }
                 }
-            }
-            item { SmallTitle(stringResource(R.string.config_label_preferences)) }
-            item {
-                Card(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 12.dp),
-                ) {
-                    // 3. Show dialog when pressing notification
-                    CouiSwitchWidget(
-                        title = stringResource(id = R.string.show_dialog_when_pressing_notification),
-                        description = stringResource(id = R.string.change_notification_touch_behavior),
-                        checked = uiState.showDialogOnPress,
-                        onCheckedChange = {
-                            viewModel.dispatch(NotificationSettingsAction.ChangeShowDialogOnPress(it))
-                        },
-                    )
 
-                    // 4. Auto-clear success notification time
-                    CouiAutoClearNotificationTimeWidget(
-                        currentValue = uiState.successAutoClearSeconds,
-                        onValueChange = { seconds ->
-                            viewModel.dispatch(NotificationSettingsAction.ChangeAutoClearSeconds(seconds))
-                        },
-                    )
-                }
+                item { Spacer(Modifier.navigationBarsPadding()) }
             }
-
-            item { Spacer(Modifier.navigationBarsPadding()) }
         }
     }
 }
@@ -263,7 +266,7 @@ private fun CouiAutoClearNotificationTimeWidget(modifier: Modifier = Modifier, c
         options.indexOf(currentValue).coerceAtLeast(0)
     }
 
-    WindowSpinnerPreference(
+    OverlaySpinnerPreference(
         modifier = modifier,
         title = stringResource(id = R.string.installer_settings_auto_clear_success_notification),
         summary = stringResource(id = R.string.installer_settings_auto_clear_success_notification_desc),

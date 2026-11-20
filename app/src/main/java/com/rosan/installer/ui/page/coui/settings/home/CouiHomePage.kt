@@ -138,9 +138,9 @@ fun CouiHomePage(
                 .overScrollVertical()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             contentPadding = PaddingValues(
-                start = innerPadding.calculateStartPadding(layoutDirection) + 12.dp,
+                start = innerPadding.calculateStartPadding(layoutDirection) + 16.dp,
                 top = innerPadding.calculateTopPadding() + 12.dp,
-                end = innerPadding.calculateEndPadding(layoutDirection) + 12.dp,
+                end = innerPadding.calculateEndPadding(layoutDirection) + 16.dp,
                 bottom = outerPadding.calculateBottomPadding(),
             ),
             overscrollEffect = null,

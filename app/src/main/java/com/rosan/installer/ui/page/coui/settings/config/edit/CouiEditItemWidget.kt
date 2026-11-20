@@ -48,7 +48,7 @@ import io.github.suqi8.coui.kmp.basic.DropdownItem
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.basic.TextField
-import io.github.suqi8.coui.kmp.preference.WindowSpinnerPreference
+import io.github.suqi8.coui.kmp.preference.OverlaySpinnerPreference
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import org.koin.compose.koinInject
 
@@ -68,7 +68,7 @@ fun CouiDataNameWidget(
         errorMessage = if (state.data.errorName) stringResource(R.string.config_error_name) else "",
         // InputView draws its own card, so the gap to the next card is this padding — without it
         // the two cards sit flush and only their corner notches separate them.
-        modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
     )
     trailingContent()
 }
@@ -81,7 +81,7 @@ fun CouiDataDescriptionWidget(state: EditViewState, dispatch: (EditViewAction) -
         title = stringResource(id = R.string.config_description),
         singleLine = false,
         maxLines = 8,
-        modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
     )
 }
 
@@ -146,7 +146,7 @@ fun CouiDataAuthorizerWidget(state: EditViewState, dispatch: (EditViewAction) ->
         authorizers.indexOf(stateAuthorizer).coerceAtLeast(0)
     }
 
-    WindowSpinnerPreference(
+    OverlaySpinnerPreference(
         title = stringResource(R.string.config_authorizer),
         summary = stringResource(R.string.config_install_authorizer_desc),
         items = spinnerEntries,
@@ -201,7 +201,7 @@ fun CouiDataInstallModeWidget(state: EditViewState, dispatch: (EditViewAction) -
         data.keys.toList().indexOf(stateInstallMode.selectable).coerceAtLeast(0)
     }
 
-    WindowSpinnerPreference(
+    OverlaySpinnerPreference(
         title = stringResource(R.string.config_install_mode),
         items = spinnerEntries,
         selectedIndex = selectedIndex,
@@ -261,7 +261,7 @@ fun CouiToastModeWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit
         data.keys.toList().indexOf(currentMode).coerceAtLeast(0)
     }
 
-    WindowSpinnerPreference(
+    OverlaySpinnerPreference(
         title = stringResource(R.string.config_install_show_toast),
         summary = stringResource(R.string.config_install_show_toast_desc),
         items = spinnerEntries,
@@ -326,7 +326,7 @@ fun CouiInstallReasonWidget(state: EditViewState, dispatch: (EditViewAction) -> 
                 data.keys.toList().indexOf(currentInstallReason).coerceAtLeast(0)
             }
 
-            WindowSpinnerPreference(
+            OverlaySpinnerPreference(
                 title = stringResource(R.string.config_install_reason),
                 items = spinnerEntries,
                 enabled = enabled,
@@ -386,7 +386,7 @@ fun CouiDataPackageSourceWidget(state: EditViewState, dispatch: (EditViewAction)
                 data.keys.toList().indexOf(currentSource).coerceAtLeast(0)
             }
 
-            WindowSpinnerPreference(
+            OverlaySpinnerPreference(
                 title = stringResource(R.string.config_package_source),
                 items = spinnerEntries,
                 enabled = enabled,
@@ -433,7 +433,7 @@ fun CouiDataInstallRequesterWidget(state: EditViewState, dispatch: (EditViewActi
         data[currentMode]
     }
 
-    WindowSpinnerPreference(
+    OverlaySpinnerPreference(
         title = stringResource(id = R.string.config_declare_install_requester),
         summary = description,
         items = spinnerEntries,
@@ -540,7 +540,7 @@ fun CouiDataDeclareInstallerWidget(state: EditViewState, dispatch: (EditViewActi
             data.keys.toList().indexOf(currentMode).coerceAtLeast(0)
         }
 
-        WindowSpinnerPreference(
+        OverlaySpinnerPreference(
             title = stringResource(id = R.string.config_declare_installer),
             summary = description,
             items = spinnerEntries,
@@ -632,7 +632,7 @@ fun CouiDataUserWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit)
                 availableUsers.keys.toList().indexOf(targetUserId).coerceAtLeast(0)
             }
 
-            WindowSpinnerPreference(
+            OverlaySpinnerPreference(
                 title = stringResource(R.string.config_target_user),
                 items = spinnerEntries,
                 selectedIndex = selectedIndex,
@@ -695,7 +695,7 @@ fun CouiDataManualDexoptWidget(state: EditViewState, dispatch: (EditViewAction) 
                 data.keys.toList().indexOf(currentMode).coerceAtLeast(0)
             }
 
-            WindowSpinnerPreference(
+            OverlaySpinnerPreference(
                 title = stringResource(R.string.config_dexopt_mode),
                 items = spinnerEntries,
                 selectedIndex = selectedIndex,

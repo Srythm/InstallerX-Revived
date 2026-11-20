@@ -87,6 +87,7 @@ import com.rosan.installer.ui.navigation.Route
 import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
 import com.rosan.installer.ui.page.coui.widgets.CouiContentDialog
 import com.rosan.installer.ui.page.coui.widgets.CouiNavigationItemWidget
+import com.rosan.installer.ui.page.coui.widgets.CouiPopupBlurScope
 import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
 import com.rosan.installer.ui.page.coui.widgets.CouiUpdateDialog
 import com.rosan.installer.ui.page.coui.widgets.ErrorDisplaySheet
@@ -119,12 +120,13 @@ import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.basic.VerticalScrollBar
 import io.github.suqi8.coui.kmp.basic.rememberScrollBarAdapter
 import io.github.suqi8.coui.kmp.interfaces.ExperimentalScrollBarApi
+import io.github.suqi8.coui.kmp.overlay.OverlayListPopup
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.theme.LocalDismissState
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
+import io.github.suqi8.coui.kmp.window.OverlayListPopup
 import io.github.suqi8.coui.kmp.window.WindowBottomSheet
-import io.github.suqi8.coui.kmp.window.WindowListPopup
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.blur.BlendColorEntry
 import top.yukonga.miuix.kmp.blur.BlurBlendMode
@@ -269,24 +271,26 @@ private fun CouiAboutPageInternal(
             )
         },
     ) { innerPadding ->
-        Box(modifier = topBarBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier) {
-            AboutContentBody(
-                padding = innerPadding,
-                uiState = uiState,
-                versionInfoText = versionInfoText,
-                lazyListState = lazyListState,
-                scrollProgressProvider = { scrollProgress },
-                useBlur = blurSupported,
-                topAppBarScrollBehavior = topAppBarScrollBehavior,
-                onLogoHeightChanged = { logoHeightPx = it },
-                onGetUpdateClicked = onShowUpdateDialog,
-                onDirectUpdateClicked = { viewModel.dispatch(AboutAction.PerformUpdate) },
-                onLicenseClicked = { navigator.push(Route.OpenSourceLicense) },
-                onLogToggle = { viewModel.dispatch(AboutAction.SetEnableFileLogging(it)) },
-                onLogExport = { viewModel.dispatch(AboutAction.ShareLog) },
-                uriHandler = uriHandler,
-                context = context,
-            )
+        CouiPopupBlurScope(topBarBackdrop) {
+            Box(modifier = topBarBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier) {
+                AboutContentBody(
+                    padding = innerPadding,
+                    uiState = uiState,
+                    versionInfoText = versionInfoText,
+                    lazyListState = lazyListState,
+                    scrollProgressProvider = { scrollProgress },
+                    useBlur = blurSupported,
+                    topAppBarScrollBehavior = topAppBarScrollBehavior,
+                    onLogoHeightChanged = { logoHeightPx = it },
+                    onGetUpdateClicked = onShowUpdateDialog,
+                    onDirectUpdateClicked = { viewModel.dispatch(AboutAction.PerformUpdate) },
+                    onLicenseClicked = { navigator.push(Route.OpenSourceLicense) },
+                    onLogToggle = { viewModel.dispatch(AboutAction.SetEnableFileLogging(it)) },
+                    onLogExport = { viewModel.dispatch(AboutAction.ShareLog) },
+                    uriHandler = uriHandler,
+                    context = context,
+                )
+            }
         }
     }
 }
@@ -707,7 +711,7 @@ private fun AboutContentBody(
                                 actionColor = COUITheme.colorScheme.labelTertiary,
                             )
 
-                            WindowListPopup(
+                            OverlayListPopup(
                                 show = isDropdownExpanded,
                                 alignment = PopupPositionProvider.Align.End,
                                 onDismissRequest = { isDropdownExpanded = false },

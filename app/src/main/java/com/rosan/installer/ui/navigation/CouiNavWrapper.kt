@@ -8,7 +8,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.RoomPreferences
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -27,10 +26,8 @@ import com.rosan.installer.ui.page.main.settings.SettingsSharedViewModel
 import com.rosan.installer.ui.theme.LocalWindowLayoutInfo
 import com.rosan.installer.ui.theme.WindowLayoutType
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
-import com.rosan.installer.ui.theme.rememberCouiPopupBlurProvider
 import io.github.suqi8.coui.kmp.basic.NavigationItem
 import io.github.suqi8.coui.kmp.basic.SnackbarHostState
-import io.github.suqi8.coui.kmp.effect.LocalPopupMaterialBlur
 import kotlinx.coroutines.flow.map
 import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
@@ -99,32 +96,26 @@ fun CouiMainPageWrapper(uiState: ThemeState, sharedViewModel: SettingsSharedView
     val floatingBackdrop = rememberCouiBlurBackdrop(useBlur && useFloatingBottomBar)
     val couiBackdrop = rememberCouiBlurBackdrop(useBlur)
 
-    // Menus, dropdowns and context menus blur the page behind them through this provider. It has
-    // to sit above the page content: the popups themselves must not end up in the recording, or
-    // they would blur their own surface.
-    val popupBlurProvider = rememberCouiPopupBlurProvider(couiBackdrop)
-    CompositionLocalProvider(LocalPopupMaterialBlur provides popupBlurProvider) {
-        // Branch statically without layout delay traps
-        if (layoutInfo.type == WindowLayoutType.EXPANDED || layoutInfo.showNavigationRail) {
-            SettingsWideScreenLayout(
-                configCount = configCount,
-                mainPagerState = mainPagerState,
-                navigationItems = navigationItems,
-                snackbarHostState = snackbarHostState,
-                useFloatingBottomBar = useFloatingBottomBar,
-                floatingBackdrop = floatingBackdrop,
-                couiBackdrop = couiBackdrop,
-            )
-        } else {
-            SettingsCompactLayout(
-                configCount = configCount,
-                mainPagerState = mainPagerState,
-                navigationItems = navigationItems,
-                snackbarHostState = snackbarHostState,
-                useFloatingBottomBar = useFloatingBottomBar,
-                floatingBackdrop = floatingBackdrop,
-                couiBackdrop = couiBackdrop,
-            )
-        }
+    // Branch statically without layout delay traps
+    if (layoutInfo.type == WindowLayoutType.EXPANDED || layoutInfo.showNavigationRail) {
+        SettingsWideScreenLayout(
+            configCount = configCount,
+            mainPagerState = mainPagerState,
+            navigationItems = navigationItems,
+            snackbarHostState = snackbarHostState,
+            useFloatingBottomBar = useFloatingBottomBar,
+            floatingBackdrop = floatingBackdrop,
+            couiBackdrop = couiBackdrop,
+        )
+    } else {
+        SettingsCompactLayout(
+            configCount = configCount,
+            mainPagerState = mainPagerState,
+            navigationItems = navigationItems,
+            snackbarHostState = snackbarHostState,
+            useFloatingBottomBar = useFloatingBottomBar,
+            floatingBackdrop = floatingBackdrop,
+            couiBackdrop = couiBackdrop,
+        )
     }
 }

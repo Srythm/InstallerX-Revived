@@ -50,6 +50,7 @@ import com.rosan.installer.domain.settings.model.preferences.theme.ThemeColorSpe
 import com.rosan.installer.domain.settings.model.preferences.theme.ThemeMode
 import com.rosan.installer.ui.navigation.LocalNavigator
 import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
+import com.rosan.installer.ui.page.coui.widgets.CouiPopupBlurScope
 import com.rosan.installer.ui.page.coui.widgets.CouiSettingsCard
 import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
 import com.rosan.installer.ui.page.main.settings.preferred.theme.ThemeSettingsAction
@@ -64,7 +65,7 @@ import io.github.suqi8.coui.kmp.basic.DropdownItem
 import io.github.suqi8.coui.kmp.basic.Scaffold
 import io.github.suqi8.coui.kmp.basic.SmallTitle
 import io.github.suqi8.coui.kmp.basic.TopAppBar
-import io.github.suqi8.coui.kmp.preference.WindowSpinnerPreference
+import io.github.suqi8.coui.kmp.preference.OverlaySpinnerPreference
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
@@ -101,209 +102,211 @@ fun COUIThemeSettingsPage(
             )
         },
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(topBarBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier)
-                .scrollEndHaptic()
-                .overScrollVertical()
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = PaddingValues(
-                start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
-                top = paddingValues.calculateTopPadding(),
-                end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
-            ),
-            overscrollEffect = null,
-        ) {
-            item { Spacer(modifier = Modifier.size(12.dp)) }
-            item { SmallTitle(stringResource(R.string.theme_settings_ui_style)) }
-            item {
-                CouiSettingsCard(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 12.dp),
-                ) {
-                    COUIThemeEngineWidget(
-                        currentThemeIsCoui = uiState.showCouiUI,
-                        onThemeChange = { useCoui ->
-                            viewModel.dispatch(ThemeSettingsAction.ChangeUseCoui(useCoui))
-                        },
-                    )
-                    CouiSwitchWidget(
-                        title = stringResource(R.string.theme_settings_use_apple_floating_bar),
-                        description = stringResource(R.string.theme_settings_use_apple_floating_bar_desc),
-                        checked = uiState.useAppleFloatingBar,
-                        onCheckedChange = {
-                            viewModel.dispatch(ThemeSettingsAction.SetUseAppleFloatingBar(it))
-                        },
-                    )
-                }
-            }
-            item { SmallTitle(stringResource(R.string.theme_settings_coui_ui)) }
-            item {
-                CouiSettingsCard(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 12.dp),
-                ) {
-                    COUIThemeModeWidget(
-                        currentThemeMode = uiState.themeMode,
-                        onThemeModeChange = { newMode ->
-                            viewModel.dispatch(ThemeSettingsAction.SetThemeMode(newMode))
-                        },
-                    )
-                    CouiSwitchWidget(
-                        title = stringResource(R.string.theme_settings_use_amoled),
-                        description = stringResource(R.string.theme_settings_use_amoled_desc),
-                        checked = uiState.useAmoled,
-                        onCheckedChange = { viewModel.dispatch(ThemeSettingsAction.SetUseAmoled(it)) },
-                    )
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        CouiSwitchWidget(
-                            title = stringResource(R.string.theme_settings_use_blur),
-                            description = stringResource(R.string.theme_settings_use_blur_desc),
-                            checked = uiState.useBlur,
-                            onCheckedChange = { viewModel.dispatch(ThemeSettingsAction.SetUseBlur(it)) },
-                        )
-                    }
-                    CouiSwitchWidget(
-                        title = stringResource(R.string.theme_settings_coui_custom_colors),
-                        description = stringResource(R.string.theme_settings_coui_custom_colors_desc),
-                        checked = uiState.useCouiMonet,
-                        onCheckedChange = {
-                            viewModel.dispatch(ThemeSettingsAction.SetUseCouiMonet(it))
-                        },
-                    )
-                    AnimatedVisibility(
-                        visible = uiState.useCouiMonet,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically(),
+        CouiPopupBlurScope(topBarBackdrop) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(topBarBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier)
+                    .scrollEndHaptic()
+                    .overScrollVertical()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                contentPadding = PaddingValues(
+                    start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
+                    top = paddingValues.calculateTopPadding(),
+                    end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
+                ),
+                overscrollEffect = null,
+            ) {
+                item { Spacer(modifier = Modifier.size(12.dp)) }
+                item { SmallTitle(stringResource(R.string.theme_settings_ui_style)) }
+                item {
+                    CouiSettingsCard(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 12.dp),
                     ) {
+                        COUIThemeEngineWidget(
+                            currentThemeIsCoui = uiState.showCouiUI,
+                            onThemeChange = { useCoui ->
+                                viewModel.dispatch(ThemeSettingsAction.ChangeUseCoui(useCoui))
+                            },
+                        )
                         CouiSwitchWidget(
-                            title = stringResource(R.string.theme_settings_dynamic_color),
-                            description = stringResource(R.string.theme_settings_dynamic_color_desc),
-                            checked = uiState.useDynamicColor,
+                            title = stringResource(R.string.theme_settings_use_apple_floating_bar),
+                            description = stringResource(R.string.theme_settings_use_apple_floating_bar_desc),
+                            checked = uiState.useAppleFloatingBar,
                             onCheckedChange = {
-                                viewModel.dispatch(ThemeSettingsAction.SetUseDynamicColor(it))
-                            },
-                        )
-                    }
-                    AnimatedVisibility(
-                        visible = uiState.useCouiMonet,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically(),
-                    ) {
-                        CouiPaletteStyleWidget(
-                            currentPaletteStyle = uiState.paletteStyle,
-                            onPaletteStyleChange = { newStyle ->
-                                viewModel.dispatch(ThemeSettingsAction.SetPaletteStyle(newStyle))
-                            },
-                        )
-                    }
-                    AnimatedVisibility(
-                        visible = uiState.useCouiMonet,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically(),
-                    ) {
-                        CouiColorSpecWidget(
-                            currentColorSpec = uiState.colorSpec,
-                            currentPaletteStyle = uiState.paletteStyle,
-                            onColorSpecChange = { newSpec ->
-                                viewModel.dispatch(ThemeSettingsAction.SetColorSpec(newSpec))
-                            },
-                        )
-                    }
-                    AnimatedVisibility(
-                        visible = uiState.useCouiMonet,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically(),
-                    ) {
-                        CouiSwitchWidget(
-                            title = stringResource(R.string.theme_settings_dynamic_color_follow_icon),
-                            description = stringResource(R.string.theme_settings_dynamic_color_follow_icon_desc),
-                            checked = uiState.useDynColorFollowPkgIcon,
-                            onCheckedChange = {
-                                viewModel.dispatch(ThemeSettingsAction.SetDynColorFollowPkgIcon(it))
-                            },
-                        )
-                    }
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && uiState.showLiveActivity) {
-                        CouiSwitchWidget(
-                            title = stringResource(R.string.theme_settings_live_activity_dynamic_color_follow_icon),
-                            description = stringResource(R.string.theme_settings_live_activity_dynamic_color_follow_icon_desc),
-                            checked = uiState.useDynColorFollowPkgIconForLiveActivity,
-                            onCheckedChange = {
-                                viewModel.dispatch(ThemeSettingsAction.SetDynColorFollowPkgIconForLiveActivity(it))
+                                viewModel.dispatch(ThemeSettingsAction.SetUseAppleFloatingBar(it))
                             },
                         )
                     }
                 }
-            }
-
-            item {
-                AnimatedVisibility(
-                    visible = uiState.useCouiMonet && (!uiState.useDynamicColor || Build.VERSION.SDK_INT < Build.VERSION_CODES.S),
-                    enter = fadeIn(animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)) +
-                        expandVertically(animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)),
-                    exit = fadeOut(animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing)) +
-                        shrinkVertically(animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing)),
-                ) {
-                    Column {
-                        SmallTitle(stringResource(R.string.theme_settings_theme_color))
-                        CouiSettingsCard(
-                            modifier = Modifier
-                                .padding(horizontal = 16.dp)
-                                .padding(bottom = 12.dp),
+                item { SmallTitle(stringResource(R.string.theme_settings_coui_ui)) }
+                item {
+                    CouiSettingsCard(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 12.dp),
+                    ) {
+                        COUIThemeModeWidget(
+                            currentThemeMode = uiState.themeMode,
+                            onThemeModeChange = { newMode ->
+                                viewModel.dispatch(ThemeSettingsAction.SetThemeMode(newMode))
+                            },
+                        )
+                        CouiSwitchWidget(
+                            title = stringResource(R.string.theme_settings_use_amoled),
+                            description = stringResource(R.string.theme_settings_use_amoled_desc),
+                            checked = uiState.useAmoled,
+                            onCheckedChange = { viewModel.dispatch(ThemeSettingsAction.SetUseAmoled(it)) },
+                        )
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            CouiSwitchWidget(
+                                title = stringResource(R.string.theme_settings_use_blur),
+                                description = stringResource(R.string.theme_settings_use_blur_desc),
+                                checked = uiState.useBlur,
+                                onCheckedChange = { viewModel.dispatch(ThemeSettingsAction.SetUseBlur(it)) },
+                            )
+                        }
+                        CouiSwitchWidget(
+                            title = stringResource(R.string.theme_settings_coui_custom_colors),
+                            description = stringResource(R.string.theme_settings_coui_custom_colors_desc),
+                            checked = uiState.useCouiMonet,
+                            onCheckedChange = {
+                                viewModel.dispatch(ThemeSettingsAction.SetUseCouiMonet(it))
+                            },
+                        )
+                        AnimatedVisibility(
+                            visible = uiState.useCouiMonet,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically(),
                         ) {
-                            BoxWithConstraints(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 16.dp),
-                            ) {
-                                val itemMinWidth = 88.dp
-                                val columns = (this.maxWidth / itemMinWidth).toInt().coerceAtLeast(1)
-                                val chunkedColors = uiState.availableColors.chunked(columns)
+                            CouiSwitchWidget(
+                                title = stringResource(R.string.theme_settings_dynamic_color),
+                                description = stringResource(R.string.theme_settings_dynamic_color_desc),
+                                checked = uiState.useDynamicColor,
+                                onCheckedChange = {
+                                    viewModel.dispatch(ThemeSettingsAction.SetUseDynamicColor(it))
+                                },
+                            )
+                        }
+                        AnimatedVisibility(
+                            visible = uiState.useCouiMonet,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically(),
+                        ) {
+                            CouiPaletteStyleWidget(
+                                currentPaletteStyle = uiState.paletteStyle,
+                                onPaletteStyleChange = { newStyle ->
+                                    viewModel.dispatch(ThemeSettingsAction.SetPaletteStyle(newStyle))
+                                },
+                            )
+                        }
+                        AnimatedVisibility(
+                            visible = uiState.useCouiMonet,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically(),
+                        ) {
+                            CouiColorSpecWidget(
+                                currentColorSpec = uiState.colorSpec,
+                                currentPaletteStyle = uiState.paletteStyle,
+                                onColorSpecChange = { newSpec ->
+                                    viewModel.dispatch(ThemeSettingsAction.SetColorSpec(newSpec))
+                                },
+                            )
+                        }
+                        AnimatedVisibility(
+                            visible = uiState.useCouiMonet,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically(),
+                        ) {
+                            CouiSwitchWidget(
+                                title = stringResource(R.string.theme_settings_dynamic_color_follow_icon),
+                                description = stringResource(R.string.theme_settings_dynamic_color_follow_icon_desc),
+                                checked = uiState.useDynColorFollowPkgIcon,
+                                onCheckedChange = {
+                                    viewModel.dispatch(ThemeSettingsAction.SetDynColorFollowPkgIcon(it))
+                                },
+                            )
+                        }
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && uiState.showLiveActivity) {
+                            CouiSwitchWidget(
+                                title = stringResource(R.string.theme_settings_live_activity_dynamic_color_follow_icon),
+                                description = stringResource(R.string.theme_settings_live_activity_dynamic_color_follow_icon_desc),
+                                checked = uiState.useDynColorFollowPkgIconForLiveActivity,
+                                onCheckedChange = {
+                                    viewModel.dispatch(ThemeSettingsAction.SetDynColorFollowPkgIconForLiveActivity(it))
+                                },
+                            )
+                        }
+                    }
+                }
 
-                                Column(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                item {
+                    AnimatedVisibility(
+                        visible = uiState.useCouiMonet && (!uiState.useDynamicColor || Build.VERSION.SDK_INT < Build.VERSION_CODES.S),
+                        enter = fadeIn(animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)) +
+                            expandVertically(animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)),
+                        exit = fadeOut(animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing)) +
+                            shrinkVertically(animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing)),
+                    ) {
+                        Column {
+                            SmallTitle(stringResource(R.string.theme_settings_theme_color))
+                            CouiSettingsCard(
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp)
+                                    .padding(bottom = 12.dp),
+                            ) {
+                                BoxWithConstraints(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 16.dp),
                                 ) {
-                                    chunkedColors.forEach { rowItems ->
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.Center,
-                                        ) {
-                                            rowItems.forEach { rawColor ->
-                                                Box(
-                                                    modifier = Modifier.weight(1f),
-                                                    contentAlignment = Alignment.Center,
-                                                ) {
-                                                    ColorSwatchPreview(
-                                                        rawColor = rawColor,
-                                                        currentStyle = uiState.paletteStyle,
-                                                        colorSpec = uiState.colorSpec,
-                                                        textStyle = COUITheme.textStyles.bodyS,
-                                                        textColor = COUITheme.colorScheme.labelPrimary,
-                                                        isSelected =
-                                                            uiState.seedColor == rawColor.color,
+                                    val itemMinWidth = 88.dp
+                                    val columns = (this.maxWidth / itemMinWidth).toInt().coerceAtLeast(1)
+                                    val chunkedColors = uiState.availableColors.chunked(columns)
+
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    ) {
+                                        chunkedColors.forEach { rowItems ->
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.Center,
+                                            ) {
+                                                rowItems.forEach { rawColor ->
+                                                    Box(
+                                                        modifier = Modifier.weight(1f),
+                                                        contentAlignment = Alignment.Center,
                                                     ) {
-                                                        viewModel.dispatch(
-                                                            ThemeSettingsAction.SetSeedColor(
-                                                                rawColor.color,
-                                                                uiState.useDynamicColor &&
-                                                                    Build.VERSION.SDK_INT < Build.VERSION_CODES.S &&
-                                                                    // If useDynamicColor is true but availableColors is PresetColors, the wallpaperColors have no valid values
-                                                                    uiState.availableColors != PresetColors,
-                                                            ),
-                                                        )
+                                                        ColorSwatchPreview(
+                                                            rawColor = rawColor,
+                                                            currentStyle = uiState.paletteStyle,
+                                                            colorSpec = uiState.colorSpec,
+                                                            textStyle = COUITheme.textStyles.bodyS,
+                                                            textColor = COUITheme.colorScheme.labelPrimary,
+                                                            isSelected =
+                                                                uiState.seedColor == rawColor.color,
+                                                        ) {
+                                                            viewModel.dispatch(
+                                                                ThemeSettingsAction.SetSeedColor(
+                                                                    rawColor.color,
+                                                                    uiState.useDynamicColor &&
+                                                                        Build.VERSION.SDK_INT < Build.VERSION_CODES.S &&
+                                                                        // If useDynamicColor is true but availableColors is PresetColors, the wallpaperColors have no valid values
+                                                                        uiState.availableColors != PresetColors,
+                                                                ),
+                                                            )
+                                                        }
                                                     }
                                                 }
-                                            }
 
-                                            val remaining = columns - rowItems.size
-                                            if (remaining > 0) {
-                                                repeat(remaining) {
-                                                    Spacer(Modifier.weight(1f))
+                                                val remaining = columns - rowItems.size
+                                                if (remaining > 0) {
+                                                    repeat(remaining) {
+                                                        Spacer(Modifier.weight(1f))
+                                                    }
                                                 }
                                             }
                                         }
@@ -313,66 +316,66 @@ fun COUIThemeSettingsPage(
                         }
                     }
                 }
-            }
 
-            // Predictive Back Section
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                item { SmallTitle(stringResource(R.string.theme_settings_predictive_back)) }
+                // Predictive Back Section
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    item { SmallTitle(stringResource(R.string.theme_settings_predictive_back)) }
+                    item {
+                        CouiSettingsCard(
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .padding(bottom = 12.dp),
+                        ) {
+                            CouiPredictiveBackAnimationWidget(
+                                currentAnimation = uiState.predictiveBackAnimation,
+                                onAnimationChange = { newAnim ->
+                                    viewModel.dispatch(ThemeSettingsAction.SetPredictiveBackAnimation(newAnim))
+                                },
+                            )
+
+                            AnimatedVisibility(
+                                visible = uiState.predictiveBackAnimation == PredictiveBackAnimation.Scale,
+                                enter = fadeIn() + expandVertically(),
+                                exit = fadeOut() + shrinkVertically(),
+                            ) {
+                                CouiPredictiveBackExitDirectionWidget(
+                                    currentDirection = uiState.predictiveBackExitDirection,
+                                    onDirectionChange = {
+                                        viewModel.dispatch(ThemeSettingsAction.SetPredictiveBackExitDirection(it))
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+
+                item { SmallTitle(stringResource(R.string.theme_settings_package_icons)) }
                 item {
                     CouiSettingsCard(
                         modifier = Modifier
                             .padding(horizontal = 16.dp)
                             .padding(bottom = 12.dp),
                     ) {
-                        CouiPredictiveBackAnimationWidget(
-                            currentAnimation = uiState.predictiveBackAnimation,
-                            onAnimationChange = { newAnim ->
-                                viewModel.dispatch(ThemeSettingsAction.SetPredictiveBackAnimation(newAnim))
+                        CouiSwitchWidget(
+                            title = stringResource(R.string.theme_settings_prefer_system_icon),
+                            description = stringResource(R.string.theme_settings_prefer_system_icon_desc),
+                            checked = uiState.preferSystemIcon,
+                            onCheckedChange = {
+                                viewModel.dispatch(
+                                    ThemeSettingsAction.ChangePreferSystemIcon(it),
+                                )
                             },
                         )
-
-                        AnimatedVisibility(
-                            visible = uiState.predictiveBackAnimation == PredictiveBackAnimation.Scale,
-                            enter = fadeIn() + expandVertically(),
-                            exit = fadeOut() + shrinkVertically(),
-                        ) {
-                            CouiPredictiveBackExitDirectionWidget(
-                                currentDirection = uiState.predictiveBackExitDirection,
-                                onDirectionChange = {
-                                    viewModel.dispatch(ThemeSettingsAction.SetPredictiveBackExitDirection(it))
-                                },
-                            )
-                        }
                     }
                 }
+                item { Spacer(Modifier.navigationBarsPadding()) }
             }
-
-            item { SmallTitle(stringResource(R.string.theme_settings_package_icons)) }
-            item {
-                CouiSettingsCard(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 12.dp),
-                ) {
-                    CouiSwitchWidget(
-                        title = stringResource(R.string.theme_settings_prefer_system_icon),
-                        description = stringResource(R.string.theme_settings_prefer_system_icon_desc),
-                        checked = uiState.preferSystemIcon,
-                        onCheckedChange = {
-                            viewModel.dispatch(
-                                ThemeSettingsAction.ChangePreferSystemIcon(it),
-                            )
-                        },
-                    )
-                }
-            }
-            item { Spacer(Modifier.navigationBarsPadding()) }
         }
     }
 }
 
 /**
- * WindowSpinnerPreference widget for selecting Predictive Back Animation
+ * OverlaySpinnerPreference widget for selecting Predictive Back Animation
  */
 @Composable
 private fun CouiPredictiveBackAnimationWidget(
@@ -398,7 +401,7 @@ private fun CouiPredictiveBackAnimationWidget(
         options.indexOf(currentAnimation).coerceAtLeast(0)
     }
 
-    WindowSpinnerPreference(
+    OverlaySpinnerPreference(
         modifier = modifier,
         title = stringResource(id = R.string.theme_settings_predictive_back_animation),
         items = spinnerEntries,
@@ -413,7 +416,7 @@ private fun CouiPredictiveBackAnimationWidget(
 }
 
 /**
- * WindowSpinnerPreference widget for selecting Predictive Back Exit Direction
+ * OverlaySpinnerPreference widget for selecting Predictive Back Exit Direction
  */
 @Composable
 private fun CouiPredictiveBackExitDirectionWidget(
@@ -437,7 +440,7 @@ private fun CouiPredictiveBackExitDirectionWidget(
         options.indexOf(currentDirection).coerceAtLeast(0)
     }
 
-    WindowSpinnerPreference(
+    OverlaySpinnerPreference(
         modifier = modifier,
         title = stringResource(id = R.string.theme_settings_predictive_back_exit_direction),
         items = spinnerEntries,
@@ -452,7 +455,7 @@ private fun CouiPredictiveBackExitDirectionWidget(
 }
 
 /**
- * Theme Engine selection widget using WindowSpinnerPreference, following the provided pattern.
+ * Theme Engine selection widget using OverlaySpinnerPreference, following the provided pattern.
  * Simplified version without data class and icons.
  *
  * @param currentThemeIsCoui True if MIUIX theme is selected, false if Google theme is selected.
@@ -474,7 +477,7 @@ private fun COUIThemeEngineWidget(
         )
     }
 
-    // Convert map entries to List<DropdownItem> for WindowSpinnerPreference.
+    // Convert map entries to List<DropdownItem> for OverlaySpinnerPreference.
     // Ensure the order matches the keys: index 0 = true, index 1 = false.
     val spinnerEntries = remember(themeOptions) {
         themeOptions.entries.sortedByDescending { it.key }.map { entry ->
@@ -490,7 +493,7 @@ private fun COUIThemeEngineWidget(
         if (currentThemeIsCoui) 0 else 1
     }
 
-    WindowSpinnerPreference(
+    OverlaySpinnerPreference(
         modifier = modifier,
         title = stringResource(id = R.string.theme_settings_ui_engine),
         // summary = spinnerEntries[selectedIndex].title,
@@ -507,9 +510,9 @@ private fun COUIThemeEngineWidget(
 }
 
 /**
- * A WindowSpinnerPreference widget for selecting the application's theme mode (Light, Dark, or System).
+ * A OverlaySpinnerPreference widget for selecting the application's theme mode (Light, Dark, or System).
  *
- * @param modifier The modifier to be applied to the WindowSpinnerPreference.
+ * @param modifier The modifier to be applied to the OverlaySpinnerPreference.
  * @param currentThemeMode The currently selected ThemeMode.
  * @param onThemeModeChange A callback that is invoked when the theme mode selection changes.
  */
@@ -532,7 +535,7 @@ fun COUIThemeModeWidget(
         )
     }
 
-    // Convert the map of options to a list of DropdownItem for the WindowSpinnerPreference component.
+    // Convert the map of options to a list of DropdownItem for the OverlaySpinnerPreference component.
     // The order of items in the list is important for index mapping.
     val spinnerEntries = remember(themeModeOptions) {
         themeModeOptions.entries.map { entry ->
@@ -546,7 +549,7 @@ fun COUIThemeModeWidget(
         themeModeOptions.keys.indexOf(currentThemeMode).coerceAtLeast(0)
     }
 
-    WindowSpinnerPreference(
+    OverlaySpinnerPreference(
         modifier = modifier,
         title = stringResource(id = R.string.theme_settings_theme_mode),
         items = spinnerEntries,
@@ -563,7 +566,7 @@ fun COUIThemeModeWidget(
 }
 
 /**
- * WindowSpinnerPreference widget for selecting the Palette Style.
+ * OverlaySpinnerPreference widget for selecting the Palette Style.
  */
 @Composable
 fun CouiPaletteStyleWidget(
@@ -579,7 +582,7 @@ fun CouiPaletteStyleWidget(
         options.indexOf(currentPaletteStyle).coerceAtLeast(0)
     }
 
-    WindowSpinnerPreference(
+    OverlaySpinnerPreference(
         modifier = modifier,
         title = stringResource(id = R.string.theme_settings_palette_style),
         items = spinnerEntries,
@@ -594,7 +597,7 @@ fun CouiPaletteStyleWidget(
 }
 
 /**
- * WindowSpinnerPreference widget for selecting the Theme Color Spec.
+ * OverlaySpinnerPreference widget for selecting the Theme Color Spec.
  * Shows the effective spec and restricts choices to those supported by the palette style.
  */
 @Composable
@@ -625,7 +628,7 @@ fun CouiColorSpecWidget(
         availableSpecs.indexOf(activeSpec).coerceAtLeast(0)
     }
 
-    WindowSpinnerPreference(
+    OverlaySpinnerPreference(
         modifier = modifier,
         title = stringResource(id = R.string.theme_settings_color_spec),
         summary = descriptionText,

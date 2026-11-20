@@ -32,8 +32,8 @@ import io.github.suqi8.coui.kmp.basic.PopupPositionProvider
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.icon.COUIIcons
 import io.github.suqi8.coui.kmp.icon.basic.ArrowUpDown
+import io.github.suqi8.coui.kmp.overlay.OverlayListPopup
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import io.github.suqi8.coui.kmp.window.WindowListPopup
 
 /**
  * A standalone dropdown menu styled to look and feel like a SmallTitle.
@@ -111,7 +111,7 @@ fun CouiDropdown(
         }
 
         // The popup menu itself, shown when isDropdownExpanded is true.
-        WindowListPopup(
+        OverlayListPopup(
             show = isDropdownExpanded.value,
             alignment = PopupPositionProvider.Align.Start,
             popupPositionProvider = DropdownWithStartMarginProvider,

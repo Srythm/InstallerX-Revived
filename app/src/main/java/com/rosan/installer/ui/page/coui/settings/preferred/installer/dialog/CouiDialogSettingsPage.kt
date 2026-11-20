@@ -27,6 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
 import com.rosan.installer.ui.navigation.LocalNavigator
 import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
+import com.rosan.installer.ui.page.coui.widgets.CouiPopupBlurScope
 import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
 import com.rosan.installer.ui.page.main.settings.preferred.installer.dialog.DialogSettingsAction
 import com.rosan.installer.ui.page.main.settings.preferred.installer.dialog.DialogSettingsViewModel
@@ -39,7 +40,7 @@ import io.github.suqi8.coui.kmp.basic.DropdownItem
 import io.github.suqi8.coui.kmp.basic.Scaffold
 import io.github.suqi8.coui.kmp.basic.SmallTitle
 import io.github.suqi8.coui.kmp.basic.TopAppBar
-import io.github.suqi8.coui.kmp.preference.WindowSpinnerPreference
+import io.github.suqi8.coui.kmp.preference.OverlaySpinnerPreference
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
 import org.koin.androidx.compose.koinViewModel
@@ -73,152 +74,154 @@ fun CouiDialogSettingsPage(useBlur: Boolean, viewModel: DialogSettingsViewModel 
             )
         },
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(topBarBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier)
-                .scrollEndHaptic()
-                .overScrollVertical()
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = PaddingValues(
-                start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
-                top = paddingValues.calculateTopPadding(),
-                end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
-            ),
-            overscrollEffect = null,
-        ) {
-            item { Spacer(modifier = Modifier.size(12.dp)) }
-            item { SmallTitle(stringResource(id = R.string.installer_settings_dialog_mode_options)) }
-            item {
-                Card(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 12.dp),
-                ) {
-                    val comparisonOptions = listOf(
-                        stringResource(R.string.install_comparison_show_all),
-                        stringResource(R.string.install_comparison_show_differences_only),
-                    )
-                    WindowSpinnerPreference(
-                        title = stringResource(id = R.string.install_comparison_display_behavior),
-                        summary = stringResource(
-                            id = if (uiState.hideIdenticalComparisons) {
-                                R.string.install_comparison_show_differences_only_desc
-                            } else {
-                                R.string.install_comparison_show_all_desc
+        CouiPopupBlurScope(topBarBackdrop) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(topBarBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier)
+                    .scrollEndHaptic()
+                    .overScrollVertical()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                contentPadding = PaddingValues(
+                    start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
+                    top = paddingValues.calculateTopPadding(),
+                    end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
+                ),
+                overscrollEffect = null,
+            ) {
+                item { Spacer(modifier = Modifier.size(12.dp)) }
+                item { SmallTitle(stringResource(id = R.string.installer_settings_dialog_mode_options)) }
+                item {
+                    Card(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 12.dp),
+                    ) {
+                        val comparisonOptions = listOf(
+                            stringResource(R.string.install_comparison_show_all),
+                            stringResource(R.string.install_comparison_show_differences_only),
+                        )
+                        OverlaySpinnerPreference(
+                            title = stringResource(id = R.string.install_comparison_display_behavior),
+                            summary = stringResource(
+                                id = if (uiState.hideIdenticalComparisons) {
+                                    R.string.install_comparison_show_differences_only_desc
+                                } else {
+                                    R.string.install_comparison_show_all_desc
+                                },
+                            ),
+                            items = comparisonOptions.map { DropdownItem(text = it) },
+                            selectedIndex = if (uiState.hideIdenticalComparisons) 1 else 0,
+                            onSelectedIndexChange = { index ->
+                                viewModel.dispatch(
+                                    DialogSettingsAction.ChangeHideIdenticalComparisons(index == 1),
+                                )
                             },
-                        ),
-                        items = comparisonOptions.map { DropdownItem(text = it) },
-                        selectedIndex = if (uiState.hideIdenticalComparisons) 1 else 0,
-                        onSelectedIndexChange = { index ->
-                            viewModel.dispatch(
-                                DialogSettingsAction.ChangeHideIdenticalComparisons(index == 1),
-                            )
-                        },
-                    )
+                        )
 
-                    /* CouiSwitchWidget(
-                         title = stringResource(id = R.string.version_compare_in_single_line),
-                         description = stringResource(id = R.string.version_compare_in_single_line_desc),
-                         checked = uiState.versionCompareInSingleLine,
-                         onCheckedChange = {
-                             viewModel.dispatch(DialogSettingsAction.ChangeVersionCompareInSingleLine(it))
-                         }
-                     )
+                        /* CouiSwitchWidget(
+                             title = stringResource(id = R.string.version_compare_in_single_line),
+                             description = stringResource(id = R.string.version_compare_in_single_line_desc),
+                             checked = uiState.versionCompareInSingleLine,
+                             onCheckedChange = {
+                                 viewModel.dispatch(DialogSettingsAction.ChangeVersionCompareInSingleLine(it))
+                             }
+                         )
 
-                     CouiSwitchWidget(
-                         title = stringResource(id = R.string.sdk_compare_in_multi_line),
-                         description = stringResource(id = R.string.sdk_compare_in_multi_line_desc),
-                         checked = uiState.sdkCompareInMultiLine,
-                         onCheckedChange = {
-                             viewModel.dispatch(DialogSettingsAction.ChangeSdkCompareInMultiLine(it))
-                         }
-                     )*/
+                         CouiSwitchWidget(
+                             title = stringResource(id = R.string.sdk_compare_in_multi_line),
+                             description = stringResource(id = R.string.sdk_compare_in_multi_line_desc),
+                             checked = uiState.sdkCompareInMultiLine,
+                             onCheckedChange = {
+                                 viewModel.dispatch(DialogSettingsAction.ChangeSdkCompareInMultiLine(it))
+                             }
+                         )*/
 
-                    CouiSwitchWidget(
-                        title = stringResource(id = R.string.show_dialog_install_extended_menu),
-                        description = stringResource(id = R.string.show_dialog_install_extended_menu_desc),
-                        checked = uiState.showDialogInstallExtendedMenu,
-                        onCheckedChange = {
-                            viewModel.dispatch(DialogSettingsAction.ChangeShowDialogInstallExtendedMenu(it))
-                        },
-                    )
+                        CouiSwitchWidget(
+                            title = stringResource(id = R.string.show_dialog_install_extended_menu),
+                            description = stringResource(id = R.string.show_dialog_install_extended_menu_desc),
+                            checked = uiState.showDialogInstallExtendedMenu,
+                            onCheckedChange = {
+                                viewModel.dispatch(DialogSettingsAction.ChangeShowDialogInstallExtendedMenu(it))
+                            },
+                        )
 
-                    CouiSwitchWidget(
-                        title = stringResource(id = R.string.show_intelligent_suggestion),
-                        description = stringResource(id = R.string.show_intelligent_suggestion_desc),
-                        checked = uiState.showSmartSuggestion,
-                        onCheckedChange = {
-                            viewModel.dispatch(DialogSettingsAction.ChangeShowSuggestion(it))
-                        },
-                    )
+                        CouiSwitchWidget(
+                            title = stringResource(id = R.string.show_intelligent_suggestion),
+                            description = stringResource(id = R.string.show_intelligent_suggestion_desc),
+                            checked = uiState.showSmartSuggestion,
+                            onCheckedChange = {
+                                viewModel.dispatch(DialogSettingsAction.ChangeShowSuggestion(it))
+                            },
+                        )
 
-                    CouiSwitchWidget(
-                        title = stringResource(id = R.string.disable_notification_on_dismiss),
-                        description = stringResource(id = R.string.close_notification_immediately_on_dialog_dismiss),
-                        checked = uiState.disableNotificationForDialogInstall,
-                        onCheckedChange = {
-                            viewModel.dispatch(DialogSettingsAction.ChangeShowDisableNotification(it))
-                        },
-                    )
+                        CouiSwitchWidget(
+                            title = stringResource(id = R.string.disable_notification_on_dismiss),
+                            description = stringResource(id = R.string.close_notification_immediately_on_dialog_dismiss),
+                            checked = uiState.disableNotificationForDialogInstall,
+                            onCheckedChange = {
+                                viewModel.dispatch(DialogSettingsAction.ChangeShowDisableNotification(it))
+                            },
+                        )
+                    }
                 }
-            }
 
-            item { SmallTitle(stringResource(id = R.string.installer_settings_dialog_automation_options)) }
-            item {
-                Card(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 12.dp),
-                ) {
-                    CouiSwitchWidget(
-                        title = stringResource(id = R.string.auto_background_install),
-                        description = stringResource(id = R.string.auto_background_install_desc),
-                        checked = uiState.autoSilentInstall,
-                        onCheckedChange = {
-                            viewModel.dispatch(DialogSettingsAction.ChangeAutoSilentInstall(it))
-                        },
-                    )
+                item { SmallTitle(stringResource(id = R.string.installer_settings_dialog_automation_options)) }
+                item {
+                    Card(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 12.dp),
+                    ) {
+                        CouiSwitchWidget(
+                            title = stringResource(id = R.string.auto_background_install),
+                            description = stringResource(id = R.string.auto_background_install_desc),
+                            checked = uiState.autoSilentInstall,
+                            onCheckedChange = {
+                                viewModel.dispatch(DialogSettingsAction.ChangeAutoSilentInstall(it))
+                            },
+                        )
 
-                    CouiSwitchWidget(
-                        title = stringResource(id = R.string.long_click_background_install),
-                        description = stringResource(id = R.string.long_click_background_install_desc),
-                        checked = uiState.longClickBackgroundInstall,
-                        onCheckedChange = {
-                            viewModel.dispatch(DialogSettingsAction.ChangeLongClickBackgroundInstall(it))
-                        },
-                    )
+                        CouiSwitchWidget(
+                            title = stringResource(id = R.string.long_click_background_install),
+                            description = stringResource(id = R.string.long_click_background_install_desc),
+                            checked = uiState.longClickBackgroundInstall,
+                            onCheckedChange = {
+                                viewModel.dispatch(DialogSettingsAction.ChangeLongClickBackgroundInstall(it))
+                            },
+                        )
+                    }
                 }
-            }
 
-            item { SmallTitle(stringResource(R.string.extras)) }
-            item {
-                Card(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 12.dp),
-                ) {
-                    CouiSwitchWidget(
-                        title = stringResource(R.string.lab_tap_icon_to_share),
-                        description = stringResource(R.string.lab_tap_icon_to_share_desc),
-                        checked = uiState.tapIconToShare,
-                        onCheckedChange = { viewModel.dispatch(DialogSettingsAction.ChangeTapIconToShare(it)) },
-                    )
-                    CouiSwitchWidget(
-                        title = stringResource(R.string.lab_show_apk_path),
-                        description = stringResource(R.string.lab_show_apk_path_desc),
-                        checked = uiState.showFilePath,
-                        onCheckedChange = { viewModel.dispatch(DialogSettingsAction.ChangeShowFilePath(it)) },
-                    )
-                    CouiSwitchWidget(
-                        title = stringResource(R.string.lab_show_install_initiator),
-                        description = stringResource(R.string.lab_show_install_initiator_desc),
-                        checked = uiState.showInstallInitiator,
-                        onCheckedChange = { viewModel.dispatch(DialogSettingsAction.ChangeShowInstallInitiator(it)) },
-                    )
+                item { SmallTitle(stringResource(R.string.extras)) }
+                item {
+                    Card(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 12.dp),
+                    ) {
+                        CouiSwitchWidget(
+                            title = stringResource(R.string.lab_tap_icon_to_share),
+                            description = stringResource(R.string.lab_tap_icon_to_share_desc),
+                            checked = uiState.tapIconToShare,
+                            onCheckedChange = { viewModel.dispatch(DialogSettingsAction.ChangeTapIconToShare(it)) },
+                        )
+                        CouiSwitchWidget(
+                            title = stringResource(R.string.lab_show_apk_path),
+                            description = stringResource(R.string.lab_show_apk_path_desc),
+                            checked = uiState.showFilePath,
+                            onCheckedChange = { viewModel.dispatch(DialogSettingsAction.ChangeShowFilePath(it)) },
+                        )
+                        CouiSwitchWidget(
+                            title = stringResource(R.string.lab_show_install_initiator),
+                            description = stringResource(R.string.lab_show_install_initiator_desc),
+                            checked = uiState.showInstallInitiator,
+                            onCheckedChange = { viewModel.dispatch(DialogSettingsAction.ChangeShowInstallInitiator(it)) },
+                        )
+                    }
                 }
+                item { Spacer(Modifier.navigationBarsPadding()) }
             }
-            item { Spacer(Modifier.navigationBarsPadding()) }
         }
     }
 }

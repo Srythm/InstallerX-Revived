@@ -45,6 +45,7 @@ import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
 import com.rosan.installer.ui.page.coui.widgets.CouiContentDialog
 import com.rosan.installer.ui.page.coui.widgets.CouiCustomGithubProxyUrlDialog
 import com.rosan.installer.ui.page.coui.widgets.CouiGithubUpdateChannelSelectionDialog
+import com.rosan.installer.ui.page.coui.widgets.CouiPopupBlurScope
 import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
 import com.rosan.installer.ui.page.main.settings.preferred.network.NetworkSettingsAction
 import com.rosan.installer.ui.page.main.settings.preferred.network.NetworkSettingsViewModel
@@ -61,8 +62,8 @@ import io.github.suqi8.coui.kmp.basic.SmallTitle
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.basic.TopAppBar
+import io.github.suqi8.coui.kmp.preference.OverlaySpinnerPreference
 import io.github.suqi8.coui.kmp.preference.SwitchPreference
-import io.github.suqi8.coui.kmp.preference.WindowSpinnerPreference
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
 import org.koin.androidx.compose.koinViewModel
@@ -158,132 +159,134 @@ fun CouiNetworkPage(useBlur: Boolean, viewModel: NetworkSettingsViewModel = koin
             )
         },
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(topBarBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier)
-                .scrollEndHaptic()
-                .overScrollVertical()
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = PaddingValues(
-                start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
-                top = paddingValues.calculateTopPadding(),
-                end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
-            ),
-            overscrollEffect = null,
-        ) {
-            item { Spacer(modifier = Modifier.size(12.dp)) }
-            item {
-                Card(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 12.dp),
-                ) {
-                    SwitchPreference(
-                        checked = uiState.allowInternetAccess,
-                        onCheckedChange = { enabled ->
-                            if (!enabled) {
-                                exitAfterInternetDisable = true
-                            }
-                            viewModel.dispatch(
-                                NetworkSettingsAction.ChangeInternetAccess(enabled),
-                            )
-                        },
-                        title = stringResource(R.string.network_access),
-                    )
-                }
-            }
-            item { Spacer(modifier = Modifier.size(12.dp)) }
-            if (uiState.allowInternetAccess) {
-                item { SmallTitle(stringResource(R.string.internet_access_enabled)) }
+        CouiPopupBlurScope(topBarBackdrop) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(topBarBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier)
+                    .scrollEndHaptic()
+                    .overScrollVertical()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                contentPadding = PaddingValues(
+                    start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
+                    top = paddingValues.calculateTopPadding(),
+                    end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
+                ),
+                overscrollEffect = null,
+            ) {
+                item { Spacer(modifier = Modifier.size(12.dp)) }
                 item {
                     Card(
                         modifier = Modifier
                             .padding(horizontal = 16.dp)
                             .padding(bottom = 12.dp),
                     ) {
-                        CouiNetworkSourceModePreference(
-                            currentMode = uiState.networkSourceMode,
-                            onModeChange = { mode ->
-                                if (mode != NetworkSourceMode.Cache &&
-                                    !uiState.networkSourceModeWarningAcknowledged
-                                ) {
-                                    pendingNetworkSourceMode = mode
-                                } else {
-                                    viewModel.dispatch(
-                                        NetworkSettingsAction.ChangeNetworkSourceMode(mode),
-                                    )
+                        SwitchPreference(
+                            checked = uiState.allowInternetAccess,
+                            onCheckedChange = { enabled ->
+                                if (!enabled) {
+                                    exitAfterInternetDisable = true
                                 }
+                                viewModel.dispatch(
+                                    NetworkSettingsAction.ChangeInternetAccess(enabled),
+                                )
                             },
-                        )
-                        if (uiState.networkSourceMode == NetworkSourceMode.Automatic) {
-                            CouiNetworkAppNameSourcePreference(
-                                source = uiState.networkAppNameSource,
-                                onChange = { viewModel.dispatch(NetworkSettingsAction.ChangeAppNameSource(it)) },
-                            )
-                            CouiSwitchWidget(
-                                title = stringResource(R.string.network_load_app_icon),
-                                description = stringResource(R.string.network_load_app_icon_desc),
-                                checked = uiState.networkLoadAppIcon,
-                                onCheckedChange = {
-                                    viewModel.dispatch(NetworkSettingsAction.ChangeLoadAppIcon(it))
-                                },
-                            )
-                        }
-                        val allowSecureString = stringResource(R.string.lab_http_profile_secure)
-                        val allowLocalString = stringResource(R.string.lab_http_profile_local)
-                        val allowAllString = stringResource(R.string.lab_http_profile_all)
-                        val profileData = remember(
-                            allowSecureString,
-                            allowLocalString,
-                            allowAllString,
-                        ) {
-                            linkedMapOf(
-                                HttpProfile.ALLOW_SECURE to allowSecureString,
-                                HttpProfile.ALLOW_LOCAL to allowLocalString,
-                                HttpProfile.ALLOW_ALL to allowAllString,
-                            )
-                        }
-                        val profileEntries = remember(profileData) {
-                            profileData.values.map { name -> DropdownItem(text = name) }
-                        }
-                        val profileIndex = profileData.keys.toList()
-                            .indexOf(uiState.httpProfile)
-                            .coerceAtLeast(0)
-
-                        WindowSpinnerPreference(
-                            title = stringResource(R.string.lab_http_profile),
-                            items = profileEntries,
-                            selectedIndex = profileIndex,
-                            onSelectedIndexChange = { newIndex ->
-                                profileData.keys.elementAtOrNull(newIndex)?.let { profile ->
-                                    viewModel.dispatch(NetworkSettingsAction.ChangeHttpProfile(profile))
-                                }
-                            },
-                        )
-
-                        val channelSummary = when (uiState.githubUpdateChannel) {
-                            GithubUpdateChannel.OFFICIAL -> stringResource(
-                                R.string.lab_update_github_proxy_official,
-                            )
-
-                            GithubUpdateChannel.PROXY_7ED -> stringResource(
-                                R.string.lab_update_github_proxy_7ed,
-                            )
-
-                            GithubUpdateChannel.CUSTOM -> uiState.customGithubProxyUrl.ifBlank {
-                                stringResource(R.string.lab_update_github_proxy_custom)
-                            }
-                        }
-                        BasicComponent(
-                            title = stringResource(R.string.lab_update_github_proxy),
-                            summary = channelSummary,
-                            onClick = { showChannelDialog.value = true },
+                            title = stringResource(R.string.network_access),
                         )
                     }
                 }
+                item { Spacer(modifier = Modifier.size(12.dp)) }
+                if (uiState.allowInternetAccess) {
+                    item { SmallTitle(stringResource(R.string.internet_access_enabled)) }
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .padding(bottom = 12.dp),
+                        ) {
+                            CouiNetworkSourceModePreference(
+                                currentMode = uiState.networkSourceMode,
+                                onModeChange = { mode ->
+                                    if (mode != NetworkSourceMode.Cache &&
+                                        !uiState.networkSourceModeWarningAcknowledged
+                                    ) {
+                                        pendingNetworkSourceMode = mode
+                                    } else {
+                                        viewModel.dispatch(
+                                            NetworkSettingsAction.ChangeNetworkSourceMode(mode),
+                                        )
+                                    }
+                                },
+                            )
+                            if (uiState.networkSourceMode == NetworkSourceMode.Automatic) {
+                                CouiNetworkAppNameSourcePreference(
+                                    source = uiState.networkAppNameSource,
+                                    onChange = { viewModel.dispatch(NetworkSettingsAction.ChangeAppNameSource(it)) },
+                                )
+                                CouiSwitchWidget(
+                                    title = stringResource(R.string.network_load_app_icon),
+                                    description = stringResource(R.string.network_load_app_icon_desc),
+                                    checked = uiState.networkLoadAppIcon,
+                                    onCheckedChange = {
+                                        viewModel.dispatch(NetworkSettingsAction.ChangeLoadAppIcon(it))
+                                    },
+                                )
+                            }
+                            val allowSecureString = stringResource(R.string.lab_http_profile_secure)
+                            val allowLocalString = stringResource(R.string.lab_http_profile_local)
+                            val allowAllString = stringResource(R.string.lab_http_profile_all)
+                            val profileData = remember(
+                                allowSecureString,
+                                allowLocalString,
+                                allowAllString,
+                            ) {
+                                linkedMapOf(
+                                    HttpProfile.ALLOW_SECURE to allowSecureString,
+                                    HttpProfile.ALLOW_LOCAL to allowLocalString,
+                                    HttpProfile.ALLOW_ALL to allowAllString,
+                                )
+                            }
+                            val profileEntries = remember(profileData) {
+                                profileData.values.map { name -> DropdownItem(text = name) }
+                            }
+                            val profileIndex = profileData.keys.toList()
+                                .indexOf(uiState.httpProfile)
+                                .coerceAtLeast(0)
+
+                            OverlaySpinnerPreference(
+                                title = stringResource(R.string.lab_http_profile),
+                                items = profileEntries,
+                                selectedIndex = profileIndex,
+                                onSelectedIndexChange = { newIndex ->
+                                    profileData.keys.elementAtOrNull(newIndex)?.let { profile ->
+                                        viewModel.dispatch(NetworkSettingsAction.ChangeHttpProfile(profile))
+                                    }
+                                },
+                            )
+
+                            val channelSummary = when (uiState.githubUpdateChannel) {
+                                GithubUpdateChannel.OFFICIAL -> stringResource(
+                                    R.string.lab_update_github_proxy_official,
+                                )
+
+                                GithubUpdateChannel.PROXY_7ED -> stringResource(
+                                    R.string.lab_update_github_proxy_7ed,
+                                )
+
+                                GithubUpdateChannel.CUSTOM -> uiState.customGithubProxyUrl.ifBlank {
+                                    stringResource(R.string.lab_update_github_proxy_custom)
+                                }
+                            }
+                            BasicComponent(
+                                title = stringResource(R.string.lab_update_github_proxy),
+                                summary = channelSummary,
+                                onClick = { showChannelDialog.value = true },
+                            )
+                        }
+                    }
+                }
+                item { Spacer(Modifier.navigationBarsPadding()) }
             }
-            item { Spacer(Modifier.navigationBarsPadding()) }
         }
     }
 }
@@ -328,7 +331,7 @@ private fun NetworkSourceModeWarningDialog(
 
 @Composable
 private fun CouiNetworkAppNameSourcePreference(source: NetworkAppNameSource, onChange: (NetworkAppNameSource) -> Unit) {
-    WindowSpinnerPreference(
+    OverlaySpinnerPreference(
         title = stringResource(R.string.network_app_name_source),
         summary = stringResource(
             if (source == NetworkAppNameSource.ServerFilename) R.string.network_app_name_server_desc else R.string.network_app_name_resources_desc,
@@ -356,7 +359,7 @@ private fun CouiNetworkSourceModePreference(currentMode: NetworkSourceMode, onMo
     )
     val entries = modes.values.map { DropdownItem(text = it) }
 
-    WindowSpinnerPreference(
+    OverlaySpinnerPreference(
         title = stringResource(R.string.config_network_source_mode),
         summary = descriptions.getValue(currentMode),
         items = entries,

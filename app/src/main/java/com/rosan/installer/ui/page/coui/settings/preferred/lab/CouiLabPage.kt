@@ -56,6 +56,7 @@ import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
 import com.rosan.installer.ui.page.coui.widgets.CouiContentDialog
 import com.rosan.installer.ui.page.coui.widgets.CouiDraggableList
 import com.rosan.installer.ui.page.coui.widgets.CouiInstallerTipCard
+import com.rosan.installer.ui.page.coui.widgets.CouiPopupBlurScope
 import com.rosan.installer.ui.page.coui.widgets.CouiRootImplementationDialog
 import com.rosan.installer.ui.page.coui.widgets.CouiSettingsTipCard
 import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
@@ -77,7 +78,7 @@ import io.github.suqi8.coui.kmp.basic.SmallTitle
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.basic.TopAppBar
-import io.github.suqi8.coui.kmp.preference.WindowSpinnerPreference
+import io.github.suqi8.coui.kmp.preference.OverlaySpinnerPreference
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
@@ -175,167 +176,24 @@ fun CouiLabPage(useBlur: Boolean, viewModel: LabSettingsViewModel = koinViewMode
             )
         },
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(topBarBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier)
-                .scrollEndHaptic()
-                .overScrollVertical()
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = PaddingValues(
-                start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
-                top = paddingValues.calculateTopPadding(),
-                end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
-            ),
-            overscrollEffect = null,
-        ) {
-            item { CouiSettingsTipCard(stringResource(R.string.lab_tip)) }
-            item { Spacer(modifier = Modifier.size(12.dp)) }
-            item { SmallTitle(stringResource(R.string.config_authorizer)) }
-            item {
-                Card(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 12.dp),
-                ) {
-                    CouiSwitchWidget(
-                        title = stringResource(R.string.config_try_multiple_authorizers_on_install),
-                        description = stringResource(R.string.config_try_multiple_authorizers_on_install_desc),
-                        checked = uiState.tryMultipleAuthorizersOnInstall,
-                        onCheckedChange = {
-                            viewModel.dispatch(
-                                LabSettingsAction.LabChangeTryMultipleAuthorizersOnInstall(it),
-                            )
-                        },
-                    )
-                    AnimatedVisibility(
-                        visible = uiState.tryMultipleAuthorizersOnInstall,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut(),
-                    ) {
-                        BasicComponent(
-                            title = stringResource(R.string.config_smart_authorizer_fallback_list),
-                            summary = stringResource(
-                                R.string.config_smart_authorizer_fallback_list_desc,
-                                smartAuthorizerSummary,
-                            ),
-                            onClick = {
-                                capabilityProvider.refreshPrivilegeStatus()
-                                showSmartAuthorizerSheet.value = true
-                            },
-                        )
-                    }
-                }
-            }
-            item { SmallTitle(stringResource(R.string.config_authorizer_root)) }
-            item {
-                Card(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 12.dp),
-                ) {
-                    CouiSwitchWidget(
-                        title = stringResource(R.string.lab_module_flashing),
-                        description = stringResource(R.string.lab_module_flashing_desc),
-                        checked = uiState.labRootEnableModuleFlash,
-                        onCheckedChange = { isEnabling ->
-                            if (isEnabling) {
-                                showRootImplementationDialog.value = true
-                            } else {
-                                viewModel.dispatch(LabSettingsAction.LabChangeRootModuleFlash(false))
-                            }
-                        },
-                    )
-                    AnimatedVisibility(
-                        visible = uiState.labRootEnableModuleFlash,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut(),
-                    ) {
-                        val currentRootImpl = uiState.labRootMode
-                        val data = remember {
-                            mapOf(
-                                RootMode.Magisk to "Magisk",
-                                RootMode.KernelSU to "KernelSU",
-                                RootMode.APatch to "APatch",
-                            )
-                        }
-
-                        val spinnerEntries = remember(data) {
-                            data.values.map { modeName ->
-                                DropdownItem(text = modeName)
-                            }
-                        }
-
-                        val selectedIndex = remember(currentRootImpl, data) {
-                            data.keys.toList().indexOf(currentRootImpl).coerceAtLeast(0)
-                        }
-
-                        Column {
-                            WindowSpinnerPreference(
-                                title = stringResource(R.string.lab_module_select_root_impl),
-                                items = spinnerEntries,
-                                selectedIndex = selectedIndex,
-                                onSelectedIndexChange = { newIndex ->
-                                    data.keys.elementAtOrNull(newIndex)?.let { impl ->
-                                        viewModel.dispatch(LabSettingsAction.LabChangeRootImplementation(impl))
-                                    }
-                                },
-                            )
-                            CouiSwitchWidget(
-                                title = stringResource(R.string.lab_module_flashing_show_art),
-                                description = stringResource(R.string.lab_module_flashing_show_art_desc),
-                                checked = uiState.labRootShowModuleArt,
-                                onCheckedChange = { viewModel.dispatch(LabSettingsAction.LabChangeRootShowModuleArt(it)) },
-                            )
-                        }
-                    }
-                }
-            }
-            item { SmallTitle(stringResource(R.string.lab_compatibility)) }
-            item {
-                Card(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 12.dp),
-                ) {
-                    CouiSwitchWidget(
-                        title = stringResource(R.string.lab_shizuku_non_adb_install),
-                        description = stringResource(R.string.lab_shizuku_non_adb_install_desc),
-                        checked = uiState.labShizukuNonAdbInstall,
-                        onCheckedChange = { enabled ->
-                            if (enabled) {
-                                showNonAdbConfirmation = true
-                            } else {
-                                viewModel.dispatch(LabSettingsAction.LabChangeShizukuNonAdbInstall(false))
-                            }
-                        },
-                    )
-                    CouiSwitchWidget(
-                        title = stringResource(R.string.lab_enable_abi_override),
-                        description = stringResource(R.string.lab_enable_abi_override_desc),
-                        checked = uiState.labEnableAbiOverride,
-                        onCheckedChange = {
-                            viewModel.dispatch(LabSettingsAction.LabChangeEnableAbiOverride(it))
-                        },
-                    )
-                    AnimatedVisibility(
-                        visible = uiState.labEnableAbiOverride,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut(),
-                    ) {
-                        CouiSwitchWidget(
-                            title = stringResource(R.string.lab_try_different_architecture),
-                            description = stringResource(R.string.lab_try_different_architecture_desc),
-                            checked = uiState.labTryDifferentArchitecture,
-                            onCheckedChange = {
-                                viewModel.dispatch(LabSettingsAction.LabChangeTryDifferentArchitecture(it))
-                            },
-                        )
-                    }
-                }
-            }
-            if (AppConfig.isRespectPlatformInstallPolicyAvailable) {
-                item { SmallTitle(stringResource(R.string.lab_unstable_features)) }
+        CouiPopupBlurScope(topBarBackdrop) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(topBarBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier)
+                    .scrollEndHaptic()
+                    .overScrollVertical()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                contentPadding = PaddingValues(
+                    start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
+                    top = paddingValues.calculateTopPadding(),
+                    end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
+                ),
+                overscrollEffect = null,
+            ) {
+                item { CouiSettingsTipCard(stringResource(R.string.lab_tip)) }
+                item { Spacer(modifier = Modifier.size(12.dp)) }
+                item { SmallTitle(stringResource(R.string.config_authorizer)) }
                 item {
                     Card(
                         modifier = Modifier
@@ -343,19 +201,164 @@ fun CouiLabPage(useBlur: Boolean, viewModel: LabSettingsViewModel = koinViewMode
                             .padding(bottom = 12.dp),
                     ) {
                         CouiSwitchWidget(
-                            title = stringResource(R.string.lab_respect_platform_install_policy),
-                            description = stringResource(R.string.lab_respect_platform_install_policy_desc),
-                            checked = uiState.labRespectPlatformInstallPolicy,
+                            title = stringResource(R.string.config_try_multiple_authorizers_on_install),
+                            description = stringResource(R.string.config_try_multiple_authorizers_on_install_desc),
+                            checked = uiState.tryMultipleAuthorizersOnInstall,
                             onCheckedChange = {
                                 viewModel.dispatch(
-                                    LabSettingsAction.LabChangeRespectPlatformInstallPolicy(it),
+                                    LabSettingsAction.LabChangeTryMultipleAuthorizersOnInstall(it),
                                 )
                             },
                         )
+                        AnimatedVisibility(
+                            visible = uiState.tryMultipleAuthorizersOnInstall,
+                            enter = expandVertically() + fadeIn(),
+                            exit = shrinkVertically() + fadeOut(),
+                        ) {
+                            BasicComponent(
+                                title = stringResource(R.string.config_smart_authorizer_fallback_list),
+                                summary = stringResource(
+                                    R.string.config_smart_authorizer_fallback_list_desc,
+                                    smartAuthorizerSummary,
+                                ),
+                                onClick = {
+                                    capabilityProvider.refreshPrivilegeStatus()
+                                    showSmartAuthorizerSheet.value = true
+                                },
+                            )
+                        }
                     }
                 }
+                item { SmallTitle(stringResource(R.string.config_authorizer_root)) }
+                item {
+                    Card(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 12.dp),
+                    ) {
+                        CouiSwitchWidget(
+                            title = stringResource(R.string.lab_module_flashing),
+                            description = stringResource(R.string.lab_module_flashing_desc),
+                            checked = uiState.labRootEnableModuleFlash,
+                            onCheckedChange = { isEnabling ->
+                                if (isEnabling) {
+                                    showRootImplementationDialog.value = true
+                                } else {
+                                    viewModel.dispatch(LabSettingsAction.LabChangeRootModuleFlash(false))
+                                }
+                            },
+                        )
+                        AnimatedVisibility(
+                            visible = uiState.labRootEnableModuleFlash,
+                            enter = expandVertically() + fadeIn(),
+                            exit = shrinkVertically() + fadeOut(),
+                        ) {
+                            val currentRootImpl = uiState.labRootMode
+                            val data = remember {
+                                mapOf(
+                                    RootMode.Magisk to "Magisk",
+                                    RootMode.KernelSU to "KernelSU",
+                                    RootMode.APatch to "APatch",
+                                )
+                            }
+
+                            val spinnerEntries = remember(data) {
+                                data.values.map { modeName ->
+                                    DropdownItem(text = modeName)
+                                }
+                            }
+
+                            val selectedIndex = remember(currentRootImpl, data) {
+                                data.keys.toList().indexOf(currentRootImpl).coerceAtLeast(0)
+                            }
+
+                            Column {
+                                OverlaySpinnerPreference(
+                                    title = stringResource(R.string.lab_module_select_root_impl),
+                                    items = spinnerEntries,
+                                    selectedIndex = selectedIndex,
+                                    onSelectedIndexChange = { newIndex ->
+                                        data.keys.elementAtOrNull(newIndex)?.let { impl ->
+                                            viewModel.dispatch(LabSettingsAction.LabChangeRootImplementation(impl))
+                                        }
+                                    },
+                                )
+                                CouiSwitchWidget(
+                                    title = stringResource(R.string.lab_module_flashing_show_art),
+                                    description = stringResource(R.string.lab_module_flashing_show_art_desc),
+                                    checked = uiState.labRootShowModuleArt,
+                                    onCheckedChange = { viewModel.dispatch(LabSettingsAction.LabChangeRootShowModuleArt(it)) },
+                                )
+                            }
+                        }
+                    }
+                }
+                item { SmallTitle(stringResource(R.string.lab_compatibility)) }
+                item {
+                    Card(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 12.dp),
+                    ) {
+                        CouiSwitchWidget(
+                            title = stringResource(R.string.lab_shizuku_non_adb_install),
+                            description = stringResource(R.string.lab_shizuku_non_adb_install_desc),
+                            checked = uiState.labShizukuNonAdbInstall,
+                            onCheckedChange = { enabled ->
+                                if (enabled) {
+                                    showNonAdbConfirmation = true
+                                } else {
+                                    viewModel.dispatch(LabSettingsAction.LabChangeShizukuNonAdbInstall(false))
+                                }
+                            },
+                        )
+                        CouiSwitchWidget(
+                            title = stringResource(R.string.lab_enable_abi_override),
+                            description = stringResource(R.string.lab_enable_abi_override_desc),
+                            checked = uiState.labEnableAbiOverride,
+                            onCheckedChange = {
+                                viewModel.dispatch(LabSettingsAction.LabChangeEnableAbiOverride(it))
+                            },
+                        )
+                        AnimatedVisibility(
+                            visible = uiState.labEnableAbiOverride,
+                            enter = expandVertically() + fadeIn(),
+                            exit = shrinkVertically() + fadeOut(),
+                        ) {
+                            CouiSwitchWidget(
+                                title = stringResource(R.string.lab_try_different_architecture),
+                                description = stringResource(R.string.lab_try_different_architecture_desc),
+                                checked = uiState.labTryDifferentArchitecture,
+                                onCheckedChange = {
+                                    viewModel.dispatch(LabSettingsAction.LabChangeTryDifferentArchitecture(it))
+                                },
+                            )
+                        }
+                    }
+                }
+                if (AppConfig.isRespectPlatformInstallPolicyAvailable) {
+                    item { SmallTitle(stringResource(R.string.lab_unstable_features)) }
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .padding(bottom = 12.dp),
+                        ) {
+                            CouiSwitchWidget(
+                                title = stringResource(R.string.lab_respect_platform_install_policy),
+                                description = stringResource(R.string.lab_respect_platform_install_policy_desc),
+                                checked = uiState.labRespectPlatformInstallPolicy,
+                                onCheckedChange = {
+                                    viewModel.dispatch(
+                                        LabSettingsAction.LabChangeRespectPlatformInstallPolicy(it),
+                                    )
+                                },
+                            )
+                        }
+                    }
+                }
+                item { Spacer(Modifier.navigationBarsPadding()) }
             }
-            item { Spacer(Modifier.navigationBarsPadding()) }
         }
     }
 

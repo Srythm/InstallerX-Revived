@@ -70,6 +70,7 @@ import com.rosan.installer.ui.navigation.Route
 import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
 import com.rosan.installer.ui.page.coui.widgets.CouiContentDialog
 import com.rosan.installer.ui.page.coui.widgets.CouiNavigationItemWidget
+import com.rosan.installer.ui.page.coui.widgets.CouiPopupBlurScope
 import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
 import com.rosan.installer.ui.page.main.settings.preferred.installer.InstallerSettingsAction
 import com.rosan.installer.ui.page.main.settings.preferred.installer.InstallerSettingsViewModel
@@ -90,7 +91,7 @@ import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.basic.TextField
 import io.github.suqi8.coui.kmp.basic.TopAppBar
-import io.github.suqi8.coui.kmp.preference.WindowSpinnerPreference
+import io.github.suqi8.coui.kmp.preference.OverlaySpinnerPreference
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
@@ -127,195 +128,103 @@ fun CouiInstallerGlobalSettingsPage(useBlur: Boolean, viewModel: InstallerSettin
             )
         },
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(topBarBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier)
-                .scrollEndHaptic()
-                .overScrollVertical()
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = PaddingValues(
-                start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
-                top = paddingValues.calculateTopPadding(),
-                end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
-            ),
-            overscrollEffect = null,
-        ) {
-            item { Spacer(modifier = Modifier.size(12.dp)) }
-            item { SmallTitle(stringResource(R.string.installer_settings_global_installer)) }
-            item {
-                Card(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 12.dp),
-                ) {
-                    CouiNavigationItemWidget(
-                        title = stringResource(R.string.dialog_settings),
-                        description = stringResource(R.string.dialog_settings_desc),
-                        onClick = { navigator.push(Route.DialogSettings) },
-                    )
-                    CouiNavigationItemWidget(
-                        title = stringResource(R.string.notification_settings),
-                        description = stringResource(R.string.notification_settings_desc),
-                        onClick = { navigator.push(Route.NotificationSettings) },
-                    )
-                    CouiNavigationItemWidget(
-                        title = stringResource(R.string.authorizer_customization),
-                        description = stringResource(R.string.authorizer_customization_desc),
-                        onClick = { navigator.push(Route.AuthorizerCust) },
-                    )
-
-                    if (BiometricManager
-                            .from(context)
-                            .canAuthenticate(BIOMETRIC_WEAK or BIOMETRIC_STRONG or DEVICE_CREDENTIAL) ==
-                        BiometricManager.BIOMETRIC_SUCCESS
-                    ) {
-                        val biometricModes = remember {
-                            listOf(
-                                BiometricAuthMode.Disable,
-                                BiometricAuthMode.Enable,
-                                BiometricAuthMode.FollowConfig,
-                            )
-                        }
-
-                        val entries = remember(biometricModes) {
-                            biometricModes.map { mode ->
-                                val text = when (mode) {
-                                    BiometricAuthMode.Disable -> context.getString(R.string.installer_biometric_auth_mode_disable)
-
-                                    BiometricAuthMode.Enable -> context.getString(R.string.installer_biometric_auth_mode_enable)
-
-                                    BiometricAuthMode.FollowConfig -> context.getString(
-                                        R.string.installer_biometric_auth_mode_follow_config,
-                                    )
-                                }
-                                DropdownItem(text = text)
-                            }
-                        }
-
-                        val selectedIndex = remember(uiState.installerRequireBiometricAuth, biometricModes) {
-                            biometricModes.indexOf(uiState.installerRequireBiometricAuth).coerceAtLeast(0)
-                        }
-
-                        val dynamicSummary = when (biometricModes[selectedIndex]) {
-                            BiometricAuthMode.Disable -> stringResource(R.string.installer_biometric_auth_mode_disable_desc)
-
-                            BiometricAuthMode.Enable -> stringResource(R.string.installer_biometric_auth_mode_enable_desc)
-
-                            BiometricAuthMode.FollowConfig -> stringResource(
-                                R.string.installer_biometric_auth_mode_follow_config_desc,
-                            )
-                        }
-
-                        WindowSpinnerPreference(
-                            title = stringResource(R.string.installer_settings_require_biometric_auth),
-                            summary = dynamicSummary,
-                            items = entries,
-                            selectedIndex = selectedIndex,
-                            onSelectedIndexChange = { index ->
-                                viewModel.dispatch(
-                                    InstallerSettingsAction.ChangeBiometricAuth(biometricModes[index]),
-                                )
-                            },
-                        )
-                    }
-                }
-            }
-
-            item { SmallTitle(stringResource(R.string.installer_settings_signature_check)) }
-            item {
-                Card(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 12.dp),
-                ) {
-                    CouiSwitchWidget(
-                        title = stringResource(R.string.config_check_app_signature),
-                        description = stringResource(R.string.config_check_app_signature_desc),
-                        checked = uiState.checkAppSignature,
-                        onCheckedChange = { viewModel.dispatch(InstallerSettingsAction.ChangeCheckAppSignature(it)) },
-                    )
-
-                    AnimatedVisibility(
-                        visible = uiState.checkAppSignature,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically(),
-                    ) {
-                        CouiSwitchWidget(
-                            title = stringResource(R.string.config_check_source_stamp),
-                            description = stringResource(R.string.config_check_source_stamp_desc),
-                            checked = uiState.checkSourceStamp,
-                            onCheckedChange = {
-                                viewModel.dispatch(InstallerSettingsAction.ChangeCheckSourceStamp(it))
-                            },
-                        )
-                    }
-
-                    AnimatedVisibility(
-                        visible = uiState.checkAppSignature,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically(),
-                    ) {
-                        CouiSwitchWidget(
-                            title = stringResource(R.string.config_show_signature_info_on_match),
-                            description = stringResource(R.string.config_show_signature_info_on_match_desc),
-                            checked = uiState.showSignatureInfoOnMatch,
-                            onCheckedChange = {
-                                viewModel.dispatch(InstallerSettingsAction.ChangeShowSignatureInfoOnMatch(it))
-                            },
-                        )
-                    }
-
-                    AnimatedVisibility(
-                        visible = uiState.checkAppSignature,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically(),
-                    ) {
-                        CouiSwitchWidget(
-                            title = stringResource(R.string.config_show_signature_details),
-                            description = stringResource(R.string.config_show_signature_details_desc),
-                            checked = uiState.showSignatureDetails,
-                            onCheckedChange = {
-                                viewModel.dispatch(InstallerSettingsAction.ChangeShowSignatureDetails(it))
-                            },
-                        )
-                    }
-                }
-            }
-
-            item { SmallTitle(stringResource(R.string.installer_settings_xposed_detection)) }
-            item {
-                Card(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 12.dp),
-                ) {
-                    CouiSwitchWidget(
-                        title = stringResource(R.string.config_detect_xposed_module),
-                        description = stringResource(R.string.config_detect_xposed_module_desc),
-                        checked = uiState.detectXposedModule,
-                        onCheckedChange = { viewModel.dispatch(InstallerSettingsAction.ChangeDetectXposedModule(it)) },
-                    )
-
-                    AnimatedVisibility(
-                        visible = uiState.detectXposedModule,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically(),
-                    ) {
-                        CouiSwitchWidget(
-                            title = stringResource(R.string.config_quick_open_lsposed),
-                            description = stringResource(R.string.config_quick_open_lsposed_desc),
-                            checked = uiState.quickOpenLSPosed,
-                            onCheckedChange = { viewModel.dispatch(InstallerSettingsAction.ChangeQuickOpenLSPosed(it)) },
-                        )
-                    }
-                }
-            }
-
-            if (DeviceConfig.currentManufacturer == Manufacturer.OPPO ||
-                DeviceConfig.currentManufacturer == Manufacturer.ONEPLUS
+        CouiPopupBlurScope(topBarBackdrop) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(topBarBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier)
+                    .scrollEndHaptic()
+                    .overScrollVertical()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                contentPadding = PaddingValues(
+                    start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
+                    top = paddingValues.calculateTopPadding(),
+                    end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
+                ),
+                overscrollEffect = null,
             ) {
-                item { SmallTitle(stringResource(R.string.installer_oppo_related)) }
+                item { Spacer(modifier = Modifier.size(12.dp)) }
+                item { SmallTitle(stringResource(R.string.installer_settings_global_installer)) }
+                item {
+                    Card(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 12.dp),
+                    ) {
+                        CouiNavigationItemWidget(
+                            title = stringResource(R.string.dialog_settings),
+                            description = stringResource(R.string.dialog_settings_desc),
+                            onClick = { navigator.push(Route.DialogSettings) },
+                        )
+                        CouiNavigationItemWidget(
+                            title = stringResource(R.string.notification_settings),
+                            description = stringResource(R.string.notification_settings_desc),
+                            onClick = { navigator.push(Route.NotificationSettings) },
+                        )
+                        CouiNavigationItemWidget(
+                            title = stringResource(R.string.authorizer_customization),
+                            description = stringResource(R.string.authorizer_customization_desc),
+                            onClick = { navigator.push(Route.AuthorizerCust) },
+                        )
+
+                        if (BiometricManager
+                                .from(context)
+                                .canAuthenticate(BIOMETRIC_WEAK or BIOMETRIC_STRONG or DEVICE_CREDENTIAL) ==
+                            BiometricManager.BIOMETRIC_SUCCESS
+                        ) {
+                            val biometricModes = remember {
+                                listOf(
+                                    BiometricAuthMode.Disable,
+                                    BiometricAuthMode.Enable,
+                                    BiometricAuthMode.FollowConfig,
+                                )
+                            }
+
+                            val entries = remember(biometricModes) {
+                                biometricModes.map { mode ->
+                                    val text = when (mode) {
+                                        BiometricAuthMode.Disable -> context.getString(R.string.installer_biometric_auth_mode_disable)
+
+                                        BiometricAuthMode.Enable -> context.getString(R.string.installer_biometric_auth_mode_enable)
+
+                                        BiometricAuthMode.FollowConfig -> context.getString(
+                                            R.string.installer_biometric_auth_mode_follow_config,
+                                        )
+                                    }
+                                    DropdownItem(text = text)
+                                }
+                            }
+
+                            val selectedIndex = remember(uiState.installerRequireBiometricAuth, biometricModes) {
+                                biometricModes.indexOf(uiState.installerRequireBiometricAuth).coerceAtLeast(0)
+                            }
+
+                            val dynamicSummary = when (biometricModes[selectedIndex]) {
+                                BiometricAuthMode.Disable -> stringResource(R.string.installer_biometric_auth_mode_disable_desc)
+
+                                BiometricAuthMode.Enable -> stringResource(R.string.installer_biometric_auth_mode_enable_desc)
+
+                                BiometricAuthMode.FollowConfig -> stringResource(
+                                    R.string.installer_biometric_auth_mode_follow_config_desc,
+                                )
+                            }
+
+                            OverlaySpinnerPreference(
+                                title = stringResource(R.string.installer_settings_require_biometric_auth),
+                                summary = dynamicSummary,
+                                items = entries,
+                                selectedIndex = selectedIndex,
+                                onSelectedIndexChange = { index ->
+                                    viewModel.dispatch(
+                                        InstallerSettingsAction.ChangeBiometricAuth(biometricModes[index]),
+                                    )
+                                },
+                            )
+                        }
+                    }
+                }
+
+                item { SmallTitle(stringResource(R.string.installer_settings_signature_check)) }
                 item {
                     Card(
                         modifier = Modifier
@@ -323,104 +232,198 @@ fun CouiInstallerGlobalSettingsPage(useBlur: Boolean, viewModel: InstallerSettin
                             .padding(bottom = 12.dp),
                     ) {
                         CouiSwitchWidget(
-                            title = stringResource(id = R.string.installer_show_oem_special),
-                            description = stringResource(id = R.string.installer_show_oem_special_desc),
-                            checked = uiState.showOPPOSpecial,
-                            onCheckedChange = { viewModel.dispatch(InstallerSettingsAction.ChangeShowOPPOSpecial(it)) },
+                            title = stringResource(R.string.config_check_app_signature),
+                            description = stringResource(R.string.config_check_app_signature_desc),
+                            checked = uiState.checkAppSignature,
+                            onCheckedChange = { viewModel.dispatch(InstallerSettingsAction.ChangeCheckAppSignature(it)) },
                         )
+
+                        AnimatedVisibility(
+                            visible = uiState.checkAppSignature,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically(),
+                        ) {
+                            CouiSwitchWidget(
+                                title = stringResource(R.string.config_check_source_stamp),
+                                description = stringResource(R.string.config_check_source_stamp_desc),
+                                checked = uiState.checkSourceStamp,
+                                onCheckedChange = {
+                                    viewModel.dispatch(InstallerSettingsAction.ChangeCheckSourceStamp(it))
+                                },
+                            )
+                        }
+
+                        AnimatedVisibility(
+                            visible = uiState.checkAppSignature,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically(),
+                        ) {
+                            CouiSwitchWidget(
+                                title = stringResource(R.string.config_show_signature_info_on_match),
+                                description = stringResource(R.string.config_show_signature_info_on_match_desc),
+                                checked = uiState.showSignatureInfoOnMatch,
+                                onCheckedChange = {
+                                    viewModel.dispatch(InstallerSettingsAction.ChangeShowSignatureInfoOnMatch(it))
+                                },
+                            )
+                        }
+
+                        AnimatedVisibility(
+                            visible = uiState.checkAppSignature,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically(),
+                        ) {
+                            CouiSwitchWidget(
+                                title = stringResource(R.string.config_show_signature_details),
+                                description = stringResource(R.string.config_show_signature_details_desc),
+                                checked = uiState.showSignatureDetails,
+                                onCheckedChange = {
+                                    viewModel.dispatch(InstallerSettingsAction.ChangeShowSignatureDetails(it))
+                                },
+                            )
+                        }
                     }
                 }
-            }
 
-            item { SmallTitle(stringResource(R.string.config_managed_installer_packages_title)) }
-            item {
-                Card(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 12.dp),
-                ) {
-                    CouiManagedPackagesWidget(
-                        noContentTitle = stringResource(R.string.config_no_preset_install_sources),
-                        packages = uiState.managedInstallerPackages,
-                        onAddPackage = { viewModel.dispatch(InstallerSettingsAction.AddManagedInstallerPackage(it)) },
-                        onRemovePackage = {
-                            viewModel.dispatch(
-                                InstallerSettingsAction.RemoveManagedInstallerPackage(it),
-                            )
-                        },
-                    )
-                }
-            }
-
-            item { SmallTitle(stringResource(R.string.config_managed_blacklist_by_package_name_title)) }
-            item {
-                Card(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 12.dp),
-                ) {
-                    CouiManagedPackagesWidget(
-                        noContentTitle = stringResource(R.string.config_no_managed_blacklist),
-                        packages = uiState.managedBlacklistPackages,
-                        onAddPackage = { viewModel.dispatch(InstallerSettingsAction.AddManagedBlacklistPackage(it)) },
-                        onRemovePackage = {
-                            viewModel.dispatch(
-                                InstallerSettingsAction.RemoveManagedBlacklistPackage(it),
-                            )
-                        },
-                    )
-                }
-            }
-
-            item { SmallTitle(stringResource(R.string.config_managed_blacklist_by_shared_user_id_title)) }
-            item {
-                Card(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 16.dp),
-                ) {
-                    CouiManagedUidsWidget(
-                        noContentTitle = stringResource(R.string.config_no_managed_shared_user_id_blacklist),
-                        uids = uiState.managedSharedUserIdBlacklist,
-                        onAddUid = {
-                            viewModel.dispatch(InstallerSettingsAction.AddManagedSharedUserIdBlacklist(it))
-                        },
-                        onRemoveUid = {
-                            viewModel.dispatch(InstallerSettingsAction.RemoveManagedSharedUserIdBlacklist(it))
-                        },
-                    )
-                    AnimatedVisibility(
-                        visible = uiState.managedSharedUserIdBlacklist.isNotEmpty(),
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically(),
+                item { SmallTitle(stringResource(R.string.installer_settings_xposed_detection)) }
+                item {
+                    Card(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 12.dp),
                     ) {
-                        HorizontalDivider(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
-                            color = COUITheme.colorScheme.divider,
+                        CouiSwitchWidget(
+                            title = stringResource(R.string.config_detect_xposed_module),
+                            description = stringResource(R.string.config_detect_xposed_module_desc),
+                            checked = uiState.detectXposedModule,
+                            onCheckedChange = { viewModel.dispatch(InstallerSettingsAction.ChangeDetectXposedModule(it)) },
                         )
+
+                        AnimatedVisibility(
+                            visible = uiState.detectXposedModule,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically(),
+                        ) {
+                            CouiSwitchWidget(
+                                title = stringResource(R.string.config_quick_open_lsposed),
+                                description = stringResource(R.string.config_quick_open_lsposed_desc),
+                                checked = uiState.quickOpenLSPosed,
+                                onCheckedChange = { viewModel.dispatch(InstallerSettingsAction.ChangeQuickOpenLSPosed(it)) },
+                            )
+                        }
+                    }
+                }
+
+                if (DeviceConfig.currentManufacturer == Manufacturer.OPPO ||
+                    DeviceConfig.currentManufacturer == Manufacturer.ONEPLUS
+                ) {
+                    item { SmallTitle(stringResource(R.string.installer_oppo_related)) }
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .padding(bottom = 12.dp),
+                        ) {
+                            CouiSwitchWidget(
+                                title = stringResource(id = R.string.installer_show_oem_special),
+                                description = stringResource(id = R.string.installer_show_oem_special_desc),
+                                checked = uiState.showOPPOSpecial,
+                                onCheckedChange = { viewModel.dispatch(InstallerSettingsAction.ChangeShowOPPOSpecial(it)) },
+                            )
+                        }
+                    }
+                }
+
+                item { SmallTitle(stringResource(R.string.config_managed_installer_packages_title)) }
+                item {
+                    Card(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 12.dp),
+                    ) {
                         CouiManagedPackagesWidget(
-                            noContentTitle = stringResource(R.string.config_no_managed_shared_user_id_exempted_packages),
-                            noContentDescription = stringResource(R.string.config_shared_uid_prior_to_pkgname_desc),
-                            packages = uiState.managedSharedUserIdExemptedPackages,
-                            infoText = stringResource(R.string.config_no_managed_shared_user_id_exempted_packages),
-                            isInfoVisible = uiState.managedSharedUserIdExemptedPackages.isNotEmpty(),
-                            onAddPackage = {
-                                viewModel.dispatch(
-                                    InstallerSettingsAction.AddManagedSharedUserIdExemptedPackages(it),
-                                )
-                            },
+                            noContentTitle = stringResource(R.string.config_no_preset_install_sources),
+                            packages = uiState.managedInstallerPackages,
+                            onAddPackage = { viewModel.dispatch(InstallerSettingsAction.AddManagedInstallerPackage(it)) },
                             onRemovePackage = {
                                 viewModel.dispatch(
-                                    InstallerSettingsAction.RemoveManagedSharedUserIdExemptedPackages(it),
+                                    InstallerSettingsAction.RemoveManagedInstallerPackage(it),
                                 )
                             },
                         )
                     }
                 }
+
+                item { SmallTitle(stringResource(R.string.config_managed_blacklist_by_package_name_title)) }
+                item {
+                    Card(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 12.dp),
+                    ) {
+                        CouiManagedPackagesWidget(
+                            noContentTitle = stringResource(R.string.config_no_managed_blacklist),
+                            packages = uiState.managedBlacklistPackages,
+                            onAddPackage = { viewModel.dispatch(InstallerSettingsAction.AddManagedBlacklistPackage(it)) },
+                            onRemovePackage = {
+                                viewModel.dispatch(
+                                    InstallerSettingsAction.RemoveManagedBlacklistPackage(it),
+                                )
+                            },
+                        )
+                    }
+                }
+
+                item { SmallTitle(stringResource(R.string.config_managed_blacklist_by_shared_user_id_title)) }
+                item {
+                    Card(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 16.dp),
+                    ) {
+                        CouiManagedUidsWidget(
+                            noContentTitle = stringResource(R.string.config_no_managed_shared_user_id_blacklist),
+                            uids = uiState.managedSharedUserIdBlacklist,
+                            onAddUid = {
+                                viewModel.dispatch(InstallerSettingsAction.AddManagedSharedUserIdBlacklist(it))
+                            },
+                            onRemoveUid = {
+                                viewModel.dispatch(InstallerSettingsAction.RemoveManagedSharedUserIdBlacklist(it))
+                            },
+                        )
+                        AnimatedVisibility(
+                            visible = uiState.managedSharedUserIdBlacklist.isNotEmpty(),
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically(),
+                        ) {
+                            HorizontalDivider(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp),
+                                color = COUITheme.colorScheme.divider,
+                            )
+                            CouiManagedPackagesWidget(
+                                noContentTitle = stringResource(R.string.config_no_managed_shared_user_id_exempted_packages),
+                                noContentDescription = stringResource(R.string.config_shared_uid_prior_to_pkgname_desc),
+                                packages = uiState.managedSharedUserIdExemptedPackages,
+                                infoText = stringResource(R.string.config_no_managed_shared_user_id_exempted_packages),
+                                isInfoVisible = uiState.managedSharedUserIdExemptedPackages.isNotEmpty(),
+                                onAddPackage = {
+                                    viewModel.dispatch(
+                                        InstallerSettingsAction.AddManagedSharedUserIdExemptedPackages(it),
+                                    )
+                                },
+                                onRemovePackage = {
+                                    viewModel.dispatch(
+                                        InstallerSettingsAction.RemoveManagedSharedUserIdExemptedPackages(it),
+                                    )
+                                },
+                            )
+                        }
+                    }
+                }
+                item { Spacer(Modifier.navigationBarsPadding()) }
             }
-            item { Spacer(Modifier.navigationBarsPadding()) }
         }
     }
 }
