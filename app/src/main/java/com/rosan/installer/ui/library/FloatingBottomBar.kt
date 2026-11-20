@@ -80,13 +80,13 @@ import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.blur.Backdrop
 import top.yukonga.miuix.kmp.blur.blur
 import top.yukonga.miuix.kmp.blur.drawBackdrop
-import top.yukonga.miuix.kmp.blur.highlight.BloomStroke
-import top.yukonga.miuix.kmp.blur.highlight.Highlight
-import top.yukonga.miuix.kmp.blur.highlight.LightPosition
-import top.yukonga.miuix.kmp.blur.highlight.LightSource
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
-import top.yukonga.miuix.kmp.blur.sensor.rememberDeviceTilt
+import top.yukonga.miuix.kmp.material.EdgeLightSource
+import top.yukonga.miuix.kmp.material.EdgePeak
+import top.yukonga.miuix.kmp.material.EdgeStroke
+import top.yukonga.miuix.kmp.material.drawEdgeStroke
+import top.yukonga.miuix.kmp.material.sensor.rememberDeviceTilt
 
 val LocalFloatingBottomBarContentColor = staticCompositionLocalOf { Color.Unspecified }
 val LocalFloatingBottomBarTabScale = staticCompositionLocalOf { { 1f } }
@@ -122,41 +122,39 @@ enum class FloatingBottomBarMode {
     None,
 }
 
-private val iosIndicatorSpecular: Highlight = Highlight(
+private val iosIndicatorSpecular = EdgeStroke(
     width = 1.dp,
-    alpha = 1f,
-    style = BloomStroke(
-        color = Color.White.copy(alpha = 0.12f),
-        innerBlurRadius = 2.0.dp,
-        primaryLight = LightSource(
-            position = LightPosition(0.5f, -0.3f, -0.05f),
-            color = Color.White,
-            intensity = 1f,
-        ),
-        secondaryLight = LightSource(
-            position = LightPosition(0.5f, 0.8f, -0.5f),
-            color = Color.White,
-            intensity = 0.4f,
-        ),
-        dualPeak = true,
+    bevel = 2.dp,
+    color = Color.White.copy(alpha = 0.12f),
+    primary = EdgeLightSource(
+        x = 0.5f,
+        y = -0.3f,
+        z = -0.05f,
+        color = Color.White,
+        intensity = 1f,
     ),
+    secondary = EdgeLightSource(
+        x = 0.5f,
+        y = 0.8f,
+        z = -0.5f,
+        color = Color.White,
+        intensity = 0.4f,
+    ),
+    peak = EdgePeak.Dual,
 )
 
-// Mirrors miuix-blur HighlightStyle's LIGHT_REF — keep in sync.
+// EdgeStroke's shader measures each light relative to this UV origin.
 private const val LIGHT_REF_X = 0.5f
 private const val LIGHT_REF_Y = 0.7f
 private const val GRAVITY_DIR_THRESHOLD_SQ = 0.01f // |g_xy| > 0.1, ≈ 6° tilt
 
-/** Tracks gravity for a `dualPeak` highlight's primary light, with an extra UV-clockwise offset on top. */
 @Composable
-private fun rememberGravityRotatedHighlight(
-    base: Highlight,
+private fun rememberGravityRotatedStroke(
+    base: EdgeStroke,
     extraDegrees: Float = 0f,
-): Highlight {
-    val baseStyle = base.style as BloomStroke
+): EdgeStroke {
     val tilt by rememberDeviceTilt()
-    val rotatedPrimary = remember(tilt, baseStyle.primaryLight, extraDegrees) {
-        val basePrimary = baseStyle.primaryLight
+    val rotatedPrimary = remember(tilt, base.primary, extraDegrees) {
         val gx = tilt.gravityX
         val gy = tilt.gravityY
         val gMagSq = gx * gx + gy * gy
@@ -171,17 +169,12 @@ private fun rememberGravityRotatedHighlight(
         val s = sin(rad).toFloat()
         val lx = c * lx0 - s * ly0
         val ly = s * lx0 + c * ly0
-        basePrimary.copy(
-            position = LightPosition(
-                x = LIGHT_REF_X + lx,
-                y = LIGHT_REF_Y + ly,
-                z = basePrimary.position.z,
-            ),
+        base.primary.copy(
+            x = LIGHT_REF_X + lx,
+            y = LIGHT_REF_Y + ly,
         )
     }
-    return remember(base, rotatedPrimary) {
-        base.copy(style = baseStyle.copy(primaryLight = rotatedPrimary))
-    }
+    return remember(base, rotatedPrimary) { base.copy(primary = rotatedPrimary) }
 }
 
 @Composable
@@ -348,8 +341,8 @@ fun FloatingBottomBar(
             null
         }
 
-    val baseHighlight = rememberGravityRotatedHighlight(iosIndicatorSpecular, extraDegrees = -45f)
-    val pillHighlight = rememberGravityRotatedHighlight(iosIndicatorSpecular, extraDegrees = 90f)
+    val baseStroke = rememberGravityRotatedStroke(iosIndicatorSpecular, extraDegrees = -45f)
+    val pillStroke = rememberGravityRotatedStroke(iosIndicatorSpecular, extraDegrees = 90f)
 
     val combinedBackdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop)
 
@@ -394,7 +387,9 @@ fun FloatingBottomBar(
                                         refractionAmount = 24.dp.toPx(),
                                     )
                                 },
-                                highlight = { baseHighlight.copy(alpha = 0.75f) },
+                                onDrawFront = {
+                                    drawEdgeStroke(shape = pillShape, stroke = baseStroke, alpha = 0.75f)
+                                },
                                 layerBlock = {
                                     val width = size.width.coerceAtLeast(1f)
                                     val s = lerp(1f, 1f + 16.dp.toPx() / width, dampedDragAnimation.pressProgress)
@@ -486,7 +481,13 @@ fun FloatingBottomBar(
                                     chromaticAberration = 0.5f,
                                 )
                             },
-                            highlight = { pillHighlight.copy(alpha = dampedDragAnimation.pressProgress) },
+                            onDrawFront = {
+                                drawEdgeStroke(
+                                    shape = pillShape,
+                                    stroke = pillStroke,
+                                    alpha = dampedDragAnimation.pressProgress,
+                                )
+                            },
                             layerBlock = {
                                 scaleX = dampedDragAnimation.scaleX
                                 scaleY = dampedDragAnimation.scaleY

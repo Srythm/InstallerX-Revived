@@ -260,8 +260,8 @@ dependencies {
     implementation(libs.coui.preference)
     implementation(libs.coui.icons)
 
-    // miuix: shared navigation / blur / shader primitives used by both families
-    implementation(libs.miuix.shader)
+    // miuix: shared navigation / blur / material primitives used by both families
+    implementation(libs.miuix.material)
     implementation(libs.miuix.blur)
     implementation(libs.miuix.navigation)
 

@@ -24,7 +24,7 @@ import top.yukonga.miuix.kmp.blur.blur
 import top.yukonga.miuix.kmp.blur.drawBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.blur.textureBlur
-import top.yukonga.miuix.kmp.shader.isRenderEffectSupported
+import top.yukonga.miuix.kmp.material.isRuntimeShaderSupported
 
 /**
  * Remember a LayerBackdrop with a solid background to prevent alpha-blending artifacts.
@@ -153,7 +153,7 @@ private fun BlendMode.toBlurBlendMode(): BlurBlendMode = when (this) {
  */
 @Composable
 fun rememberMaterial3BlurBackdrop(enableBlur: Boolean): LayerBackdrop? {
-    if (!enableBlur || !isRenderEffectSupported()) return null
+    if (!enableBlur || !isRuntimeShaderSupported()) return null
     val surfaceColor = MaterialTheme.colorScheme.surfaceContainer
     return rememberLayerBackdrop {
         drawRect(surfaceColor)

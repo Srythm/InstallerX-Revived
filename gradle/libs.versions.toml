@@ -27,7 +27,7 @@ aboutLibraries = "15.3.0"
 appiconloader = "1.5.0"
 androidx-annotation = "1.11.0"
 timber = "5.0.1"
-miuix = "0.9.4-ea2dbb3a-SNAPSHOT"
+miuix = "0.9.5-5ff41ba9-SNAPSHOT"
 coui = "2.0.0"
 okhttp = "5.5.1"
 monetcompat = "0.4.1"
@@ -130,9 +130,9 @@ aboutlibraries-compose-m3 = { module = "com.mikepenz:aboutlibraries-compose-m3",
 # log
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
 
-# miuix (shared navigation and blur/shader primitives only; the component
+# miuix (shared navigation and blur/material primitives only; the component
 # family comes from coui below)
-miuix-shader = { group = "top.yukonga.miuix.kmp", name = "miuix-shader-android", version.ref = "miuix" }
+miuix-material = { group = "top.yukonga.miuix.kmp", name = "miuix-material-android", version.ref = "miuix" }
 miuix-blur = { group = "top.yukonga.miuix.kmp", name = "miuix-blur-android", version.ref = "miuix" }
 miuix-navigation = { group = "top.yukonga.miuix.kmp", name = "miuix-nav-android", version.ref = "miuix" }
 
