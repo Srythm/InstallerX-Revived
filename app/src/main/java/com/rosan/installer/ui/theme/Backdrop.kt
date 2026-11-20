@@ -132,8 +132,8 @@ private fun BlendMode.toBlurBlendMode(): BlurBlendMode = when (this) {
     BlendMode.Lighten -> BlurBlendMode.Lighten
     BlendMode.ColorDodge -> BlurBlendMode.ColorDodge
     BlendMode.ColorBurn -> BlurBlendMode.ColorBurn
-    BlendMode.HardLight -> BlurBlendMode.HardLight
-    BlendMode.SoftLight -> BlurBlendMode.SoftLight
+    BlendMode.Hardlight -> BlurBlendMode.HardLight
+    BlendMode.Softlight -> BlurBlendMode.SoftLight
     BlendMode.Difference -> BlurBlendMode.Difference
     BlendMode.Exclusion -> BlurBlendMode.Exclusion
     BlendMode.Multiply -> BlurBlendMode.Multiply
