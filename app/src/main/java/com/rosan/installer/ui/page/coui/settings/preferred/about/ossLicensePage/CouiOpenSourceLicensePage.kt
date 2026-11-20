@@ -21,8 +21,8 @@ import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
 import com.rosan.installer.R
 import com.rosan.installer.ui.navigation.LocalNavigator
 import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
+import com.rosan.installer.ui.theme.CouiProgressiveTopBarGlow
 import com.rosan.installer.ui.theme.getCouiAppBarColor
-import com.rosan.installer.ui.theme.installerCouiBlurEffect
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
 import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
 import io.github.suqi8.coui.kmp.basic.Scaffold
@@ -45,8 +45,12 @@ fun CouiOpenSourceLicensePage(useBlur: Boolean) {
     Scaffold(
         topBar = {
             TopAppBar(
-                modifier = Modifier.installerCouiBlurEffect(topBarBackdrop),
                 color = topBarBackdrop.getCouiAppBarColor(),
+                glow = if (topBarBackdrop != null) {
+                    { CouiProgressiveTopBarGlow(backdrop = topBarBackdrop) }
+                } else {
+                    null
+                },
                 title = stringResource(id = R.string.open_source_license),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {

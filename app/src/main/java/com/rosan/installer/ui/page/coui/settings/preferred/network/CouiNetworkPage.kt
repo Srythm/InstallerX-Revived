@@ -48,8 +48,8 @@ import com.rosan.installer.ui.page.coui.widgets.CouiGithubUpdateChannelSelection
 import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
 import com.rosan.installer.ui.page.main.settings.preferred.network.NetworkSettingsAction
 import com.rosan.installer.ui.page.main.settings.preferred.network.NetworkSettingsViewModel
+import com.rosan.installer.ui.theme.CouiProgressiveTopBarGlow
 import com.rosan.installer.ui.theme.getCouiAppBarColor
-import com.rosan.installer.ui.theme.installerCouiBlurEffect
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
 import io.github.suqi8.coui.kmp.basic.BasicComponent
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
@@ -144,8 +144,12 @@ fun CouiNetworkPage(useBlur: Boolean, viewModel: NetworkSettingsViewModel = koin
     Scaffold(
         topBar = {
             TopAppBar(
-                modifier = Modifier.installerCouiBlurEffect(topBarBackdrop),
                 color = topBarBackdrop.getCouiAppBarColor(),
+                glow = if (topBarBackdrop != null) {
+                    { CouiProgressiveTopBarGlow(backdrop = topBarBackdrop) }
+                } else {
+                    null
+                },
                 title = stringResource(R.string.network_settings),
                 navigationIcon = {
                     CouiBackButton(onClick = { navigator.pop() })

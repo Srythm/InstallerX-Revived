@@ -55,8 +55,8 @@ import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
 import com.rosan.installer.ui.page.main.settings.preferred.theme.ThemeSettingsAction
 import com.rosan.installer.ui.page.main.settings.preferred.theme.ThemeSettingsViewModel
 import com.rosan.installer.ui.page.main.widget.card.ColorSwatchPreview
+import com.rosan.installer.ui.theme.CouiProgressiveTopBarGlow
 import com.rosan.installer.ui.theme.getCouiAppBarColor
-import com.rosan.installer.ui.theme.installerCouiBlurEffect
 import com.rosan.installer.ui.theme.material.PresetColors
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
 import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
@@ -87,8 +87,12 @@ fun COUIThemeSettingsPage(
     Scaffold(
         topBar = {
             TopAppBar(
-                modifier = Modifier.installerCouiBlurEffect(topBarBackdrop),
                 color = topBarBackdrop.getCouiAppBarColor(),
+                glow = if (topBarBackdrop != null) {
+                    { CouiProgressiveTopBarGlow(backdrop = topBarBackdrop) }
+                } else {
+                    null
+                },
                 title = stringResource(R.string.theme_settings),
                 navigationIcon = {
                     CouiBackButton(onClick = { navigator.pop() })

@@ -41,8 +41,8 @@ import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
 import com.rosan.installer.ui.page.main.settings.preferred.installer.notification.NotificationSettingsAction
 import com.rosan.installer.ui.page.main.settings.preferred.installer.notification.NotificationSettingsViewModel
 import com.rosan.installer.ui.page.main.settings.preferred.installer.notification.NotificationStyle
+import com.rosan.installer.ui.theme.CouiProgressiveTopBarGlow
 import com.rosan.installer.ui.theme.getCouiAppBarColor
-import com.rosan.installer.ui.theme.installerCouiBlurEffect
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
 import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
 import io.github.suqi8.coui.kmp.basic.Card
@@ -104,8 +104,12 @@ fun CouiNotificationSettingsPage(useBlur: Boolean, viewModel: NotificationSettin
     Scaffold(
         topBar = {
             TopAppBar(
-                modifier = Modifier.installerCouiBlurEffect(topBarBackdrop),
                 color = topBarBackdrop.getCouiAppBarColor(),
+                glow = if (topBarBackdrop != null) {
+                    { CouiProgressiveTopBarGlow(backdrop = topBarBackdrop) }
+                } else {
+                    null
+                },
                 title = stringResource(R.string.notification_settings),
                 navigationIcon = {
                     CouiBackButton(onClick = { navigator.pop() })

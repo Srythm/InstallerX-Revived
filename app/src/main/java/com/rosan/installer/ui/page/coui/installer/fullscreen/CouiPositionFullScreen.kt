@@ -38,6 +38,7 @@ import com.rosan.installer.R
 import com.rosan.installer.ui.icons.AppCOUIIcons
 import com.rosan.installer.ui.page.main.installer.InstallerViewModel
 import com.rosan.installer.ui.theme.ProvideCouiMaterialBackdrop
+import com.rosan.installer.ui.theme.colorOsSpring
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
 import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.IconButton
@@ -72,12 +73,24 @@ fun CouiPositionFullScreen(
     // The only backdrop source on this page. Null when blur is disabled by the user or the
     // runtime cannot support it, which is what every material surface below degrades on.
     val backdrop = if (inspectionMode) null else rememberCouiBlurBackdrop(useBlur)
-    val uiAlpha = remember { Animatable(if (inspectionMode) 1f else 0f) }
+    // The shell is opaque from its first frame. The previous version started at alpha 0 and faded
+    // in, which left the activity visible for the first frames — and the bottom sheet that the
+    // full-screen mode replaces was often still on screen then, so it flashed. Only the exit fades.
+    val uiAlpha = remember { Animatable(1f) }
     LaunchedEffect(isClosing) {
-        uiAlpha.animateTo(
-            targetValue = if (isClosing) 0f else 1f,
-            animationSpec = tween(InstallerViewModel.FullscreenCloseFadeOutMs.toInt()),
-        )
+        if (isClosing) {
+            uiAlpha.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(InstallerViewModel.FullscreenCloseFadeOutMs.toInt()),
+            )
+        }
+    }
+
+    // Entry motion lives on the content, not on the shell: it can rise while the background is
+    // already opaque, so the transition reads as content arriving instead of a page popping in.
+    val enter = remember { Animatable(if (inspectionMode) 1f else 0f) }
+    LaunchedEffect(Unit) {
+        if (!inspectionMode) enter.animateTo(1f, colorOsSpring(responseSeconds = 0.34f))
     }
 
     // Consume system back even when navigation is disabled during installation.
@@ -128,7 +141,11 @@ fun CouiPositionFullScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .windowInsetsPadding(WindowInsets.safeDrawing),
+                        .windowInsetsPadding(WindowInsets.safeDrawing)
+                        .graphicsLayer {
+                            alpha = enter.value
+                            translationY = (1f - enter.value) * 28.dp.toPx()
+                        },
                 ) {
                     SmallTopAppBar(
                         title = title,

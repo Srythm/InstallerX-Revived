@@ -61,8 +61,8 @@ import com.rosan.installer.ui.page.coui.widgets.CouiSettingsTipCard
 import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
 import com.rosan.installer.ui.page.main.settings.preferred.lab.LabSettingsAction
 import com.rosan.installer.ui.page.main.settings.preferred.lab.LabSettingsViewModel
+import com.rosan.installer.ui.theme.CouiProgressiveTopBarGlow
 import com.rosan.installer.ui.theme.getCouiAppBarColor
-import com.rosan.installer.ui.theme.installerCouiBlurEffect
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
 import io.github.suqi8.coui.kmp.basic.BasicComponent
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
@@ -161,8 +161,12 @@ fun CouiLabPage(useBlur: Boolean, viewModel: LabSettingsViewModel = koinViewMode
     Scaffold(
         topBar = {
             TopAppBar(
-                modifier = Modifier.installerCouiBlurEffect(topBarBackdrop),
                 color = topBarBackdrop.getCouiAppBarColor(),
+                glow = if (topBarBackdrop != null) {
+                    { CouiProgressiveTopBarGlow(backdrop = topBarBackdrop) }
+                } else {
+                    null
+                },
                 title = stringResource(R.string.lab),
                 navigationIcon = {
                     CouiBackButton(onClick = { navigator.pop() })

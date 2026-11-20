@@ -47,8 +47,8 @@ import com.rosan.installer.ui.page.coui.widgets.CouiUninstallPackageDialog
 import com.rosan.installer.ui.page.main.settings.preferred.uninstaller.UninstallerSettingsAction
 import com.rosan.installer.ui.page.main.settings.preferred.uninstaller.UninstallerSettingsEvent
 import com.rosan.installer.ui.page.main.settings.preferred.uninstaller.UninstallerSettingsViewModel
+import com.rosan.installer.ui.theme.CouiProgressiveTopBarGlow
 import com.rosan.installer.ui.theme.getCouiAppBarColor
-import com.rosan.installer.ui.theme.installerCouiBlurEffect
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
 import com.rosan.installer.util.toast
 import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
@@ -97,8 +97,12 @@ fun CouiUninstallerGlobalSettingsPage(useBlur: Boolean, viewModel: UninstallerSe
     Scaffold(
         topBar = {
             TopAppBar(
-                modifier = Modifier.installerCouiBlurEffect(topBarBackdrop),
                 color = topBarBackdrop.getCouiAppBarColor(),
+                glow = if (topBarBackdrop != null) {
+                    { CouiProgressiveTopBarGlow(backdrop = topBarBackdrop) }
+                } else {
+                    null
+                },
                 title = stringResource(R.string.uninstaller_settings),
                 navigationIcon = {
                     CouiBackButton(onClick = { navigator.pop() })

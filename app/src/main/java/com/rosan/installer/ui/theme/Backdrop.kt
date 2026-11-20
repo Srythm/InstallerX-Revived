@@ -103,8 +103,9 @@ fun Modifier.installerCouiBlurEffect(
  * 2. A gradient sheet of the page colour over it: opaque at the top, ~70% at two thirds, clear at
  *    the bottom edge (dark theme: 40% at the top). This is what makes the band readable — a
  *    blur alone over a flat page background has nothing to show.
- * 3. A scroll-driven alpha, `min(1, scrollOffsetPx / 30dp)`, so the frosting appears as content
- *    slides beneath the bar. The [scrollOffsetPx] comes from `ScrollBehavior.glowScrollOffsetPx()`.
+ * 3. An optional scroll-driven alpha, `min(1, scrollOffsetPx / 30dp)`. Pass `null` to keep the
+ *    band fully on: COUI ties it to the scroll offset, but a band that is invisible at rest reads
+ *    as "this page has no blur", so every call site in this app keeps it on.
  *
  * The glow slot already spans the status bar plus the library's 24dp tail, so no extra layout
  * padding, spacer or inset compensation is needed, and `TopAppBar` suppresses its divider on its
@@ -113,12 +114,13 @@ fun Modifier.installerCouiBlurEffect(
  * Call sites only pass this when a backdrop exists; without one the bar keeps its opaque colour,
  * which is why they pass `glow = null` in that case.
  *
- * @param scrollOffsetPx The bar's resolved scroll distance in pixels.
+ * @param scrollOffsetPx The bar's resolved scroll distance in pixels, or `null` to keep the band
+ *   fully visible instead of fading it in with the scroll.
  */
 @Composable
 fun BoxScope.CouiProgressiveTopBarGlow(
     backdrop: LayerBackdrop,
-    scrollOffsetPx: Float,
+    scrollOffsetPx: Float? = null,
     baseColor: Color = COUITheme.colorScheme.backgroundWithCard,
     isDark: Boolean = COUITheme.isDark,
 ) {
@@ -130,8 +132,12 @@ fun BoxScope.CouiProgressiveTopBarGlow(
     }
 
     // COUI 17 AppBarBlurOverlayBehavior.computeOverlayAlpha: alpha = min(1, scrollPx / 30dp).
-    val thresholdPx = with(LocalDensity.current) { TopBarGlowAlphaScrollThreshold.toPx() }
-    val overlayAlpha = (scrollOffsetPx / thresholdPx).coerceIn(0f, 1f)
+    val overlayAlpha = if (scrollOffsetPx == null) {
+        1f
+    } else {
+        val thresholdPx = with(LocalDensity.current) { TopBarGlowAlphaScrollThreshold.toPx() }
+        (scrollOffsetPx / thresholdPx).coerceIn(0f, 1f)
+    }
     if (overlayAlpha <= 0f) return
 
     // COUI passes 30f straight through as raw pixels (createGradientBlurEffect), so this converts

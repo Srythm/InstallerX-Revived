@@ -6,8 +6,6 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
@@ -185,17 +183,14 @@ internal fun CouiFullScreenInstallerContent(
             targetState = page,
             modifier = Modifier.fillMaxSize(),
             contentKey = { it.key },
-            // ColorOS page change: the incoming page rises a little and settles with the system
-            // spring while the outgoing one fades and drifts back, instead of a flat cross-fade.
+            // ColorOS page change: the old page leaves immediately and the new one rises into its
+            // place with the system spring. No scale — shrinking the content made every stage
+            // change read as a flicker, and the shell's icon, title and buttons never move anyway.
             transitionSpec = {
                 (
-                    fadeIn(colorOsSpring(responseSeconds = 0.30f)) +
-                        slideInVertically(colorOsSpring(responseSeconds = 0.34f)) { it / 22 } +
-                        scaleIn(colorOsSpring(responseSeconds = 0.34f), initialScale = 0.97f)
-                    ) togetherWith (
-                    fadeOut(tween(durationMillis = 140)) +
-                        scaleOut(tween(durationMillis = 200), targetScale = 1.02f)
-                    )
+                    fadeIn(colorOsSpring(responseSeconds = 0.28f)) +
+                        slideInVertically(colorOsSpring(responseSeconds = 0.32f)) { it / 28 }
+                    ) togetherWith fadeOut(tween(durationMillis = 110))
             },
             label = "CouiFullScreenPage",
         ) { displayed ->

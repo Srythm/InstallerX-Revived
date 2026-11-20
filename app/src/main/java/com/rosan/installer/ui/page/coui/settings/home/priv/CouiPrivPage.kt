@@ -37,8 +37,8 @@ import com.rosan.installer.ui.page.coui.widgets.CouiSettingsTipCard
 import com.rosan.installer.ui.page.main.settings.home.HomePageViewAction
 import com.rosan.installer.ui.page.main.settings.home.HomePageViewModel
 import com.rosan.installer.ui.page.main.widget.util.OnLifecycleEvent
+import com.rosan.installer.ui.theme.CouiProgressiveTopBarGlow
 import com.rosan.installer.ui.theme.getCouiAppBarColor
-import com.rosan.installer.ui.theme.installerCouiBlurEffect
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
 import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
 import io.github.suqi8.coui.kmp.basic.Card
@@ -93,8 +93,12 @@ fun CouiPrivPage(useBlur: Boolean, viewModel: HomePageViewModel = koinViewModel(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                modifier = Modifier.installerCouiBlurEffect(backdrop),
                 color = backdrop.getCouiAppBarColor(),
+                glow = if (backdrop != null) {
+                    { CouiProgressiveTopBarGlow(backdrop = backdrop) }
+                } else {
+                    null
+                },
                 title = stringResource(R.string.home_stat_authorizers),
                 navigationIcon = {
                     CouiBackButton(onClick = { navigator.pop() })
