@@ -141,9 +141,10 @@ fun BoxScope.CouiProgressiveTopBarGlow(
     // GradientBackgroundDrawable builds LinearGradient(0, height, 0, 0), whose position 0 is the
     // bottom edge; the stops are mirrored here onto Compose's top-to-bottom axis.
     val sheet = if (isDark) {
+        // Dark theme uses two stops: 40% at the top edge, clear at the bottom.
         Brush.verticalGradient(
-            0f to baseColor.copy(alpha = 1f),
-            1f to baseColor.copy(alpha = 0.4f),
+            0f to baseColor.copy(alpha = 0.4f),
+            1f to baseColor.copy(alpha = 0f),
         )
     } else {
         Brush.verticalGradient(
