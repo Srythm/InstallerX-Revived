@@ -3,20 +3,31 @@
 package com.rosan.installer.ui.page.coui.installer.fullscreen
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -27,11 +38,19 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.rosan.installer.R
+import com.rosan.installer.ui.icons.AppCOUIIcons
 import com.rosan.installer.ui.page.main.installer.InstallerViewModel
 import com.rosan.installer.ui.theme.ProvideCouiMaterialBackdrop
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
+import io.github.suqi8.coui.kmp.basic.Icon
+import io.github.suqi8.coui.kmp.basic.IconButton
+import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.effect.LocalCOUIMaterialEffectEnabled
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import top.yukonga.miuix.kmp.blur.layerBackdrop
@@ -42,25 +61,30 @@ val FullScreenBottomBarHeight = 70.dp
 /** Single horizontal rhythm shared by the header, cards and actions. */
 val FullScreenHorizontalPadding = 16.dp
 
+/** COUI's `SmallTopAppBar` height. */
+val FullScreenTopBarHeight = 56.dp
+
 internal val LocalFullScreenActionsEnabled = staticCompositionLocalOf { true }
 
 /**
  * The full-screen installer surface.
  *
- * This is deliberately only a surface: an opaque page colour, a static colour wash, the blur
- * backdrop, the close fade and the safe-area inset. The bar, the app header, the stage body and
- * the action row all live inside [content], so a page-to-page transition can move the whole page
- * as one unit — a fixed bar over a sliding body reads as two unrelated animations.
+ * The bar and the action row are drawn exactly once, here, and never take part in a page change:
+ * letting each page draw its own bar put two sets of icon buttons on the same pixels during a
+ * push, which reads as the buttons flashing grey. Only [content] moves between pages.
  *
  * The ViewModel owns teardown; this shell only follows its closing signal.
  */
 @Composable
 fun CouiPositionFullScreen(
+    title: String,
     isClosing: Boolean,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onMore: (() -> Unit)? = null,
     useBlur: Boolean = false,
-    content: @Composable BoxScope.() -> Unit,
+    bottomBar: (@Composable () -> Unit)? = null,
+    content: @Composable () -> Unit,
 ) {
     val inspectionMode = LocalInspectionMode.current
     val pageColor = COUITheme.colorScheme.backgroundWithCard.copy(alpha = 1f)
@@ -123,13 +147,110 @@ fun CouiPositionFullScreen(
             }
 
             ProvideCouiMaterialBackdrop(backdrop) {
-                Box(
+                Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .windowInsetsPadding(WindowInsets.safeDrawing),
-                    content = content,
+                        // Only the top and the sides are inset here. The bottom is left to the
+                        // page: scrolling content must be able to run under the navigation bar
+                        // (that is what makes it feel immersive) and only the action row needs to
+                        // be lifted above it.
+                        .windowInsetsPadding(
+                            WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+                        ),
+                ) {
+                    FullScreenTopBar(
+                        title = title,
+                        onBack = onBack,
+                        onMore = onMore,
+                        backEnabled = !isClosing,
+                    )
+                    Box(Modifier.fillMaxWidth().weight(1f)) { content() }
+                    // Only reserved when the page actually has actions. A page without them gets
+                    // the full height and lets its content reach the navigation bar.
+                    Crossfade(
+                        targetState = bottomBar != null,
+                        animationSpec = tween(durationMillis = 180),
+                        label = "FullScreenBottomBar",
+                    ) { visible ->
+                        if (visible) {
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .windowInsetsPadding(
+                                        WindowInsets.navigationBars.only(WindowInsetsSides.Bottom),
+                                    )
+                                    .height(FullScreenBottomBarHeight),
+                            ) {
+                                bottomBar?.invoke()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The bar shared by every page of the full-screen installer.
+ *
+ * Drawn as an overlay rather than a `Row` so the title stays optically centred regardless of how
+ * many action buttons are present, and the label cross-fades in place when a sub page renames it.
+ */
+@Composable
+private fun FullScreenTopBar(
+    title: String,
+    onBack: () -> Unit,
+    onMore: (() -> Unit)?,
+    backEnabled: Boolean,
+) {
+    Box(Modifier.fillMaxWidth().height(FullScreenTopBarHeight)) {
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(
+                onClick = { if (backEnabled) onBack() },
+                enabled = backEnabled,
+            ) {
+                Icon(
+                    imageVector = AppCOUIIcons.Back,
+                    contentDescription = stringResource(R.string.back),
+                    tint = if (backEnabled) {
+                        COUITheme.colorScheme.labelPrimary
+                    } else {
+                        COUITheme.colorScheme.disabledNeutral
+                    },
+                    modifier = Modifier.size(24.dp),
                 )
             }
+            Spacer(Modifier.weight(1f))
+            if (onMore != null) {
+                IconButton(onClick = { if (backEnabled) onMore() }, enabled = backEnabled) {
+                    Icon(
+                        imageVector = AppCOUIIcons.More,
+                        contentDescription = stringResource(R.string.installer_settings),
+                        tint = COUITheme.colorScheme.labelPrimary,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
+        }
+        Crossfade(
+            targetState = title,
+            animationSpec = tween(durationMillis = 180),
+            modifier = Modifier.align(Alignment.Center),
+            label = "FullScreenTitle",
+        ) { label ->
+            Text(
+                text = label,
+                style = COUITheme.textStyles.headlineS,
+                color = COUITheme.colorScheme.labelPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 72.dp),
+            )
         }
     }
 }

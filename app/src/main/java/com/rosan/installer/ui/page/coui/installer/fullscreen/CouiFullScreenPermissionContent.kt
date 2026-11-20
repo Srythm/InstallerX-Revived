@@ -5,7 +5,10 @@ package com.rosan.installer.ui.page.coui.installer.fullscreen
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -58,11 +61,14 @@ fun CouiFullScreenPermissionContent(
     val sensitive = permissions.filter { it in SensitivePermissions }
     val normal = permissions.filter { it !in SensitivePermissions }
 
+    // The shell leaves the bottom edge alone so the list can run under the navigation bar while
+    // scrolling; the tail padding keeps the last row readable once it settles.
+    val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     Column(
         modifier = modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
-            .padding(bottom = 8.dp),
+            .padding(top = 4.dp, bottom = bottomInset + 20.dp),
     ) {
         if (sensitive.isNotEmpty()) {
             PermissionSectionTitle(

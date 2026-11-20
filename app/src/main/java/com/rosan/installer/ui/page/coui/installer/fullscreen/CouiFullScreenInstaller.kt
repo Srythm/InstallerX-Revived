@@ -62,8 +62,6 @@ import io.github.suqi8.coui.kmp.basic.ButtonDefaults
 import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.CircularProgressIndicator
 import io.github.suqi8.coui.kmp.basic.Icon
-import io.github.suqi8.coui.kmp.basic.IconButton
-import io.github.suqi8.coui.kmp.basic.SmallTopAppBar
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.theme.COUITheme
@@ -151,21 +149,52 @@ internal fun CouiFullScreenInstallerContent(
     onAction: (InstallerViewAction) -> Unit = {},
     settingsContent: @Composable () -> Unit = {},
 ) {
-    val installing = page.stage.isBusy()
+    val stage = page.stage
+    val installing = stage.isBusy()
+    val isMain = page.subPage == FullScreenSubPage.Main
+    // A task name, not a status line: keeping it constant is what stops the bar from flickering
+    // every time the stage advances. The state itself is told by the body.
+    val title = when (page.subPage) {
+        FullScreenSubPage.Permissions -> stringResource(R.string.permission_list)
+
+        FullScreenSubPage.Settings -> stringResource(R.string.installer_settings)
+
+        FullScreenSubPage.Main -> stringResource(
+            if (isModule) R.string.installer_install_module else R.string.installer_install_app,
+        )
+    }
     val backAction: () -> Unit = when {
         installing || isClosing -> ({})
         page.subPage == FullScreenSubPage.Permissions -> ({ onAction(InstallerViewAction.HideCouiPermissionList) })
         page.subPage == FullScreenSubPage.Settings -> ({ onAction(InstallerViewAction.HideCouiSheetRightActionSettings) })
         else -> onClose
     }
+    val moreAction: (() -> Unit)? = if (isMain && stage is InstallerStage.InstallPrepare && !isClosing) {
+        { onAction(InstallerViewAction.ShowCouiSheetRightActionSettings) }
+    } else {
+        null
+    }
 
     CouiPositionFullScreen(
+        title = title,
         isClosing = isClosing,
         onBack = backAction,
+        onMore = moreAction,
         useBlur = useBlur,
+        bottomBar = if (isMain) {
+            {
+                FullScreenActionRow(
+                    stage = stage,
+                    onClose = onClose,
+                    onInstall = { onAction(InstallerViewAction.Install(true)) },
+                )
+            }
+        } else {
+            null
+        },
     ) {
-        // Sub pages are pushed, not faded in: the whole page travels, so the bar and the body stay
-        // one surface. Only the stage body below uses a cross-fade.
+        // Pages are pushed, not faded in, and they travel as whole pages including the app header,
+        // while the bar and the action row stay put.
         AnimatedContent(
             targetState = page.subPage,
             modifier = Modifier.fillMaxSize(),
@@ -174,175 +203,44 @@ internal fun CouiFullScreenInstallerContent(
             label = "FullScreenSubPage",
         ) { subPage ->
             when (subPage) {
-                FullScreenSubPage.Main -> FullScreenMainPage(
-                    page = page,
-                    appInfo = appInfo,
-                    isModule = isModule,
-                    entity = entity,
-                    versionName = versionName,
-                    sourceLabel = sourceLabel,
-                    permissions = permissions,
-                    isClosing = isClosing,
-                    onClose = onClose,
-                    onAction = onAction,
-                )
-
-                FullScreenSubPage.Permissions -> FullScreenPageScaffold(
-                    title = stringResource(R.string.permission_list),
-                    onBack = {
-                        if (!isClosing) onAction(InstallerViewAction.HideCouiPermissionList)
-                    },
-                ) {
-                    CouiFullScreenPermissionContent(permissions)
+                FullScreenSubPage.Main -> Column(Modifier.fillMaxSize()) {
+                    // Fixed for the whole install: the identity block is the anchor the body
+                    // changes under.
+                    CouiFullScreenAppHeader(appInfo, versionName)
+                    Box(Modifier.fillMaxWidth().weight(1f)) {
+                        FullScreenStageBody(
+                            page = page,
+                            appInfo = appInfo,
+                            entity = entity,
+                            sourceLabel = sourceLabel,
+                            permissions = permissions,
+                            onAction = onAction,
+                        )
+                    }
                 }
 
-                FullScreenSubPage.Settings -> FullScreenPageScaffold(
-                    title = stringResource(R.string.installer_settings),
-                    onBack = {
-                        if (!isClosing) onAction(InstallerViewAction.HideCouiSheetRightActionSettings)
-                    },
+                FullScreenSubPage.Permissions -> CouiFullScreenPermissionContent(permissions)
+
+                FullScreenSubPage.Settings -> Box(
+                    Modifier.fillMaxSize().padding(horizontal = FullScreenHorizontalPadding),
                 ) {
-                    Box(Modifier.fillMaxSize().padding(horizontal = FullScreenHorizontalPadding)) {
-                        settingsContent()
-                    }
+                    settingsContent()
                 }
             }
         }
     }
 }
 
-/**
- * COUI page push: the incoming page comes in from the right over a third of the screen with the
- * system spring, the outgoing one drifts a tenth of the way left and fades. Popping mirrors it.
- *
- * A plain cross-fade was the reason the sub pages looked like a dialog opening on top of another
- * dialog; a horizontal push keeps the navigation direction readable.
- */
-private fun AnimatedContentTransitionScope<FullScreenSubPage>.subPageTransition(): ContentTransform = if (targetState != FullScreenSubPage.Main) {
-    (
-        slideInHorizontally(colorOsSpring(responseSeconds = 0.34f)) { it / 3 } +
-            fadeIn(tween(durationMillis = 90))
-        ) togetherWith (
-        slideOutHorizontally(tween(durationMillis = 260)) { -it / 10 } +
-            fadeOut(tween(durationMillis = 180))
-        )
-} else {
-    (
-        slideInHorizontally(colorOsSpring(responseSeconds = 0.34f)) { -it / 10 } +
-            fadeIn(tween(durationMillis = 140))
-        ) togetherWith (
-        slideOutHorizontally(tween(durationMillis = 240)) { it / 3 } +
-            fadeOut(tween(durationMillis = 160))
-        )
-}
-
-@Composable
-private fun FullScreenMainPage(
-    page: FullScreenPage,
-    appInfo: AppInfoState,
-    isModule: Boolean,
-    entity: AppEntity.BaseEntity?,
-    versionName: String?,
-    sourceLabel: String?,
-    permissions: List<String>,
-    isClosing: Boolean,
-    onClose: () -> Unit,
-    onAction: (InstallerViewAction) -> Unit,
-) {
-    val stage = page.stage
-    val installing = stage.isBusy()
-    // A task name, not a status line: keeping it constant is what stops the bar from flickering
-    // every time the stage advances. The state itself is told by the body.
-    val title = stringResource(if (isModule) R.string.installer_install_module else R.string.installer_install_app)
-    val canLeave = !installing && !isClosing
-    val settingsAvailable = stage is InstallerStage.InstallPrepare && !isClosing
-
-    Column(Modifier.fillMaxSize()) {
-        SmallTopAppBar(
-            title = title,
-            centerTitle = true,
-            color = Color.Transparent,
-            defaultWindowInsetsPadding = false,
-            showDivider = false,
-            navigationIcon = {
-                IconButton(
-                    onClick = { if (canLeave) onClose() },
-                    enabled = canLeave,
-                ) {
-                    Icon(
-                        imageVector = AppCOUIIcons.Back,
-                        contentDescription = stringResource(R.string.back),
-                        tint = if (canLeave) {
-                            COUITheme.colorScheme.labelPrimary
-                        } else {
-                            COUITheme.colorScheme.disabledNeutral
-                        },
-                        modifier = Modifier.size(24.dp),
-                    )
-                }
-            },
-            actions = {
-                if (settingsAvailable) {
-                    IconButton(onClick = { onAction(InstallerViewAction.ShowCouiSheetRightActionSettings) }) {
-                        Icon(
-                            imageVector = AppCOUIIcons.More,
-                            contentDescription = stringResource(R.string.installer_settings),
-                            tint = COUITheme.colorScheme.labelPrimary,
-                            modifier = Modifier.size(24.dp),
-                        )
-                    }
-                }
-            },
-        )
-        // Fixed for the whole install: the identity block is the anchor the body changes under.
-        CouiFullScreenAppHeader(appInfo, versionName)
-        Box(Modifier.fillMaxWidth().weight(1f)) {
-            FullScreenStageBody(
-                page = page,
-                appInfo = appInfo,
-                entity = entity,
-                sourceLabel = sourceLabel,
-                permissions = permissions,
-                onAction = onAction,
-            )
-        }
-        Box(Modifier.fillMaxWidth().height(FullScreenBottomBarHeight)) {
-            FullScreenActionRow(
-                stage = stage,
-                onClose = onClose,
-                onInstall = { onAction(InstallerViewAction.Install(true)) },
-            )
-        }
-    }
-}
-
-/** A sub page owns its own bar so a push moves the title together with the content. */
-@Composable
-private fun FullScreenPageScaffold(
-    title: String,
-    onBack: () -> Unit,
-    content: @Composable () -> Unit,
-) {
-    val enabled = LocalFullScreenActionsEnabled.current
-    Column(Modifier.fillMaxSize()) {
-        SmallTopAppBar(
-            title = title,
-            centerTitle = true,
-            color = Color.Transparent,
-            defaultWindowInsetsPadding = false,
-            showDivider = false,
-            navigationIcon = {
-                IconButton(onClick = { if (enabled) onBack() }, enabled = enabled) {
-                    Icon(
-                        imageVector = AppCOUIIcons.Back,
-                        contentDescription = stringResource(R.string.back),
-                        tint = if (enabled) COUITheme.colorScheme.labelPrimary else COUITheme.colorScheme.disabledNeutral,
-                        modifier = Modifier.size(24.dp),
-                    )
-                }
-            },
-        )
-        Box(Modifier.fillMaxWidth().weight(1f)) { content() }
+private fun AnimatedContentTransitionScope<FullScreenSubPage>.subPageTransition(): ContentTransform {
+    // A real push: the incoming page enters from the screen edge at full width and the outgoing
+    // one yields a third of the way back. Neither one fades, so the two surfaces stay in contact
+    // for the whole gesture instead of leaving a band of page colour between them.
+    return if (targetState != FullScreenSubPage.Main) {
+        slideInHorizontally(colorOsSpring(responseSeconds = 0.32f)) { it } togetherWith
+            slideOutHorizontally(tween(durationMillis = 320)) { -it / 3 }
+    } else {
+        slideInHorizontally(colorOsSpring(responseSeconds = 0.32f)) { -it / 3 } togetherWith
+            slideOutHorizontally(tween(durationMillis = 320)) { it }
     }
 }
 

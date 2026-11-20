@@ -275,6 +275,13 @@ fun CouiInstallerPage(
             compatStatusBarColor = false,
             useAmoled = useAmoled,
         ) {
+            // Ready means the session has not resolved its config yet, so `uiState.config` is
+            // still the default (Dialog). Rendering the sheet here shows a "loading" dialog for a
+            // few frames and then jumps to the full-screen shell the user actually asked for.
+            // Nothing meaningful exists to show at this point anyway, so render nothing.
+            if (stage is InstallerStage.Ready) {
+                return@InstallerCOUITheme
+            }
             // Full-screen install mode. The window itself never changes: this
             // page is already laid out edge-to-edge inside the activity, so the
             // mode only decides which shell renders the stage. Stages that are
