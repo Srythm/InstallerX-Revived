@@ -37,7 +37,7 @@ import com.rosan.installer.domain.settings.model.config.InstallerMode
 import com.rosan.installer.domain.settings.model.config.PackageSource
 import com.rosan.installer.domain.settings.model.config.ToastMode
 import com.rosan.installer.ui.icons.AppIcons
-import com.rosan.installer.ui.page.coui.widgets.CouiHintTextField
+import com.rosan.installer.ui.page.coui.widgets.CouiInputCard
 import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
 import com.rosan.installer.ui.page.main.settings.config.edit.EditViewAction
 import com.rosan.installer.ui.page.main.settings.config.edit.EditViewState
@@ -58,29 +58,28 @@ fun CouiDataNameWidget(
     dispatch: (EditViewAction) -> Unit,
     trailingContent: @Composable (() -> Unit) = {},
 ) {
-    CouiHintTextField(
+    // The card is part of InputView, so this owns the page margin and nothing wraps it.
+    CouiInputCard(
         value = state.data.name,
         onValueChange = {
             dispatch(EditViewAction.ChangeDataName(it))
         },
-        labelText = stringResource(id = R.string.config_name),
-        isError = state.data.errorName,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp, horizontal = 12.dp),
+        title = stringResource(id = R.string.config_name),
+        errorMessage = if (state.data.errorName) stringResource(R.string.config_error_name) else "",
+        modifier = Modifier.padding(horizontal = 12.dp),
     )
     trailingContent()
 }
 
 @Composable
 fun CouiDataDescriptionWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit) {
-    CouiHintTextField(
+    CouiInputCard(
         value = state.data.description,
         onValueChange = { dispatch(EditViewAction.ChangeDataDescription(it)) },
-        labelText = stringResource(id = R.string.config_description),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp, horizontal = 12.dp),
+        title = stringResource(id = R.string.config_description),
+        singleLine = false,
+        maxLines = 8,
+        modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
     )
 }
 
