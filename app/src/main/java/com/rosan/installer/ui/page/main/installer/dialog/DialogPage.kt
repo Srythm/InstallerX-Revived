@@ -2,7 +2,6 @@
 // Copyright (C) 2023-2026 iamr0s, InstallerX Revived contributors
 package com.rosan.installer.ui.page.main.installer.dialog
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,7 +40,7 @@ import com.rosan.installer.ui.theme.InstallerMaterialExpressiveTheme
 import com.rosan.installer.ui.theme.InstallerTheme
 import com.rosan.installer.ui.theme.LocalInstallerColorScheme
 import com.rosan.installer.ui.theme.material.dynamicColorScheme
-import com.rosan.installer.ui.util.WindowBlurEffect
+import com.rosan.installer.ui.util.WindowBlurTransition
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import top.yukonga.miuix.kmp.nav.gesture.WindowNavigationEventBridge
@@ -145,10 +144,13 @@ fun DialogPage(
                     contentColor = colorScheme.onSurface,
                 ) {
                     WindowNavigationEventBridge()
-                    val blurRadius = if (sheetState.targetValue == SheetValue.Expanded) 30 else 0
-                    AnimatedContent(targetState = blurRadius) { targetState ->
-                        WindowBlurEffect(useBlur = useBlur, blurRadius = targetState)
-                    }
+                    // Same single-instance rule as the COUI sheet: one stable effect fed by an
+                    // animated radius, so a sheet that is already expanded on first composition
+                    // still ramps 0 -> 30 and the exit leaves no residual blur flag.
+                    WindowBlurTransition(
+                        visible = sheetState.targetValue == SheetValue.Expanded,
+                        useBlur = useBlur,
+                    )
 
                     ModuleInstallSheetContent(
                         rootMode = uiState.rootMode,

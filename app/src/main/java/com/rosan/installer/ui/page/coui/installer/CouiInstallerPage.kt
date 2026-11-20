@@ -85,7 +85,7 @@ import com.rosan.installer.ui.theme.InstallerCOUITheme
 import com.rosan.installer.ui.theme.InstallerTheme
 import com.rosan.installer.ui.theme.LocalInstallerColorScheme
 import com.rosan.installer.ui.theme.material.dynamicColorScheme
-import com.rosan.installer.ui.util.WindowBlurEffect
+import com.rosan.installer.ui.util.WindowBlurTransition
 import com.rosan.installer.ui.util.getSupportTitle
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
 import io.github.suqi8.coui.kmp.basic.Icon
@@ -512,17 +512,15 @@ fun CouiInstallerPage(
                 },
 
             ) {
-                val radius = if (showBottomSheet.value) 30 else 0
-                AnimatedContent(
-                    targetState = radius,
-                    label = "BlurTransition",
-                    transitionSpec = {
-                        fadeIn(animationSpec = tween(durationMillis = 350)) togetherWith
-                            fadeOut(animationSpec = tween(durationMillis = 350))
-                    },
-                ) { targetState ->
-                    WindowBlurEffect(useBlur = settings.useBlur, blurRadius = targetState)
-                }
+                // One window-blur instance for the whole sheet lifetime: the radius follows a
+                // single 0 -> 30 -> 0 progress instead of an AnimatedContent cross-fade, which
+                // used to spawn competing writers on the same dialog window. The ramp starts at
+                // 0 on first composition, so the very first sheet entry gets a real fade-in even
+                // though `showBottomSheet` is already true.
+                WindowBlurTransition(
+                    visible = showBottomSheet.value,
+                    useBlur = settings.useBlur,
+                )
 
                 // Keyed by stage class for stability, but each slot must render the stage it
                 // was handed: reading the live value made the outgoing page paint the incoming
