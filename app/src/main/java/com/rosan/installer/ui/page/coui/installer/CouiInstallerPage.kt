@@ -17,6 +17,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -73,8 +74,6 @@ import com.rosan.installer.ui.page.coui.installer.sheetcontent.UninstallSuccessC
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.UninstallingContent
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.unarchiveErrorTitle
 import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
-import com.rosan.installer.ui.page.coui.widgets.CouiSheetPopupHost
-import com.rosan.installer.ui.page.coui.widgets.CouiSheetPopupProvider
 import com.rosan.installer.ui.page.coui.widgets.DropdownItem
 import com.rosan.installer.ui.page.main.installer.InstallerStage
 import com.rosan.installer.ui.page.main.installer.InstallerViewAction
@@ -85,7 +84,6 @@ import com.rosan.installer.ui.theme.InstallerCOUITheme
 import com.rosan.installer.ui.theme.InstallerTheme
 import com.rosan.installer.ui.theme.LocalInstallerColorScheme
 import com.rosan.installer.ui.theme.material.dynamicColorScheme
-import com.rosan.installer.ui.theme.rememberCouiSurfaceBackdrop
 import com.rosan.installer.ui.util.WindowBlurTransition
 import com.rosan.installer.ui.util.getSupportTitle
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
@@ -95,12 +93,11 @@ import io.github.suqi8.coui.kmp.basic.ListPopupColumn
 import io.github.suqi8.coui.kmp.basic.ListPopupDefaults
 import io.github.suqi8.coui.kmp.basic.PopupPositionProvider
 import io.github.suqi8.coui.kmp.basic.TextButton
-import io.github.suqi8.coui.kmp.overlay.OverlayListPopup
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.window.WindowBottomSheet
+import io.github.suqi8.coui.kmp.window.WindowListPopup
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 @SuppressLint("UnusedContentLambdaTargetStateParameter")
 @Composable
@@ -154,10 +151,6 @@ fun CouiInstallerPage(
         currentPackageName = currentPackageName,
         displayIcons = displayIcons,
     )
-
-    // The sheet's own recording, so that a menu opened over the panel can blur what it covers.
-    // The window blur behind the panel is a window effect and cannot be sampled by a popup.
-    val sheetBackdrop = rememberCouiSurfaceBackdrop(settings.useBlur)
 
     LaunchedEffect(session.id) {
         viewModel.dispatch(InstallerViewAction.CollectSession(session))
@@ -283,519 +276,510 @@ fun CouiInstallerPage(
             // The full-screen shell is parked for this release. It stays in the tree so it can be
             // continued later, but no mode reaches it: the dialog below is the only shell.
 
-            // The provider wraps the whole sheet: the title bar builds its actions outside the
-            // content slot, and the reboot menu is opened from there.
-            CouiSheetPopupProvider(sheetBackdrop) {
-                WindowBottomSheet(
-                    show = showBottomSheet.value, // Always true as long as this page is composed.
-                    modifier = sheetBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier,
-                    backgroundColor = COUITheme.colorScheme.surface,
-                    startAction = {
-                        when (stage) {
-                            is InstallerStage.Preparing,
-                            is InstallerStage.InstallWaitingUnknownSource,
-                            -> {
+            WindowBottomSheet(
+                show = showBottomSheet.value, // Always true as long as this page is composed.
+                backgroundColor = COUITheme.colorScheme.surface,
+                startAction = {
+                    when (stage) {
+                        is InstallerStage.Preparing,
+                        is InstallerStage.InstallWaitingUnknownSource,
+                        -> {
+                            CouiBackButton(
+                                icon = AppCOUIIcons.Close,
+                                iconTint = COUITheme.colorScheme.labelPrimary,
+                                onClick = {
+                                    dismissSheet {
+                                        viewModel.dispatch(InstallerViewAction.Cancel)
+                                    }
+                                },
+                            )
+                        }
+
+                        is InstallerStage.InstallChoice -> {
+                            if (isApkChoice) {
                                 CouiBackButton(
-                                    icon = AppCOUIIcons.Close,
                                     iconTint = COUITheme.colorScheme.labelPrimary,
-                                    onClick = {
-                                        dismissSheet {
-                                            viewModel.dispatch(InstallerViewAction.Cancel)
-                                        }
-                                    },
+                                    onClick = backToTypeChoice,
                                 )
-                            }
-
-                            is InstallerStage.InstallChoice -> {
-                                if (isApkChoice) {
-                                    CouiBackButton(
-                                        iconTint = COUITheme.colorScheme.labelPrimary,
-                                        onClick = backToTypeChoice,
-                                    )
-                                } else if (uiState.navigatedFromPrepareToChoice && !returnedToTypeChoice) {
-                                    // Came from Prepare (re-selecting splits) -> Show Back icon, go back to Prepare
-                                    CouiBackButton(
-                                        icon = AppCOUIIcons.Back,
-                                        iconTint = COUITheme.colorScheme.labelPrimary,
-                                        onClick = { viewModel.dispatch(InstallerViewAction.InstallPrepare) },
-                                    )
-                                } else {
-                                    // Initial choice or other origin -> Show Cancel icon, force close
-                                    CouiBackButton(
-                                        icon = AppCOUIIcons.Close,
-                                        iconTint = COUITheme.colorScheme.labelPrimary,
-                                        onClick = closeSheet,
-                                    )
-                                }
-                            }
-
-                            is InstallerStage.InstallConfirm -> {
-                                CouiBackButton(
-                                    icon = AppCOUIIcons.Close,
-                                    iconTint = COUITheme.colorScheme.labelPrimary,
-                                    onClick = {
-                                        if (stage.isSelfSession) {
-                                            viewModel.dispatch(InstallerViewAction.ApproveSession(stage.sessionId, false))
-                                        } else {
-                                            dismissSheet {
-                                                viewModel.dispatch(InstallerViewAction.ApproveSession(stage.sessionId, false))
-                                            }
-                                        }
-                                    },
-                                )
-                            }
-
-                            is InstallerStage.InstallCompleted,
-                            is InstallerStage.InstallFailed,
-                            is InstallerStage.InstallSuccess,
-                            is InstallerStage.UninstallReady,
-                            is InstallerStage.UninstallSuccess,
-                            is InstallerStage.UninstallFailed,
-                            is InstallerStage.UnarchiveReady,
-                            is InstallerStage.UnarchiveError,
-                            is InstallerStage.UnarchiveFailed,
-                            is InstallerStage.AnalyseFailed,
-                            is InstallerStage.ResolveFailed,
-                            -> {
-                                CouiBackButton(
-                                    icon = AppCOUIIcons.Close,
-                                    iconTint = COUITheme.colorScheme.labelPrimary,
-                                    onClick = {
-                                        if (uiState.isDismissible) {
-                                            dismissSheet {
-                                                viewModel.dispatch(InstallerViewAction.Close)
-                                            }
-                                        }
-                                    },
-                                )
-                            }
-
-                            is InstallerStage.InstallPrepare -> {
-                                CouiBackButton(
-                                    icon = if (showSettings || showPermissions || preparedFromTypeChoice) AppCOUIIcons.Back else AppCOUIIcons.Close,
-                                    iconTint = COUITheme.colorScheme.labelPrimary,
-                                    onClick = {
-                                        if (showSettings) {
-                                            viewModel.dispatch(InstallerViewAction.HideCouiSheetRightActionSettings)
-                                        } else if (showPermissions) {
-                                            viewModel.dispatch(InstallerViewAction.HideCouiPermissionList)
-                                        } else if (preparedFromTypeChoice) {
-                                            backToTypeChoice()
-                                        } else {
-                                            dismissSheet {
-                                                viewModel.dispatch(InstallerViewAction.Close)
-                                            }
-                                        }
-                                    },
-                                )
-                            }
-
-                            is InstallerStage.InstallExtendedMenu -> {
+                            } else if (uiState.navigatedFromPrepareToChoice && !returnedToTypeChoice) {
+                                // Came from Prepare (re-selecting splits) -> Show Back icon, go back to Prepare
                                 CouiBackButton(
                                     icon = AppCOUIIcons.Back,
                                     iconTint = COUITheme.colorScheme.labelPrimary,
                                     onClick = { viewModel.dispatch(InstallerViewAction.InstallPrepare) },
                                 )
+                            } else {
+                                // Initial choice or other origin -> Show Cancel icon, force close
+                                CouiBackButton(
+                                    icon = AppCOUIIcons.Close,
+                                    iconTint = COUITheme.colorScheme.labelPrimary,
+                                    onClick = closeSheet,
+                                )
                             }
-
-                            else -> {}
                         }
-                    },
-                    endAction = {
-                        when (stage) {
-                            is InstallerStage.InstallPrepare -> {
-                                if (!showSettings && !showPermissions) {
-                                    IconButton(onClick = {
-                                        viewModel.dispatch(InstallerViewAction.ShowCouiSheetRightActionSettings)
-                                    }) {
-                                        Icon(
-                                            imageVector = AppCOUIIcons.Settings,
-                                            tint = COUITheme.colorScheme.labelPrimary,
-                                            contentDescription = stringResource(R.string.installer_settings),
-                                        )
-                                    }
-                                } else {
-                                    Spacer(Modifier.size(48.dp))
-                                }
-                            }
 
-                            is InstallerStage.InstallSuccess -> {
-                                IconButton(onClick = {
-                                    if (packageName.isNotEmpty()) {
-                                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                                            .setData(Uri.fromParts("package", packageName, null))
-                                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        context.startActivity(intent)
+                        is InstallerStage.InstallConfirm -> {
+                            CouiBackButton(
+                                icon = AppCOUIIcons.Close,
+                                iconTint = COUITheme.colorScheme.labelPrimary,
+                                onClick = {
+                                    if (stage.isSelfSession) {
+                                        viewModel.dispatch(InstallerViewAction.ApproveSession(stage.sessionId, false))
+                                    } else {
+                                        dismissSheet {
+                                            viewModel.dispatch(InstallerViewAction.ApproveSession(stage.sessionId, false))
+                                        }
                                     }
-                                    viewModel.dispatch(InstallerViewAction.Close)
+                                },
+                            )
+                        }
+
+                        is InstallerStage.InstallCompleted,
+                        is InstallerStage.InstallFailed,
+                        is InstallerStage.InstallSuccess,
+                        is InstallerStage.UninstallReady,
+                        is InstallerStage.UninstallSuccess,
+                        is InstallerStage.UninstallFailed,
+                        is InstallerStage.UnarchiveReady,
+                        is InstallerStage.UnarchiveError,
+                        is InstallerStage.UnarchiveFailed,
+                        is InstallerStage.AnalyseFailed,
+                        is InstallerStage.ResolveFailed,
+                        -> {
+                            CouiBackButton(
+                                icon = AppCOUIIcons.Close,
+                                iconTint = COUITheme.colorScheme.labelPrimary,
+                                onClick = {
+                                    if (uiState.isDismissible) {
+                                        dismissSheet {
+                                            viewModel.dispatch(InstallerViewAction.Close)
+                                        }
+                                    }
+                                },
+                            )
+                        }
+
+                        is InstallerStage.InstallPrepare -> {
+                            CouiBackButton(
+                                icon = if (showSettings || showPermissions || preparedFromTypeChoice) AppCOUIIcons.Back else AppCOUIIcons.Close,
+                                iconTint = COUITheme.colorScheme.labelPrimary,
+                                onClick = {
+                                    if (showSettings) {
+                                        viewModel.dispatch(InstallerViewAction.HideCouiSheetRightActionSettings)
+                                    } else if (showPermissions) {
+                                        viewModel.dispatch(InstallerViewAction.HideCouiPermissionList)
+                                    } else if (preparedFromTypeChoice) {
+                                        backToTypeChoice()
+                                    } else {
+                                        dismissSheet {
+                                            viewModel.dispatch(InstallerViewAction.Close)
+                                        }
+                                    }
+                                },
+                            )
+                        }
+
+                        is InstallerStage.InstallExtendedMenu -> {
+                            CouiBackButton(
+                                icon = AppCOUIIcons.Back,
+                                iconTint = COUITheme.colorScheme.labelPrimary,
+                                onClick = { viewModel.dispatch(InstallerViewAction.InstallPrepare) },
+                            )
+                        }
+
+                        else -> {}
+                    }
+                },
+                endAction = {
+                    when (stage) {
+                        is InstallerStage.InstallPrepare -> {
+                            if (!showSettings && !showPermissions) {
+                                IconButton(onClick = {
+                                    viewModel.dispatch(InstallerViewAction.ShowCouiSheetRightActionSettings)
                                 }) {
                                     Icon(
-                                        imageVector = AppCOUIIcons.Info,
+                                        imageVector = AppCOUIIcons.Settings,
                                         tint = COUITheme.colorScheme.labelPrimary,
                                         contentDescription = stringResource(R.string.installer_settings),
                                     )
                                 }
+                            } else {
+                                Spacer(Modifier.size(48.dp))
                             }
-
-                            is InstallerStage.InstallingModule -> {
-                                // Only show the reboot menu when the installation is finished
-                                if (stage.isFinished) {
-                                    RebootListPopup(
-                                        rootMode = uiState.rootMode,
-                                        onReboot = { reason ->
-                                            viewModel.dispatch(InstallerViewAction.Reboot(reason))
-                                        },
-                                    )
-                                }
-                            }
-
-                            else -> {}
                         }
-                    },
-                    title = sheetTitle, // DYNAMIC TITLE
-                    insideMargin = DpSize(16.dp, 16.dp),
-                    allowDismiss = uiState.isDismissible,
-                    onDismissFinished = {
-                        val action = pendingDismissAction.value
-                        pendingDismissAction.value = null
-                        action?.invoke()
-                    },
-                    onDismissRequest = {
-                        if (uiState.isDismissible) {
-                            // If we are in the confirmation stage and the user taps outside or swipes back
-                            if (stage is InstallerStage.InstallConfirm) {
-                                dismissSheet {
-                                    viewModel.dispatch(InstallerViewAction.ApproveSession(stage.sessionId, false))
-                                }
-                                return@WindowBottomSheet
-                            }
 
+                        is InstallerStage.InstallSuccess -> {
+                            IconButton(onClick = {
+                                if (packageName.isNotEmpty()) {
+                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                        .setData(Uri.fromParts("package", packageName, null))
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    context.startActivity(intent)
+                                }
+                                viewModel.dispatch(InstallerViewAction.Close)
+                            }) {
+                                Icon(
+                                    imageVector = AppCOUIIcons.Info,
+                                    tint = COUITheme.colorScheme.labelPrimary,
+                                    contentDescription = stringResource(R.string.installer_settings),
+                                )
+                            }
+                        }
+
+                        is InstallerStage.InstallingModule -> {
+                            // Only show the reboot menu when the installation is finished
+                            if (stage.isFinished) {
+                                RebootListPopup(
+                                    rootMode = uiState.rootMode,
+                                    onReboot = { reason ->
+                                        viewModel.dispatch(InstallerViewAction.Reboot(reason))
+                                    },
+                                )
+                            }
+                        }
+
+                        else -> {}
+                    }
+                },
+                title = sheetTitle, // DYNAMIC TITLE
+                insideMargin = DpSize(16.dp, 16.dp),
+                allowDismiss = uiState.isDismissible,
+                onDismissFinished = {
+                    val action = pendingDismissAction.value
+                    pendingDismissAction.value = null
+                    action?.invoke()
+                },
+                onDismissRequest = {
+                    if (uiState.isDismissible) {
+                        // If we are in the confirmation stage and the user taps outside or swipes back
+                        if (stage is InstallerStage.InstallConfirm) {
                             dismissSheet {
-                                val disableNotif = settings.disableNotificationOnDismiss
-                                val isModule = stage is InstallerStage.InstallingModule
-                                val isUninstall =
-                                    stage is InstallerStage.UninstallReady || stage is InstallerStage.UninstallResolveFailed ||
-                                        stage is InstallerStage.UninstallSuccess || stage is InstallerStage.UninstallFailed
-                                val isUnarchive =
-                                    stage is InstallerStage.UnarchiveReady || stage is InstallerStage.UnarchiveError ||
-                                        stage is InstallerStage.UnarchiveFailed
-
-                                // 1. If it's a module install, OR uninstall OR the "disable notification" setting is on -> Close
-                                // 2. Otherwise (including Preparing, Standard APK install) -> Background
-                                val action = if (isModule || disableNotif || isUninstall || isUnarchive) {
-                                    InstallerViewAction.Close
-                                } else {
-                                    InstallerViewAction.Background
-                                }
-
-                                viewModel.dispatch(action)
+                                viewModel.dispatch(InstallerViewAction.ApproveSession(stage.sessionId, false))
                             }
+                            return@WindowBottomSheet
                         }
+
+                        dismissSheet {
+                            val disableNotif = settings.disableNotificationOnDismiss
+                            val isModule = stage is InstallerStage.InstallingModule
+                            val isUninstall =
+                                stage is InstallerStage.UninstallReady || stage is InstallerStage.UninstallResolveFailed ||
+                                    stage is InstallerStage.UninstallSuccess || stage is InstallerStage.UninstallFailed
+                            val isUnarchive =
+                                stage is InstallerStage.UnarchiveReady || stage is InstallerStage.UnarchiveError ||
+                                    stage is InstallerStage.UnarchiveFailed
+
+                            // 1. If it's a module install, OR uninstall OR the "disable notification" setting is on -> Close
+                            // 2. Otherwise (including Preparing, Standard APK install) -> Background
+                            val action = if (isModule || disableNotif || isUninstall || isUnarchive) {
+                                InstallerViewAction.Close
+                            } else {
+                                InstallerViewAction.Background
+                            }
+
+                            viewModel.dispatch(action)
+                        }
+                    }
+                },
+
+            ) {
+                // One window-blur instance for the whole sheet lifetime: the radius follows a
+                // single 0 -> 30 -> 0 progress instead of an AnimatedContent cross-fade, which
+                // used to spawn competing writers on the same dialog window. The ramp starts at
+                // 0 on first composition, so the very first sheet entry gets a real fade-in even
+                // though `showBottomSheet` is already true.
+                WindowBlurTransition(
+                    visible = showBottomSheet.value,
+                    useBlur = settings.useBlur,
+                )
+
+                // Keyed by stage class for stability, but each slot must render the stage it
+                // was handed: reading the live value made the outgoing page paint the incoming
+                // one, so text appeared to animate along with the cross-fade.
+                AnimatedContent(
+                    targetState = stage,
+                    label = "CouiSheetContentAnimation",
+                    contentKey = { it.javaClass },
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(durationMillis = 150)) togetherWith
+                            fadeOut(animationSpec = tween(durationMillis = 150))
                     },
-
-                ) {
-                    // One window-blur instance for the whole sheet lifetime: the radius follows a
-                    // single 0 -> 30 -> 0 progress instead of an AnimatedContent cross-fade, which
-                    // used to spawn competing writers on the same dialog window. The ramp starts at
-                    // 0 on first composition, so the very first sheet entry gets a real fade-in even
-                    // though `showBottomSheet` is already true.
-                    WindowBlurTransition(
-                        visible = showBottomSheet.value,
-                        useBlur = settings.useBlur,
-                    )
-
-                    // Keyed by stage class for stability, but each slot must render the stage it
-                    // was handed: reading the live value made the outgoing page paint the incoming
-                    // one, so text appeared to animate along with the cross-fade.
-                    AnimatedContent(
-                        targetState = stage,
-                        label = "CouiSheetContentAnimation",
-                        contentKey = { it.javaClass },
-                        transitionSpec = {
-                            fadeIn(animationSpec = tween(durationMillis = 150)) togetherWith
-                                fadeOut(animationSpec = tween(durationMillis = 150))
-                        },
-                    ) { targetStage ->
-                        val stage = targetStage
-                        when (stage) {
-                            is InstallerStage.InstallConfirm -> {
-                                InstallConfirmContent(
-                                    viewModel = viewModel,
-                                    onCancel = {
-                                        if (stage.isSelfSession) {
-                                            // INTERNAL INSTALL: Do not close the bottom sheet!
-                                            // Dispatch the rejection, backend will wait for the abort exception
-                                            // and then switch state to InstallFailed with the correct error message.
+                ) { targetStage ->
+                    val stage = targetStage
+                    when (stage) {
+                        is InstallerStage.InstallConfirm -> {
+                            InstallConfirmContent(
+                                viewModel = viewModel,
+                                onCancel = {
+                                    if (stage.isSelfSession) {
+                                        // INTERNAL INSTALL: Do not close the bottom sheet!
+                                        // Dispatch the rejection, backend will wait for the abort exception
+                                        // and then switch state to InstallFailed with the correct error message.
+                                        viewModel.dispatch(
+                                            InstallerViewAction.ApproveSession(stage.sessionId, false),
+                                        )
+                                    } else {
+                                        dismissSheet {
                                             viewModel.dispatch(
                                                 InstallerViewAction.ApproveSession(stage.sessionId, false),
                                             )
-                                        } else {
-                                            dismissSheet {
-                                                viewModel.dispatch(
-                                                    InstallerViewAction.ApproveSession(stage.sessionId, false),
-                                                )
-                                            }
                                         }
-                                    },
-                                    onConfirm = {
-                                        if (stage.isSelfSession) {
-                                            // INTERNAL INSTALL: Do not close the bottom sheet!
+                                    }
+                                },
+                                onConfirm = {
+                                    if (stage.isSelfSession) {
+                                        // INTERNAL INSTALL: Do not close the bottom sheet!
+                                        viewModel.dispatch(
+                                            InstallerViewAction.ApproveSession(stage.sessionId, true),
+                                        )
+                                    } else {
+                                        dismissSheet {
                                             viewModel.dispatch(
                                                 InstallerViewAction.ApproveSession(stage.sessionId, true),
                                             )
-                                        } else {
-                                            dismissSheet {
-                                                viewModel.dispatch(
-                                                    InstallerViewAction.ApproveSession(stage.sessionId, true),
-                                                )
-                                            }
                                         }
-                                    },
-                                )
+                                    }
+                                },
+                            )
+                        }
+
+                        is InstallerStage.InstallChoice -> {
+                            InstallChoiceContent(
+                                viewModel = viewModel,
+                                selectionMode = selectionMode,
+                                onSelectionModeChange = { selectionMode = it },
+                                onSelectMixedModuleType = { installAsModule ->
+                                    preparedFromTypeChoice = true
+                                    returnedToTypeChoice = false
+                                    viewModel.dispatch(InstallerViewAction.SelectMixedModuleType(installAsModule))
+                                },
+                                onBackToTypeChoice = backToTypeChoice,
+                                onCancel = closeSheet,
+                            )
+                        }
+
+                        is InstallerStage.InstallExtendedMenu -> {
+                            InstallExtendedMenuContent(
+                                viewModel = viewModel,
+                            )
+                        }
+
+                        is InstallerStage.Preparing -> {
+                            InstallPreparingContent(
+                                viewModel = viewModel,
+                                onBackground = {
+                                    dismissSheet {
+                                        viewModel.dispatch(InstallerViewAction.Background)
+                                    }
+                                },
+                            )
+                        }
+
+                        is InstallerStage.InstallWaitingUnknownSource -> {
+                            val sourceAppLabel = uiState.unknownSourcePermissionAppLabel
+                                ?: uiState.initiatorAppLabel
+                                ?: stringResource(R.string.installer_label_unknown)
+                            val showPermissionAction = rememberUnknownSourcePermissionActionVisible(
+                                isWaitingUnknownSource = true,
+                            )
+                            InstallPreparingContent(
+                                viewModel = viewModel,
+                                onBackground = {
+                                    viewModel.dispatch(InstallerViewAction.RequestUnknownSourcePermission)
+                                },
+                                descriptionText = stringResource(R.string.installer_waiting_unknown_source_desc, sourceAppLabel),
+                                buttonTextRes = R.string.suggestion_allow_unknown_source,
+                                showButton = showPermissionAction,
+                            )
+                        }
+
+                        is InstallerStage.InstallPrepare -> {
+                            val prepareSubState = when {
+                                showSettings -> "settings"
+                                showPermissions -> "permissions"
+                                else -> "prepare"
                             }
 
-                            is InstallerStage.InstallChoice -> {
-                                InstallChoiceContent(
-                                    viewModel = viewModel,
-                                    selectionMode = selectionMode,
-                                    onSelectionModeChange = { selectionMode = it },
-                                    onSelectMixedModuleType = { installAsModule ->
-                                        preparedFromTypeChoice = true
-                                        returnedToTypeChoice = false
-                                        viewModel.dispatch(InstallerViewAction.SelectMixedModuleType(installAsModule))
-                                    },
-                                    onBackToTypeChoice = backToTypeChoice,
-                                    onCancel = closeSheet,
-                                )
-                            }
+                            AnimatedContent(
+                                targetState = prepareSubState,
+                                label = "PrepareContentVsSettingsVsPermissions",
+                                transitionSpec = {
+                                    fadeIn(animationSpec = tween(durationMillis = 150)) togetherWith
+                                        fadeOut(animationSpec = tween(durationMillis = 150))
+                                },
+                            ) { subState ->
+                                when (subState) {
+                                    "settings" -> {
+                                        PrepareSettingsContent(
+                                            viewModel = viewModel,
+                                        )
+                                    }
 
-                            is InstallerStage.InstallExtendedMenu -> {
-                                InstallExtendedMenuContent(
-                                    viewModel = viewModel,
-                                )
-                            }
+                                    "permissions" -> {
+                                        InstallPreparePermissionContent(
+                                            viewModel = viewModel,
+                                            onBack = { viewModel.dispatch(InstallerViewAction.HideCouiPermissionList) },
+                                        )
+                                    }
 
-                            is InstallerStage.Preparing -> {
-                                InstallPreparingContent(
-                                    viewModel = viewModel,
-                                    onBackground = {
-                                        dismissSheet {
-                                            viewModel.dispatch(InstallerViewAction.Background)
-                                        }
-                                    },
-                                )
-                            }
-
-                            is InstallerStage.InstallWaitingUnknownSource -> {
-                                val sourceAppLabel = uiState.unknownSourcePermissionAppLabel
-                                    ?: uiState.initiatorAppLabel
-                                    ?: stringResource(R.string.installer_label_unknown)
-                                val showPermissionAction = rememberUnknownSourcePermissionActionVisible(
-                                    isWaitingUnknownSource = true,
-                                )
-                                InstallPreparingContent(
-                                    viewModel = viewModel,
-                                    onBackground = {
-                                        viewModel.dispatch(InstallerViewAction.RequestUnknownSourcePermission)
-                                    },
-                                    descriptionText = stringResource(R.string.installer_waiting_unknown_source_desc, sourceAppLabel),
-                                    buttonTextRes = R.string.suggestion_allow_unknown_source,
-                                    showButton = showPermissionAction,
-                                )
-                            }
-
-                            is InstallerStage.InstallPrepare -> {
-                                val prepareSubState = when {
-                                    showSettings -> "settings"
-                                    showPermissions -> "permissions"
-                                    else -> "prepare"
-                                }
-
-                                AnimatedContent(
-                                    targetState = prepareSubState,
-                                    label = "PrepareContentVsSettingsVsPermissions",
-                                    transitionSpec = {
-                                        fadeIn(animationSpec = tween(durationMillis = 150)) togetherWith
-                                            fadeOut(animationSpec = tween(durationMillis = 150))
-                                    },
-                                ) { subState ->
-                                    when (subState) {
-                                        "settings" -> {
-                                            PrepareSettingsContent(
-                                                viewModel = viewModel,
-                                            )
-                                        }
-
-                                        "permissions" -> {
-                                            InstallPreparePermissionContent(
-                                                viewModel = viewModel,
-                                                onBack = { viewModel.dispatch(InstallerViewAction.HideCouiPermissionList) },
-                                            )
-                                        }
-
-                                        else -> { // "prepare"
-                                            InstallPrepareContent(
-                                                viewModel = viewModel,
-                                                appInfo = appInfoState,
-                                                onCancel = closeSheet,
-                                                onInstall = {
+                                    else -> { // "prepare"
+                                        InstallPrepareContent(
+                                            viewModel = viewModel,
+                                            appInfo = appInfoState,
+                                            onCancel = closeSheet,
+                                            onInstall = {
+                                                viewModel.dispatch(InstallerViewAction.Install(true))
+                                                if (settings.autoSilentInstall && !viewModel.isInstallingModule) {
+                                                    dismissSheet {
+                                                        viewModel.dispatch(InstallerViewAction.Background)
+                                                    }
+                                                }
+                                            },
+                                            onLongInstall = if (settings.longClickBackgroundInstall) {
+                                                {
+                                                    // Trigger install directly
                                                     viewModel.dispatch(InstallerViewAction.Install(true))
-                                                    if (settings.autoSilentInstall && !viewModel.isInstallingModule) {
+                                                    // Force background auto silent install regardless of settings
+                                                    if (!viewModel.isInstallingModule) {
                                                         dismissSheet {
                                                             viewModel.dispatch(InstallerViewAction.Background)
                                                         }
                                                     }
-                                                },
-                                                onLongInstall = if (settings.longClickBackgroundInstall) {
-                                                    {
-                                                        // Trigger install directly
-                                                        viewModel.dispatch(InstallerViewAction.Install(true))
-                                                        // Force background auto silent install regardless of settings
-                                                        if (!viewModel.isInstallingModule) {
-                                                            dismissSheet {
-                                                                viewModel.dispatch(InstallerViewAction.Background)
-                                                            }
-                                                        }
-                                                    }
-                                                } else {
-                                                    null
-                                                },
-                                            )
-                                        }
+                                                }
+                                            } else {
+                                                null
+                                            },
+                                        )
                                     }
                                 }
                             }
+                        }
 
-                            is InstallerStage.Installing -> {
-                                InstallingContent(
-                                    stage = stage,
-                                    appInfo = appInfoState,
-                                    onButtonClick = {
-                                        dismissSheet {
-                                            viewModel.dispatch(InstallerViewAction.Background)
-                                        }
-                                    },
-                                )
-                            }
+                        is InstallerStage.Installing -> {
+                            InstallingContent(
+                                stage = stage,
+                                appInfo = appInfoState,
+                                onButtonClick = {
+                                    dismissSheet {
+                                        viewModel.dispatch(InstallerViewAction.Background)
+                                    }
+                                },
+                            )
+                        }
 
-                            is InstallerStage.InstallSuccess -> {
-                                InstallSuccessContent(
-                                    appInfo = appInfoState,
-                                    viewModel = viewModel,
-                                    closeSessionCountDown = settings.closeSessionCountDown,
-                                    onClose = closeSheet,
-                                )
-                            }
+                        is InstallerStage.InstallSuccess -> {
+                            InstallSuccessContent(
+                                appInfo = appInfoState,
+                                viewModel = viewModel,
+                                closeSessionCountDown = settings.closeSessionCountDown,
+                                onClose = closeSheet,
+                            )
+                        }
 
-                            is InstallerStage.InstallCompleted -> {
-                                InstallCompletedContent(
-                                    results = stage.results,
-                                    onClose = closeSheet,
-                                )
-                            }
+                        is InstallerStage.InstallCompleted -> {
+                            InstallCompletedContent(
+                                results = stage.results,
+                                onClose = closeSheet,
+                            )
+                        }
 
-                            is InstallerStage.InstallFailed -> {
-                                if (error is ModuleInstallException) {
-                                    NonInstallFailedContent(
-                                        error = error,
-                                        onClose = closeSheet,
-                                    )
-                                } else {
-                                    InstallFailedContent(
-                                        appInfo = appInfoState,
-                                        viewModel = viewModel,
-                                        onClose = closeSheet,
-                                    )
-                                }
-                            }
-
-                            is InstallerStage.InstallingModule -> {
-                                InstallModuleContent(
-                                    outputLines = stage.output,
-                                    isFinished = stage.isFinished,
-                                    onClose = closeSheet,
-                                )
-                            }
-
-                            is InstallerStage.UninstallReady -> {
-                                UninstallPrepareContent(
-                                    viewModel = viewModel,
-                                    onCancel = closeSheet,
-                                    onUninstall = { viewModel.dispatch(InstallerViewAction.Uninstall) },
-                                )
-                            }
-
-                            is InstallerStage.Uninstalling -> {
-                                UninstallingContent(viewModel = viewModel)
-                            }
-
-                            is InstallerStage.UninstallSuccess -> {
-                                UninstallSuccessContent(viewModel = viewModel, onClose = closeSheet)
-                            }
-
-                            is InstallerStage.UninstallFailed -> {
-                                UninstallFailedContent(
-                                    viewModel = viewModel,
-                                    onClose = closeSheet,
-                                )
-                            }
-
-                            is InstallerStage.UnarchiveReady -> {
-                                UnarchivePrepareContent(
-                                    appLabel = stage.appLabel,
-                                    installerLabel = stage.installerLabel,
-                                    onCancel = closeSheet,
-                                    onRestore = { viewModel.dispatch(InstallerViewAction.StartUnarchive) },
-                                )
-                            }
-
-                            is InstallerStage.Unarchiving -> {
-                                LoadingContent(statusText = stringResource(R.string.unarchive_restoring))
-                            }
-
-                            is InstallerStage.UnarchiveError -> {
-                                UnarchiveErrorContent(
-                                    status = stage.status,
-                                    requiredBytes = stage.requiredBytes,
-                                    installerLabel = stage.installerLabel,
-                                    onClose = closeSheet,
-                                    onPrimaryAction = { viewModel.dispatch(InstallerViewAction.OpenUnarchiveErrorAction) },
-                                )
-                            }
-
-                            is InstallerStage.UnarchiveFailed -> {
+                        is InstallerStage.InstallFailed -> {
+                            if (error is ModuleInstallException) {
                                 NonInstallFailedContent(
                                     error = error,
                                     onClose = closeSheet,
                                 )
-                            }
-
-                            is InstallerStage.AnalyseFailed, is InstallerStage.ResolveFailed -> {
-                                NonInstallFailedContent(
-                                    error = error,
+                            } else {
+                                InstallFailedContent(
+                                    appInfo = appInfoState,
+                                    viewModel = viewModel,
                                     onClose = closeSheet,
                                 )
-                            }
-
-                            is InstallerStage.Resolving, is InstallerStage.Analysing -> {
-                                LoadingContent(
-                                    statusText = if (stage is InstallerStage.Resolving) {
-                                        stringResource(R.string.installer_resolving)
-                                    } else {
-                                        stringResource(R.string.installer_analysing)
-                                    },
-                                )
-                            }
-
-                            else -> {
-                                LoadingContent(statusText = stringResource(R.string.loading))
                             }
                         }
-                    }
 
-                    // COUI's in-window popup host: the menus of this sheet have to stay in
-                    // this window to sample what they cover.
-                    CouiSheetPopupHost()
+                        is InstallerStage.InstallingModule -> {
+                            InstallModuleContent(
+                                outputLines = stage.output,
+                                isFinished = stage.isFinished,
+                                onClose = closeSheet,
+                            )
+                        }
+
+                        is InstallerStage.UninstallReady -> {
+                            UninstallPrepareContent(
+                                viewModel = viewModel,
+                                onCancel = closeSheet,
+                                onUninstall = { viewModel.dispatch(InstallerViewAction.Uninstall) },
+                            )
+                        }
+
+                        is InstallerStage.Uninstalling -> {
+                            UninstallingContent(viewModel = viewModel)
+                        }
+
+                        is InstallerStage.UninstallSuccess -> {
+                            UninstallSuccessContent(viewModel = viewModel, onClose = closeSheet)
+                        }
+
+                        is InstallerStage.UninstallFailed -> {
+                            UninstallFailedContent(
+                                viewModel = viewModel,
+                                onClose = closeSheet,
+                            )
+                        }
+
+                        is InstallerStage.UnarchiveReady -> {
+                            UnarchivePrepareContent(
+                                appLabel = stage.appLabel,
+                                installerLabel = stage.installerLabel,
+                                onCancel = closeSheet,
+                                onRestore = { viewModel.dispatch(InstallerViewAction.StartUnarchive) },
+                            )
+                        }
+
+                        is InstallerStage.Unarchiving -> {
+                            LoadingContent(statusText = stringResource(R.string.unarchive_restoring))
+                        }
+
+                        is InstallerStage.UnarchiveError -> {
+                            UnarchiveErrorContent(
+                                status = stage.status,
+                                requiredBytes = stage.requiredBytes,
+                                installerLabel = stage.installerLabel,
+                                onClose = closeSheet,
+                                onPrimaryAction = { viewModel.dispatch(InstallerViewAction.OpenUnarchiveErrorAction) },
+                            )
+                        }
+
+                        is InstallerStage.UnarchiveFailed -> {
+                            NonInstallFailedContent(
+                                error = error,
+                                onClose = closeSheet,
+                            )
+                        }
+
+                        is InstallerStage.AnalyseFailed, is InstallerStage.ResolveFailed -> {
+                            NonInstallFailedContent(
+                                error = error,
+                                onClose = closeSheet,
+                            )
+                        }
+
+                        is InstallerStage.Resolving, is InstallerStage.Analysing -> {
+                            LoadingContent(
+                                statusText = if (stage is InstallerStage.Resolving) {
+                                    stringResource(R.string.installer_resolving)
+                                } else {
+                                    stringResource(R.string.installer_analysing)
+                                },
+                            )
+                        }
+
+                        else -> {
+                            LoadingContent(statusText = stringResource(R.string.loading))
+                        }
+                    }
                 }
             }
         }
@@ -823,7 +807,7 @@ private fun RebootListPopup(
         )
     }
 
-    OverlayListPopup(
+    WindowListPopup(
         show = showTopPopup.value,
         popupPositionProvider = ListPopupDefaults.ContextMenuPositionProvider,
         alignment = alignment,
