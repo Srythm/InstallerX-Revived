@@ -49,7 +49,7 @@ fun <T> CouiDraggableList(
         Icon(
             imageVector = ImageVector.vectorResource(AppIcons.DragHandle),
             contentDescription = null,
-            tint = COUITheme.colorScheme.onSurfaceVariantActions,
+            tint = COUITheme.colorScheme.labelTertiary,
         )
     },
     trailingContent: @Composable RowScope.(item: T) -> Unit,

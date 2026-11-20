@@ -17,11 +17,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.rosan.installer.R
 import com.rosan.installer.ui.page.coui.widgets.CouiErrorTextBlock
+import com.rosan.installer.ui.theme.InstallerTheme.useCouiMonet
 import com.rosan.installer.ui.util.isGestureNavigation
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import io.github.suqi8.coui.kmp.theme.COUITheme.isDynamicColor
 
 @Composable
 fun NonInstallFailedContent(
@@ -52,8 +52,8 @@ fun NonInstallFailedContent(
                 onClick = onClose,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.textButtonColors(
-                    color = if (isDynamicColor) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
-                    textColor = if (isDynamicColor) COUITheme.colorScheme.onSecondaryContainer else COUITheme.colorScheme.onSecondaryVariant,
+                    color = if (useCouiMonet) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
+                    textColor = COUITheme.colorScheme.labelPrimary,
                 ),
             )
         }

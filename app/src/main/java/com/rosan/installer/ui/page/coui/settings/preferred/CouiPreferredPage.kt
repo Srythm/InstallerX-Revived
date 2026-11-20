@@ -15,11 +15,12 @@ import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,6 +48,7 @@ import com.rosan.installer.domain.settings.model.config.Authorizer
 import com.rosan.installer.ui.icons.AppIcons
 import com.rosan.installer.ui.navigation.LocalNavigator
 import com.rosan.installer.ui.navigation.Route
+import com.rosan.installer.ui.page.coui.widgets.CouiContentDialog
 import com.rosan.installer.ui.page.coui.widgets.CouiNavigationItemWidget
 import com.rosan.installer.ui.page.coui.widgets.CouiSettingsTipCard
 import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
@@ -76,7 +78,6 @@ import io.github.suqi8.coui.kmp.basic.TopAppBar
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
-import io.github.suqi8.coui.kmp.window.WindowDialog
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
@@ -369,8 +370,8 @@ fun CouiPreferredPage(
                             "$revLevel ${AppConfig.VERSION_NAME}"
                         },
                         summaryColor = BasicComponentColors(
-                            color = if (uiState.hasUpdate) COUITheme.colorScheme.primary else COUITheme.colorScheme.onSurfaceVariantSummary,
-                            disabledColor = COUITheme.colorScheme.disabledOnSecondaryVariant,
+                            color = if (uiState.hasUpdate) COUITheme.colorScheme.primary else COUITheme.colorScheme.labelSecondaryVariant,
+                            disabledColor = COUITheme.colorScheme.disabledNeutral,
                         ),
                         onClick = { navigator.push(Route.About) },
                     )
@@ -427,40 +428,36 @@ private fun CouiRestoreBackupConfirmDialog(
     onConfirm: () -> Unit,
 ) {
     val context = LocalContext.current
-    WindowDialog(
+    CouiContentDialog(
         show = show,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.backup_settings_restore_confirm_title),
-        content = {
-            Column {
-                Text(
-                    text = preview?.formatBackupRestorePreview(context)
-                        ?: stringResource(R.string.backup_settings_restore_confirm_desc),
-                    color = COUITheme.colorScheme.onSurface,
+        actions = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = onDismiss,
+                    text = stringResource(R.string.cancel),
                 )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = onDismiss,
-                        text = stringResource(R.string.cancel),
-                    )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = onConfirm,
-                        text = stringResource(R.string.confirm),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                    )
-                }
+                Spacer(modifier = Modifier.width(8.dp))
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = onConfirm,
+                    text = stringResource(R.string.confirm),
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                )
             }
+        },
+        content = {
+            Text(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                text = preview?.formatBackupRestorePreview(context)
+                    ?: stringResource(R.string.backup_settings_restore_confirm_desc),
+                color = COUITheme.colorScheme.labelPrimary,
+            )
         },
     )
 }
@@ -470,26 +467,24 @@ private fun CouiBackupValidationErrorDialog(
     errorText: String?,
     onDismiss: () -> Unit,
 ) {
-    WindowDialog(
+    CouiContentDialog(
         show = errorText != null,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.backup_settings_validation_failed_title),
+        actions = {
+            TextButton(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onDismiss,
+                text = stringResource(R.string.confirm),
+                colors = ButtonDefaults.textButtonColorsPrimary(),
+            )
+        },
         content = {
-            Column {
-                Text(
-                    text = errorText.orEmpty(),
-                    color = COUITheme.colorScheme.onSurface,
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                TextButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = onDismiss,
-                    text = stringResource(R.string.confirm),
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                )
-            }
+            Text(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                text = errorText.orEmpty(),
+                color = COUITheme.colorScheme.labelPrimary,
+            )
         },
     )
 }
@@ -500,41 +495,39 @@ private fun CouiHideLauncherIconWarningDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    WindowDialog(
+    CouiContentDialog(
         show = show,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.warning),
+        actions = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = onDismiss,
+                    text = stringResource(R.string.cancel),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = onConfirm,
+                    text = stringResource(R.string.confirm),
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                )
+            }
+        },
         content = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text(
                     text = stringResource(R.string.theme_settings_hide_launcher_icon_warning),
-                    color = COUITheme.colorScheme.onSurface,
+                    color = COUITheme.colorScheme.labelPrimary,
                 )
                 if (DeviceConfig.currentManufacturer == Manufacturer.XIAOMI) {
                     Text(
                         text = stringResource(R.string.theme_settings_hide_launcher_icon_warning_xiaomi),
-                        color = COUITheme.colorScheme.onSurface,
-                    )
-                }
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = onDismiss,
-                        text = stringResource(R.string.cancel),
-                    )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = onConfirm,
-                        text = stringResource(R.string.confirm),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                        color = COUITheme.colorScheme.labelPrimary,
                     )
                 }
             }

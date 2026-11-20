@@ -39,11 +39,6 @@ fun CouiMainPageWrapper(uiState: ThemeState, sharedViewModel: SettingsSharedView
     val sharedState by sharedViewModel.state.collectAsStateWithLifecycle()
     val useBlur = uiState.useBlur
     val useFloatingBottomBar = uiState.useAppleFloatingBar
-    val floatingBottomBarMode = when {
-        useBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> FloatingBottomBarMode.LiquidGlass
-        useBlur -> FloatingBottomBarMode.Blur
-        else -> FloatingBottomBarMode.None
-    }
 
     val configRepo = koinInject<ConfigRepository>()
     val configCountFlow = remember { configRepo.flowAll().map { it.size } }
@@ -98,7 +93,7 @@ fun CouiMainPageWrapper(uiState: ThemeState, sharedViewModel: SettingsSharedView
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Create separated backdrops for different blurred components
-    val floatingBackdrop = rememberLayerBackdrop()
+    val floatingBackdrop = rememberCouiBlurBackdrop(useBlur && useFloatingBottomBar)
     val couiBackdrop = rememberCouiBlurBackdrop(useBlur)
 
     // Branch statically without layout delay traps
@@ -109,7 +104,6 @@ fun CouiMainPageWrapper(uiState: ThemeState, sharedViewModel: SettingsSharedView
             navigationItems = navigationItems,
             snackbarHostState = snackbarHostState,
             useFloatingBottomBar = useFloatingBottomBar,
-            floatingBottomBarMode = floatingBottomBarMode,
             floatingBackdrop = floatingBackdrop,
             couiBackdrop = couiBackdrop,
         )
@@ -120,7 +114,6 @@ fun CouiMainPageWrapper(uiState: ThemeState, sharedViewModel: SettingsSharedView
             navigationItems = navigationItems,
             snackbarHostState = snackbarHostState,
             useFloatingBottomBar = useFloatingBottomBar,
-            floatingBottomBarMode = floatingBottomBarMode,
             floatingBackdrop = floatingBackdrop,
             couiBackdrop = couiBackdrop,
         )

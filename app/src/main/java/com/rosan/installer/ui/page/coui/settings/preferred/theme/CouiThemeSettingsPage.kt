@@ -278,8 +278,8 @@ fun COUIThemeSettingsPage(
                                                         rawColor = rawColor,
                                                         currentStyle = uiState.paletteStyle,
                                                         colorSpec = uiState.colorSpec,
-                                                        textStyle = COUITheme.textStyles.footnote1,
-                                                        textColor = COUITheme.colorScheme.onSurface,
+                                                        textStyle = COUITheme.textStyles.bodyS,
+                                                        textColor = COUITheme.colorScheme.labelPrimary,
                                                         isSelected =
                                                             uiState.seedColor == rawColor.color,
                                                     ) {
@@ -387,7 +387,7 @@ private fun CouiPredictiveBackAnimationWidget(
             PredictiveBackAnimation.Scale -> stringResource(R.string.theme_settings_predictive_back_animation_scale)
             PredictiveBackAnimation.Classic -> stringResource(R.string.theme_settings_predictive_back_animation_ksu_classic)
         }
-        DropdownItem(title = title)
+        DropdownItem(text = title)
     }
 
     val selectedIndex = remember(currentAnimation, options) {
@@ -426,7 +426,7 @@ private fun CouiPredictiveBackExitDirectionWidget(
             PredictiveBackExitDirection.ALWAYS_RIGHT -> stringResource(R.string.theme_settings_predictive_back_exit_direction_always_right)
             PredictiveBackExitDirection.ALWAYS_LEFT -> stringResource(R.string.theme_settings_predictive_back_exit_direction_always_left)
         }
-        DropdownItem(title = title)
+        DropdownItem(text = title)
     }
 
     val selectedIndex = remember(currentDirection, options) {
@@ -475,7 +475,7 @@ private fun COUIThemeEngineWidget(
     val spinnerEntries = remember(themeOptions) {
         themeOptions.entries.sortedByDescending { it.key }.map { entry ->
             DropdownItem(
-                title = context.getString(entry.value),
+                text = context.getString(entry.value),
             )
         }
     }
@@ -532,7 +532,7 @@ fun COUIThemeModeWidget(
     // The order of items in the list is important for index mapping.
     val spinnerEntries = remember(themeModeOptions) {
         themeModeOptions.entries.map { entry ->
-            DropdownItem(title = context.getString(entry.value))
+            DropdownItem(text = context.getString(entry.value))
         }
     }
 
@@ -569,7 +569,7 @@ fun CouiPaletteStyleWidget(
 ) {
     val options = remember { PaletteStyle.entries }
     val spinnerEntries = remember(options) {
-        options.map { DropdownItem(title = it.displayName) }
+        options.map { DropdownItem(text = it.displayName) }
     }
     val selectedIndex = remember(currentPaletteStyle, options) {
         options.indexOf(currentPaletteStyle).coerceAtLeast(0)
@@ -614,7 +614,7 @@ fun CouiColorSpecWidget(
     }
 
     val spinnerEntries = remember(availableSpecs) {
-        availableSpecs.map { DropdownItem(title = it.displayName) }
+        availableSpecs.map { DropdownItem(text = it.displayName) }
     }
 
     val selectedIndex = remember(activeSpec, availableSpecs) {

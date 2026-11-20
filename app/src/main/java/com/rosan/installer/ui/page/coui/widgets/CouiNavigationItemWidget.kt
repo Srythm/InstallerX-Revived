@@ -3,10 +3,15 @@
 package com.rosan.installer.ui.page.coui.widgets
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import io.github.suqi8.coui.kmp.basic.BasicComponentDefaults
+import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.preference.ArrowPreference
+import io.github.suqi8.coui.kmp.theme.COUITheme
 
 /**
  * A setting pkg that navigates to a secondary page, built upon BaseWidget.
@@ -29,6 +34,18 @@ fun CouiNavigationItemWidget(
     ArrowPreference(
         title = title,
         summary = description,
+        startAction = if (icon != null) {
+            {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = COUITheme.colorScheme.labelPrimary,
+                )
+            }
+        } else {
+            null
+        },
         insideMargin = insideMargin,
         onClick = onClick,
     )

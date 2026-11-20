@@ -83,10 +83,11 @@ class SettingsActivity :
                     useCouiMonet = uiState.useCouiMonet,
                     seedColor = androidx.compose.ui.graphics.Color(uiState.seedColor),
                     useAmoled = uiState.useAmoled,
+                    useBlur = uiState.useBlur,
                 ) {
                     val backgroundColor =
                         if (uiState.useCoui) {
-                            COUITheme.colorScheme.surface
+                            COUITheme.colorScheme.backgroundWithCard
                         } else {
                             MaterialTheme.colorScheme.surfaceContainer
                         }

@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,6 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rosan.installer.ui.page.coui.installer.components.AppInfoState
 import io.github.suqi8.coui.kmp.basic.Text
+import io.github.suqi8.coui.kmp.squircle.SquircleShape
 import io.github.suqi8.coui.kmp.theme.COUITheme
 
 private val AppIconSize = 48.dp
@@ -43,7 +43,7 @@ fun CouiFullScreenAppHeader(
             .padding(start = FullScreenHorizontalPadding, end = FullScreenHorizontalPadding, top = 10.dp, bottom = 18.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val iconShape = RoundedCornerShape(14.dp)
+        val iconShape = SquircleShape(14.dp)
         val bitmap = appInfo.icon
 
         if (bitmap != null) {
@@ -65,8 +65,8 @@ fun CouiFullScreenAppHeader(
             ) {
                 Text(
                     text = appInfo.label.take(1).uppercase(),
-                    style = COUITheme.textStyles.title4,
-                    color = COUITheme.colorScheme.onPrimary,
+                    style = COUITheme.textStyles.headlineS,
+                    color = COUITheme.colorScheme.labelOnColor,
                 )
             }
         }
@@ -74,8 +74,8 @@ fun CouiFullScreenAppHeader(
         Column(modifier = Modifier.padding(start = 12.dp)) {
             Text(
                 text = appInfo.label,
-                style = COUITheme.textStyles.title4,
-                color = COUITheme.colorScheme.onSurface,
+                style = COUITheme.textStyles.headlineS,
+                color = COUITheme.colorScheme.labelPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -85,8 +85,8 @@ fun CouiFullScreenAppHeader(
                 } else {
                     "${appInfo.packageName} · $versionName"
                 },
-                style = COUITheme.textStyles.footnote1,
-                color = COUITheme.colorScheme.onSurfaceVariantSummary,
+                style = COUITheme.textStyles.bodyS,
+                color = COUITheme.colorScheme.labelSecondaryVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 2.dp),

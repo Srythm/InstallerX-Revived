@@ -28,6 +28,7 @@ import com.rosan.installer.ui.page.coui.widgets.CouiNavigationItemWidget
 import com.rosan.installer.ui.page.coui.widgets.CouiUninstallConfirmationDialog
 import com.rosan.installer.ui.page.main.installer.InstallerViewAction
 import com.rosan.installer.ui.page.main.installer.InstallerViewModel
+import com.rosan.installer.ui.theme.InstallerTheme.useCouiMonet
 import com.rosan.installer.ui.theme.couiSheetCardColors
 import com.rosan.installer.ui.util.isGestureNavigation
 import com.rosan.installer.ui.util.rememberErrorSuggestions
@@ -36,7 +37,6 @@ import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.SmallTitle
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import io.github.suqi8.coui.kmp.theme.COUITheme.isDynamicColor
 
 @Composable
 fun InstallFailedContent(
@@ -75,8 +75,8 @@ fun InstallFailedContent(
                 onClick = onClose,
                 text = stringResource(R.string.close),
                 colors = ButtonDefaults.textButtonColors(
-                    color = if (isDynamicColor) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
-                    textColor = if (isDynamicColor) COUITheme.colorScheme.onSecondaryContainer else COUITheme.colorScheme.onSecondaryVariant,
+                    color = if (useCouiMonet) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
+                    textColor = COUITheme.colorScheme.labelPrimary,
                 ),
                 modifier = Modifier.fillMaxWidth(),
             )

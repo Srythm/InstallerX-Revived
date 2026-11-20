@@ -23,6 +23,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,6 +52,7 @@ import com.rosan.installer.domain.history.model.OperationStatus
 import com.rosan.installer.ui.icons.AppCOUIIcons
 import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
 import com.rosan.installer.ui.page.coui.widgets.CouiBadge
+import com.rosan.installer.ui.page.coui.widgets.CouiContentDialog
 import com.rosan.installer.ui.page.main.settings.history.HistoryBadgeType
 import com.rosan.installer.ui.page.main.settings.history.HistoryViewAction
 import com.rosan.installer.ui.page.main.settings.history.HistoryViewModel
@@ -79,7 +82,6 @@ import io.github.suqi8.coui.kmp.theme.LocalDismissState
 import io.github.suqi8.coui.kmp.utils.PressFeedbackType
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.window.WindowBottomSheet
-import io.github.suqi8.coui.kmp.window.WindowDialog
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.blur.layerBackdrop
@@ -191,7 +193,7 @@ fun CouiHistoryPage(
                     InfiniteProgressIndicator()
                     Text(
                         text = stringResource(id = R.string.loading),
-                        style = COUITheme.textStyles.main,
+                        style = COUITheme.textStyles.bodyXL,
                     )
                 }
             }
@@ -269,12 +271,12 @@ fun CouiHistoryPage(
     selectedRecord?.let { record ->
         WindowBottomSheet(
             show = showRecordDetailSheet,
-            backgroundColor = COUITheme.colorScheme.surfaceContainerHigh,
+            backgroundColor = COUITheme.colorScheme.surface,
             startAction = {
                 val dismissState = LocalDismissState.current
                 CouiBackButton(
                     icon = AppCOUIIcons.Close,
-                    iconTint = COUITheme.colorScheme.onSurface,
+                    iconTint = COUITheme.colorScheme.labelPrimary,
                     onClick = { dismissState?.invoke() ?: run { showRecordDetailSheet = false } },
                 )
             },
@@ -307,8 +309,8 @@ private fun EmptyHistory(isHistoryEnabled: Boolean, modifier: Modifier = Modifie
                     R.string.history_disabled_title
                 },
             ),
-            style = COUITheme.textStyles.title2,
-            color = COUITheme.colorScheme.onSurface,
+            style = COUITheme.textStyles.displayXS,
+            color = COUITheme.colorScheme.labelPrimary,
         )
         Spacer(modifier = Modifier.size(8.dp))
         Text(
@@ -319,8 +321,8 @@ private fun EmptyHistory(isHistoryEnabled: Boolean, modifier: Modifier = Modifie
                     R.string.history_disabled_desc
                 },
             ),
-            style = COUITheme.textStyles.subtitle,
-            color = COUITheme.colorScheme.onSurfaceVariantSummary,
+            style = COUITheme.textStyles.buttonM,
+            color = COUITheme.colorScheme.labelSecondaryVariant,
         )
     }
 }
@@ -355,7 +357,7 @@ private fun HistoryRecordBriefCard(record: OperationHistoryModel, showIndicator:
             ) {
                 Text(
                     text = record.appLabel ?: record.packageName,
-                    fontSize = COUITheme.textStyles.headline1.fontSize,
+                    fontSize = COUITheme.textStyles.headlineXS.fontSize,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -372,7 +374,7 @@ private fun HistoryRecordBriefCard(record: OperationHistoryModel, showIndicator:
             }
             Text(
                 text = stringResource(record.status.labelRes()),
-                style = COUITheme.textStyles.subtitle,
+                style = COUITheme.textStyles.buttonM,
                 color = statusColor,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.padding(start = 12.dp),
@@ -388,16 +390,16 @@ private fun HistoryRecordBriefCard(record: OperationHistoryModel, showIndicator:
         ) {
             Text(
                 text = record.packageName,
-                style = COUITheme.textStyles.body1,
-                color = COUITheme.colorScheme.onSurfaceVariantSummary,
+                style = COUITheme.textStyles.bodyXL,
+                color = COUITheme.colorScheme.labelSecondaryVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
             Text(
                 text = record.timestamp.formatHistoryTime(),
-                style = COUITheme.textStyles.body1,
-                color = COUITheme.colorScheme.onSurfaceVariantSummary,
+                style = COUITheme.textStyles.bodyXL,
+                color = COUITheme.colorScheme.labelSecondaryVariant,
                 modifier = Modifier.padding(start = 12.dp),
             )
         }
@@ -507,7 +509,7 @@ private fun HistoryRecordDetailContent(record: OperationHistoryModel, isSystemAp
 private fun HistoryInfoLine(
     title: String,
     value: String,
-    valueColor: androidx.compose.ui.graphics.Color = COUITheme.colorScheme.onSurface,
+    valueColor: androidx.compose.ui.graphics.Color = COUITheme.colorScheme.labelPrimary,
 ) {
     val clipboard = LocalClipboard.current
     val context = LocalContext.current
@@ -530,13 +532,13 @@ private fun HistoryInfoLine(
     ) {
         Text(
             text = title,
-            style = COUITheme.textStyles.subtitle,
-            color = COUITheme.colorScheme.onSurfaceVariantSummary,
+            style = COUITheme.textStyles.buttonM,
+            color = COUITheme.colorScheme.labelSecondaryVariant,
             fontWeight = FontWeight.Medium,
         )
         Text(
             text = value,
-            style = COUITheme.textStyles.main,
+            style = COUITheme.textStyles.bodyXL,
             color = valueColor,
         )
     }
@@ -562,34 +564,34 @@ private fun sourcePathText(record: OperationHistoryModel): String = record.sourc
 
 @Composable
 private fun HistoryClearConfirmDialog(show: Boolean, onDismiss: () -> Unit, onConfirm: () -> Unit) {
-    WindowDialog(
+    CouiContentDialog(
         show = show,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.history_clear_confirm_title),
-        content = {
-            Column {
-                Text(
-                    text = stringResource(R.string.history_clear_confirm_desc),
-                    color = COUITheme.colorScheme.onSurface,
+        actions = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = onDismiss,
+                    text = stringResource(R.string.cancel),
                 )
-                Spacer(modifier = Modifier.size(24.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = onDismiss,
-                        text = stringResource(R.string.cancel),
-                    )
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = onConfirm,
-                        text = stringResource(R.string.clear),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                    )
-                }
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = onConfirm,
+                    text = stringResource(R.string.clear),
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                )
             }
+        },
+        content = {
+            Text(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                text = stringResource(R.string.history_clear_confirm_desc),
+                color = COUITheme.colorScheme.labelPrimary,
+            )
         },
     )
 }
@@ -601,34 +603,34 @@ private fun HistoryDisableConfirmDialog(
     onDisableAndKeep: () -> Unit,
     onDisableAndClear: () -> Unit,
 ) {
-    WindowDialog(
+    CouiContentDialog(
         show = show,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.history_disable_confirm_title),
-        content = {
-            Column {
-                Text(
-                    text = stringResource(R.string.history_disable_confirm_desc),
-                    color = COUITheme.colorScheme.onSurface,
+        actions = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = onDisableAndKeep,
+                    text = stringResource(R.string.history_disable_and_keep),
                 )
-                Spacer(modifier = Modifier.size(24.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = onDisableAndKeep,
-                        text = stringResource(R.string.history_disable_and_keep),
-                    )
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = onDisableAndClear,
-                        text = stringResource(R.string.history_disable_and_clear),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                    )
-                }
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = onDisableAndClear,
+                    text = stringResource(R.string.history_disable_and_clear),
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                )
             }
+        },
+        content = {
+            Text(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                text = stringResource(R.string.history_disable_confirm_desc),
+                color = COUITheme.colorScheme.labelPrimary,
+            )
         },
     )
 }

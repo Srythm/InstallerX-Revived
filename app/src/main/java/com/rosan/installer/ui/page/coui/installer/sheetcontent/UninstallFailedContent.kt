@@ -22,11 +22,11 @@ import com.rosan.installer.ui.page.coui.installer.components.AppInfoSlot
 import com.rosan.installer.ui.page.coui.installer.components.AppInfoState
 import com.rosan.installer.ui.page.coui.widgets.CouiErrorTextBlock
 import com.rosan.installer.ui.page.main.installer.InstallerViewModel
+import com.rosan.installer.ui.theme.InstallerTheme.useCouiMonet
 import com.rosan.installer.ui.util.isGestureNavigation
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import io.github.suqi8.coui.kmp.theme.COUITheme.isDynamicColor
 
 @Composable
 fun UninstallFailedContent(
@@ -67,8 +67,8 @@ fun UninstallFailedContent(
                 onClick = onClose,
                 text = stringResource(R.string.close),
                 colors = ButtonDefaults.textButtonColors(
-                    color = if (isDynamicColor) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
-                    textColor = if (isDynamicColor) COUITheme.colorScheme.onSecondaryContainer else COUITheme.colorScheme.onSecondaryVariant,
+                    color = if (useCouiMonet) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
+                    textColor = COUITheme.colorScheme.labelPrimary,
                 ),
                 modifier = Modifier.fillMaxWidth(),
             )

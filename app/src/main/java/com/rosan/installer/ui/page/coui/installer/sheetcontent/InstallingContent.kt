@@ -27,11 +27,11 @@ import com.rosan.installer.ui.page.coui.installer.components.AppInfoState
 import com.rosan.installer.ui.page.coui.widgets.ProgressButton
 import com.rosan.installer.ui.page.coui.widgets.ProgressButtonDefaults
 import com.rosan.installer.ui.page.main.installer.InstallerStage
+import com.rosan.installer.ui.theme.InstallerTheme.useCouiMonet
 import com.rosan.installer.ui.util.isGestureNavigation
 import io.github.suqi8.coui.kmp.basic.InfiniteProgressIndicator
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import io.github.suqi8.coui.kmp.theme.COUITheme.isDynamicColor
 
 @Composable
 fun InstallingContent(
@@ -65,8 +65,8 @@ fun InstallingContent(
         progressText?.let {
             Text(
                 text = it,
-                style = COUITheme.textStyles.footnote1,
-                color = COUITheme.colorScheme.onSurface,
+                style = COUITheme.textStyles.bodyS,
+                color = COUITheme.colorScheme.labelPrimary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -83,7 +83,7 @@ fun InstallingContent(
 
         // Dynamic content color based on progress fill
         val contentColor = if (animatedProgress < 0.45f) {
-            if (isDynamicColor) COUITheme.colorScheme.onSecondaryContainer else COUITheme.colorScheme.onSecondaryVariant
+            COUITheme.colorScheme.labelPrimary
         } else {
             COUITheme.colorScheme.onPrimary
         }
@@ -96,7 +96,7 @@ fun InstallingContent(
                 .navigationBarsPadding()
                 .padding(top = 24.dp, bottom = if (isGestureNavigation()) 24.dp else 0.dp),
             colors = ProgressButtonDefaults.progressButtonColors(
-                trackColor = if (isDynamicColor) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
+                trackColor = if (useCouiMonet) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
                 progressColor = COUITheme.colorScheme.primary,
                 contentColor = contentColor,
             ),

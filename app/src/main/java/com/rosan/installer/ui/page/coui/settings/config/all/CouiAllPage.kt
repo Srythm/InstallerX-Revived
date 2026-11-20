@@ -122,7 +122,7 @@ fun CouiAllPage(
                         InfiniteProgressIndicator()
                         Text(
                             text = stringResource(id = R.string.loading),
-                            style = COUITheme.textStyles.main,
+                            style = COUITheme.textStyles.bodyXL,
                         )
                     }
                 }
@@ -187,7 +187,7 @@ private fun DataItemWidget(viewModel: AllViewModel, entity: ConfigModel, isDefau
                 ) {
                     Text(
                         text = entity.name,
-                        style = COUITheme.textStyles.title4,
+                        style = COUITheme.textStyles.headlineS,
                         fontWeight = FontWeight.Medium,
                     )
                     if (isDefault) {
@@ -206,8 +206,8 @@ private fun DataItemWidget(viewModel: AllViewModel, entity: ConfigModel, isDefau
                 if (entity.description.isNotEmpty()) {
                     Text(
                         text = entity.description,
-                        color = COUITheme.colorScheme.onSurfaceVariantSummary,
-                        style = COUITheme.textStyles.subtitle,
+                        color = COUITheme.colorScheme.labelSecondaryVariant,
+                        style = COUITheme.textStyles.buttonM,
                     )
                 }
             }
@@ -233,7 +233,7 @@ private fun DataItemWidget(viewModel: AllViewModel, entity: ConfigModel, isDefau
                 Icon(
                     modifier = Modifier.size(20.dp),
                     imageVector = COUIIcons.Regular.Edit,
-                    tint = COUITheme.colorScheme.onSecondaryContainer,
+                    tint = COUITheme.colorScheme.labelPrimary,
                     contentDescription = stringResource(id = R.string.edit),
                 )
             }
@@ -247,7 +247,7 @@ private fun DataItemWidget(viewModel: AllViewModel, entity: ConfigModel, isDefau
                     Icon(
                         modifier = Modifier.size(20.dp),
                         imageVector = COUIIcons.Regular.Delete,
-                        tint = COUITheme.colorScheme.onSecondaryContainer,
+                        tint = COUITheme.colorScheme.labelPrimary,
                         contentDescription = stringResource(id = R.string.delete),
                     )
                 }
@@ -268,14 +268,14 @@ private fun DataItemWidget(viewModel: AllViewModel, entity: ConfigModel, isDefau
                         Icon(
                             modifier = Modifier.size(20.dp),
                             imageVector = COUIIcons.Regular.SelectAll,
-                            tint = COUITheme.colorScheme.onSecondaryContainer,
+                            tint = COUITheme.colorScheme.labelPrimary,
                             contentDescription = stringResource(id = R.string.apply),
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             modifier = Modifier.padding(end = 3.dp),
                             text = stringResource(R.string.config_scope),
-                            color = COUITheme.colorScheme.onSecondaryContainer,
+                            color = COUITheme.colorScheme.labelPrimary,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 15.sp,
                         )

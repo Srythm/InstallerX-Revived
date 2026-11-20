@@ -104,7 +104,7 @@ fun CouiDialogSettingsPage(useBlur: Boolean, viewModel: DialogSettingsViewModel 
                                 R.string.install_comparison_show_all_desc
                             },
                         ),
-                        items = comparisonOptions.map { DropdownItem(title = it) },
+                        items = comparisonOptions.map { DropdownItem(text = it) },
                         selectedIndex = if (uiState.hideIdenticalComparisons) 1 else 0,
                         onSelectedIndexChange = { index ->
                             viewModel.dispatch(

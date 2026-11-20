@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,8 +20,9 @@ import androidx.compose.ui.unit.dp
 import io.github.suqi8.coui.kmp.basic.BasicComponent
 import io.github.suqi8.coui.kmp.basic.Checkbox
 import io.github.suqi8.coui.kmp.basic.CheckboxDefaults
-import io.github.suqi8.coui.kmp.basic.Switch
+import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.Text
+import io.github.suqi8.coui.kmp.preference.SwitchPreference
 import io.github.suqi8.coui.kmp.theme.COUITheme
 
 @Composable
@@ -32,23 +34,23 @@ fun CouiSwitchWidget(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
-    val toggleAction = {
-        if (enabled) {
-            onCheckedChange(!checked)
-        }
-    }
-
-    BasicComponent(
+    SwitchPreference(
         title = title,
         summary = description,
         enabled = enabled,
-        onClick = toggleAction,
-        endActions = {
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                enabled = enabled,
-            )
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        startAction = if (icon != null) {
+            {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = if (enabled) COUITheme.colorScheme.labelPrimary else COUITheme.colorScheme.disabledNeutral,
+                )
+            }
+        } else {
+            null
         },
     )
 }
@@ -57,7 +59,7 @@ fun CouiSwitchWidget(
  * A BasicComponent variant that displays a Checkbox as its right action.
  * The entire row is clickable to toggle the checked state.
  *
- * @param icon Optional icon for the component (Note: not passed to BasicComponent, matching CouiSwitchWidget's provided structure).
+ * @param icon Optional leading icon, using the same enabled tint as the title.
  * @param title The main text title.
  * @param description The supporting text (summary).
  * @param enabled Controls the enabled state of the component and the Checkbox.
@@ -84,6 +86,19 @@ fun CouiCheckboxWidget(
         summary = description,
         enabled = enabled,
         onClick = toggleAction,
+        role = Role.Checkbox,
+        startAction = if (icon != null) {
+            {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = if (enabled) COUITheme.colorScheme.labelPrimary else COUITheme.colorScheme.disabledNeutral,
+                )
+            }
+        } else {
+            null
+        },
         endActions = {
             Checkbox(
                 state = ToggleableState(value = checked),
@@ -143,16 +158,16 @@ fun CouiMultiApkCheckboxWidget(
         ) {
             Text(
                 text = title,
-                style = COUITheme.textStyles.subtitle,
-                color = COUITheme.colorScheme.onSurface.copy(alpha = contentAlpha),
+                style = COUITheme.textStyles.buttonM,
+                color = COUITheme.colorScheme.labelPrimary.copy(alpha = contentAlpha),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             summary?.let {
                 Text(
                     text = it,
-                    style = COUITheme.textStyles.subtitle,
-                    color = COUITheme.colorScheme.onSurfaceVariantSummary,
+                    style = COUITheme.textStyles.buttonM,
+                    color = COUITheme.colorScheme.labelSecondaryVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )

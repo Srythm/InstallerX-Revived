@@ -43,6 +43,7 @@ import com.rosan.installer.ui.page.coui.widgets.WarningCard
 import com.rosan.installer.ui.page.main.installer.InstallerViewAction
 import com.rosan.installer.ui.page.main.installer.InstallerViewModel
 import com.rosan.installer.ui.theme.InstallerTheme
+import com.rosan.installer.ui.theme.InstallerTheme.useCouiMonet
 import com.rosan.installer.ui.theme.couiSheetCardColors
 import com.rosan.installer.ui.util.getSupportSubtitle
 import com.rosan.installer.ui.util.isGestureNavigation
@@ -53,7 +54,6 @@ import io.github.suqi8.coui.kmp.basic.HorizontalDivider
 import io.github.suqi8.coui.kmp.basic.SmallTitle
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import io.github.suqi8.coui.kmp.theme.COUITheme.isDynamicColor
 import io.github.suqi8.coui.kmp.utils.PressFeedbackType
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
@@ -182,8 +182,8 @@ fun InstallChoiceContent(
                         },
                         text = stringResource(if (isBack) R.string.back else R.string.cancel),
                         colors = ButtonDefaults.textButtonColors(
-                            color = if (isDynamicColor) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
-                            textColor = if (isDynamicColor) COUITheme.colorScheme.onSecondaryContainer else COUITheme.colorScheme.onSecondaryVariant,
+                            color = if (useCouiMonet) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
+                            textColor = COUITheme.colorScheme.labelPrimary,
                         ),
                         modifier = Modifier.weight(1f),
                     )
@@ -334,7 +334,7 @@ private fun ChoiceLazyList(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outline,
+                            color = COUITheme.colorScheme.divider,
                         )
                         itemsInGroup
                             .sortedByDescending { (it.app as? AppEntity.BaseEntity)?.versionCode ?: 0 }

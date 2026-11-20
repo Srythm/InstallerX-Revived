@@ -20,12 +20,12 @@ import androidx.compose.ui.unit.dp
 import com.rosan.installer.R
 import com.rosan.installer.domain.archive.model.UnarchiveErrorAction
 import com.rosan.installer.domain.archive.model.UnarchiveStatus
+import com.rosan.installer.ui.theme.InstallerTheme.useCouiMonet
 import com.rosan.installer.ui.util.isGestureNavigation
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import io.github.suqi8.coui.kmp.theme.COUITheme.isDynamicColor
 
 @Composable
 fun UnarchiveErrorContent(
@@ -42,16 +42,16 @@ fun UnarchiveErrorContent(
     ) {
         Text(
             text = unarchiveErrorTitle(status, installerLabel),
-            style = COUITheme.textStyles.title3,
-            color = COUITheme.colorScheme.onSurface,
+            style = COUITheme.textStyles.headlineM,
+            color = COUITheme.colorScheme.labelPrimary,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
         )
         Text(
             text = unarchiveErrorMessage(status, requiredBytes, installerLabel),
-            style = COUITheme.textStyles.body1,
-            color = COUITheme.colorScheme.onSurfaceVariantSummary,
+            style = COUITheme.textStyles.bodyXL,
+            color = COUITheme.colorScheme.labelSecondaryVariant,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 24.dp),
         )
@@ -67,8 +67,8 @@ fun UnarchiveErrorContent(
                 onClick = onClose,
                 text = stringResource(R.string.close),
                 colors = ButtonDefaults.textButtonColors(
-                    color = if (isDynamicColor) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
-                    textColor = if (isDynamicColor) COUITheme.colorScheme.onSecondaryContainer else COUITheme.colorScheme.onSecondaryVariant,
+                    color = if (useCouiMonet) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
+                    textColor = COUITheme.colorScheme.labelPrimary,
                 ),
                 modifier = Modifier.weight(1f),
             )

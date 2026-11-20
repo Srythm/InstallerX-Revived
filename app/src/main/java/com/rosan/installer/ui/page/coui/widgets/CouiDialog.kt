@@ -3,6 +3,7 @@ package com.rosan.installer.ui.page.coui.widgets
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -41,10 +42,68 @@ import io.github.suqi8.coui.kmp.basic.TextField
 import io.github.suqi8.coui.kmp.icon.COUIIcons
 import io.github.suqi8.coui.kmp.icon.basic.Check
 import io.github.suqi8.coui.kmp.icon.extended.Close
+import io.github.suqi8.coui.kmp.layout.DialogDefaults
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.theme.LocalDismissState
 import io.github.suqi8.coui.kmp.window.WindowBottomSheet
 import io.github.suqi8.coui.kmp.window.WindowDialog
+
+// Bodies own their scrolling; actions stay in COUI's fixed button slot.
+@Composable
+fun CouiContentDialog(
+    show: Boolean,
+    modifier: Modifier = Modifier,
+    title: String? = null,
+    titleColor: Color = DialogDefaults.titleColor(),
+    summary: String? = null,
+    onDismissRequest: (() -> Unit)? = null,
+    onDismissFinished: (() -> Unit)? = null,
+    insideMargin: DpSize = DialogDefaults.insideMargin,
+    actions: (@Composable () -> Unit)? = null,
+    content: @Composable () -> Unit,
+) {
+    WindowDialog(
+        show = show,
+        modifier = modifier,
+        title = title,
+        titleColor = titleColor,
+        summary = summary,
+        onDismissRequest = onDismissRequest,
+        onDismissFinished = onDismissFinished,
+        insideMargin = insideMargin,
+        customContent = {
+            Box(
+                modifier = Modifier.padding(
+                    start = insideMargin.width,
+                    top = if (title == null && summary == null) insideMargin.height else 0.dp,
+                    end = insideMargin.width,
+                    bottom = if (actions == null) {
+                        (insideMargin.height - DialogDefaults.CustomContentPaddingBottom).coerceAtLeast(0.dp)
+                    } else {
+                        0.dp
+                    },
+                ),
+            ) {
+                content()
+            }
+        },
+        content = {
+            actions?.let {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            start = DialogDefaults.insideMargin.width,
+                            end = DialogDefaults.insideMargin.width,
+                            bottom = insideMargin.height,
+                        ),
+                ) {
+                    it()
+                }
+            }
+        },
+    )
+}
 
 /**
  * A dialog to confirm an action, dynamically showing specific errors or a generic message.
@@ -70,53 +129,42 @@ fun CouiUnsavedChangesDialog(
         stringResource(R.string.config_dialog_title_unsaved_changes)
     }
 
-    WindowDialog(
+    CouiContentDialog(
         show = showState.value,
         onDismissRequest = onDismiss,
         title = dialogTitle,
+        actions = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = onDismiss,
+                    text = stringResource(R.string.back),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = onConfirm,
+                    text = stringResource(R.string.discard),
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                )
+            }
+        },
         content = {
-            // Reconstruct content: text body + action buttons
-            Column {
-                // Body content (errors or generic message)
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 if (hasSpecificErrors) {
-                    // If there are errors, display each one on a new line.
-                    Column {
-                        errorMessages.forEach { message ->
-                            Text(
-                                text = message,
-                                color = COUITheme.colorScheme.onSurface,
-                            )
-                        }
+                    errorMessages.forEach { message ->
+                        Text(
+                            text = message,
+                            color = COUITheme.colorScheme.labelPrimary,
+                        )
                     }
                 } else {
-                    // Otherwise, show the generic unsaved changes message.
                     Text(
                         text = stringResource(R.string.config_dialog_message_unsaved_changes),
-                        color = COUITheme.colorScheme.onSurface,
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(24.dp)) // Add spacing before buttons
-
-                // Button Row, aligned to the end.
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    // Coui TextButton for dismiss action
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = onDismiss,
-                        text = stringResource(R.string.back),
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    // Coui TextButton for confirm action with primary color styling
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = onConfirm,
-                        text = stringResource(R.string.discard), // Use text parameter directly
-                        colors = ButtonDefaults.textButtonColorsPrimary(), // Apply primary color style
+                        color = COUITheme.colorScheme.labelPrimary,
                     )
                 }
             }
@@ -128,18 +176,24 @@ fun CouiUnsavedChangesDialog(
 fun CouiUpdateDialog(showState: MutableState<Boolean>, onDismiss: () -> Unit) {
     val uriHandler = LocalUriHandler.current
 
-    WindowDialog(
+    CouiContentDialog(
         show = showState.value,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.get_update),
+        actions = {
+            TextButton(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onDismiss,
+                text = stringResource(R.string.cancel),
+            )
+        },
         content = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 Card(
-                    modifier = Modifier.padding(bottom = 8.dp),
                     colors = CardColors(
                         color = COUITheme.colorScheme.secondaryVariant,
-                        contentColor = COUITheme.colorScheme.onSurface,
-                        pressedColor = COUITheme.colorScheme.secondaryContainerVariant,
+                        contentColor = COUITheme.colorScheme.labelPrimary,
+                        pressedColor = COUITheme.colorScheme.cardPressed,
                     ),
                 ) {
                     BasicComponent(
@@ -169,11 +223,6 @@ fun CouiUpdateDialog(showState: MutableState<Boolean>, onDismiss: () -> Unit) {
                         },
                     )
                 }
-                TextButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = onDismiss,
-                    text = stringResource(R.string.cancel),
-                )
             }
         },
     )
@@ -194,48 +243,43 @@ fun CouiUninstallConfirmationDialog(
     onConfirm: () -> Unit,
     keepData: Boolean,
 ) {
-    WindowDialog(
+    CouiContentDialog(
         show = showState.value,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.suggestion_uninstall_alert_dialog_confirm_action),
-        content = {
-            Column {
-                val message = if (keepData) {
-                    stringResource(R.string.suggestion_uninstall_alert_dialog_confirm_uninstall_keep_data_message)
-                } else {
-                    stringResource(R.string.suggestion_uninstall_alert_dialog_confirm_uninstall_no_data_message)
-                }
-
-                Text(
-                    text = message,
-                    color = COUITheme.colorScheme.onSurface,
+        actions = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = onDismiss,
+                    text = stringResource(R.string.cancel),
                 )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = onDismiss,
-                        text = stringResource(R.string.cancel),
-                    )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = onConfirm,
-                        text = stringResource(R.string.confirm),
-                        colors = ButtonDefaults.textButtonColors(
-                            color = COUITheme.colorScheme.errorContainer,
-                            textColor = COUITheme.colorScheme.error,
-                        ),
-                    )
-                }
+                Spacer(modifier = Modifier.width(8.dp))
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = onConfirm,
+                    text = stringResource(R.string.confirm),
+                    colors = ButtonDefaults.textButtonColors(
+                        color = COUITheme.colorScheme.error.copy(alpha = 0.12f),
+                        textColor = COUITheme.colorScheme.error,
+                    ),
+                )
             }
+        },
+        content = {
+            val message = if (keepData) {
+                stringResource(R.string.suggestion_uninstall_alert_dialog_confirm_uninstall_keep_data_message)
+            } else {
+                stringResource(R.string.suggestion_uninstall_alert_dialog_confirm_uninstall_no_data_message)
+            }
+            Text(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                text = message,
+                color = COUITheme.colorScheme.labelPrimary,
+            )
         },
     )
 }
@@ -262,6 +306,7 @@ fun ErrorDisplaySheet(
         show = showState.value,
         onDismissRequest = onDismissRequest,
         onDismissFinished = onDismissFinished,
+        insideMargin = DpSize(24.dp, 0.dp),
         title = title,
         startAction = {
             val dismissState = LocalDismissState.current
@@ -342,46 +387,41 @@ fun CouiRootImplementationDialog(showState: MutableState<Boolean>, onDismiss: ()
 
     var selectedImpl by remember { mutableStateOf(rootModes.first()) }
 
-    WindowDialog(
+    CouiContentDialog(
         show = showState.value,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.lab_module_select_root_impl),
         insideMargin = DpSize(0.dp, 24.dp),
+        actions = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = onDismiss,
+                    text = stringResource(R.string.cancel),
+                )
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        onConfirm(selectedImpl)
+                        onDismiss()
+                    },
+                    text = stringResource(R.string.confirm),
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                )
+            }
+        },
         content = {
-            Column {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    rootModes.forEach { impl ->
-                        val isSelected = selectedImpl == impl
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                rootModes.forEach { impl ->
+                    val isSelected = selectedImpl == impl
 
-                        SelectableRow(
-                            text = implementationNames[impl] ?: impl.name,
-                            isSelected = isSelected,
-                            onClick = { selectedImpl = impl },
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = onDismiss,
-                        text = stringResource(R.string.cancel),
-                    )
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            onConfirm(selectedImpl)
-                            onDismiss()
-                        },
-                        text = stringResource(R.string.confirm),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                    SelectableRow(
+                        text = implementationNames[impl] ?: impl.name,
+                        isSelected = isSelected,
+                        onClick = { selectedImpl = impl },
                     )
                 }
             }
@@ -391,9 +431,9 @@ fun CouiRootImplementationDialog(showState: MutableState<Boolean>, onDismiss: ()
 
 @Composable
 private fun SelectableRow(text: String, isSelected: Boolean, onClick: () -> Unit) {
-    val backgroundColor = if (isSelected) COUITheme.colorScheme.tertiaryContainer else Color.Transparent
-    val contentColor = if (isSelected) COUITheme.colorScheme.onTertiaryContainer else COUITheme.colorScheme.onSurface
-    val indicatorColor = if (isSelected) COUITheme.colorScheme.onTertiaryContainer else Color.Transparent
+    val backgroundColor = if (isSelected) COUITheme.colorScheme.secondary else Color.Transparent
+    val contentColor = if (isSelected) COUITheme.colorScheme.primaryText else COUITheme.colorScheme.labelPrimary
+    val indicatorColor = if (isSelected) COUITheme.colorScheme.primaryText else Color.Transparent
 
     Row(
         modifier = Modifier
@@ -424,44 +464,46 @@ fun CouiUninstallPackageDialog(showState: MutableState<Boolean>, onDismiss: () -
     var packageName by remember { mutableStateOf("") }
     val isConfirmEnabled = packageName.isNotBlank()
 
-    WindowDialog(
+    CouiContentDialog(
         show = showState.value,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.uninstall_enter_package_name),
+        actions = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+            ) {
+                @Suppress("DEPRECATION")
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    text = stringResource(R.string.cancel),
+                    onClick = onDismiss,
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                @Suppress("DEPRECATION")
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    text = stringResource(R.string.confirm),
+                    onClick = {
+                        onConfirm(packageName)
+                        packageName = ""
+                    },
+                    enabled = isConfirmEnabled,
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                )
+            }
+        },
         content = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 Spacer(modifier = Modifier.height(8.dp))
                 TextField(
                     value = packageName,
                     onValueChange = { packageName = it },
                     label = stringResource(R.string.config_package_name),
                     useLabelAsPlaceholder = true,
+                    minHeight = 0.dp,
                     singleLine = true,
                 )
-                Spacer(modifier = Modifier.height(24.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                ) {
-                    @Suppress("DEPRECATION")
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        text = stringResource(R.string.cancel),
-                        onClick = onDismiss,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    @Suppress("DEPRECATION")
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        text = stringResource(R.string.confirm),
-                        onClick = {
-                            onConfirm(packageName)
-                            packageName = ""
-                        },
-                        enabled = isConfirmEnabled,
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                    )
-                }
             }
         },
     )
@@ -492,48 +534,43 @@ fun CouiGithubUpdateChannelSelectionDialog(
 
     var selectedChannel by remember { mutableStateOf(currentSelection) }
 
-    WindowDialog(
+    CouiContentDialog(
         show = showState.value,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.lab_update_github_proxy),
         insideMargin = DpSize(0.dp, 24.dp),
+        actions = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                @Suppress("DEPRECATION")
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = onDismiss,
+                    text = stringResource(R.string.cancel),
+                )
+                @Suppress("DEPRECATION")
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        onConfirm(selectedChannel)
+                        onDismiss()
+                    },
+                    text = stringResource(R.string.confirm),
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                )
+            }
+        },
         content = {
-            Column {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    channels.forEach { channel ->
-                        val isSelected = selectedChannel == channel
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                channels.forEach { channel ->
+                    val isSelected = selectedChannel == channel
 
-                        SelectableRow(
-                            text = stringResource(channelNames[channel]!!),
-                            isSelected = isSelected,
-                            onClick = { selectedChannel = channel },
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    @Suppress("DEPRECATION")
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = onDismiss,
-                        text = stringResource(R.string.cancel),
-                    )
-                    @Suppress("DEPRECATION")
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            onConfirm(selectedChannel)
-                            onDismiss()
-                        },
-                        text = stringResource(R.string.confirm),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                    SelectableRow(
+                        text = stringResource(channelNames[channel]!!),
+                        isSelected = isSelected,
+                        onClick = { selectedChannel = channel },
                     )
                 }
             }
@@ -551,44 +588,46 @@ fun CouiCustomGithubProxyUrlDialog(
     var url by remember { mutableStateOf(initialUrl) }
     val isConfirmEnabled = url.isNotBlank()
 
-    WindowDialog(
+    CouiContentDialog(
         show = showState.value,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.lab_update_github_proxy_custom),
+        actions = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+            ) {
+                @Suppress("DEPRECATION")
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    text = stringResource(R.string.cancel),
+                    onClick = onDismiss,
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                @Suppress("DEPRECATION")
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    text = stringResource(R.string.confirm),
+                    onClick = {
+                        onConfirm(url)
+                        onDismiss()
+                    },
+                    enabled = isConfirmEnabled,
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                )
+            }
+        },
         content = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 Spacer(modifier = Modifier.height(8.dp))
                 TextField(
                     value = url,
                     onValueChange = { url = it },
                     label = "GHProxy URL",
                     useLabelAsPlaceholder = true,
+                    minHeight = 0.dp,
                     singleLine = true,
                 )
-                Spacer(modifier = Modifier.height(24.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                ) {
-                    @Suppress("DEPRECATION")
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        text = stringResource(R.string.cancel),
-                        onClick = onDismiss,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    @Suppress("DEPRECATION")
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        text = stringResource(R.string.confirm),
-                        onClick = {
-                            onConfirm(url)
-                            onDismiss()
-                        },
-                        enabled = isConfirmEnabled,
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                    )
-                }
             }
         },
     )
@@ -603,44 +642,44 @@ fun CouiCustomAuthorizerDialog(
 ) {
     var authorizer by remember(initialAuthorizer) { mutableStateOf(initialAuthorizer) }
 
-    WindowDialog(
+    CouiContentDialog(
         show = showState.value,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.config_authorizer_customize),
-        content = {
-            Column {
-                Spacer(modifier = Modifier.height(8.dp))
-                TextField(
-                    value = authorizer,
-                    onValueChange = { authorizer = it },
-                    label = stringResource(R.string.config_authorizer_customize),
-                    useLabelAsPlaceholder = true,
-                    singleLine = false,
-                    maxLines = 4,
+        actions = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+            ) {
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    text = stringResource(R.string.cancel),
+                    onClick = onDismiss,
                 )
-                Spacer(modifier = Modifier.height(24.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                ) {
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        text = stringResource(R.string.cancel),
-                        onClick = onDismiss,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        text = stringResource(R.string.confirm),
-                        onClick = {
-                            onConfirm(authorizer)
-                            onDismiss()
-                        },
-                        enabled = authorizer.isNotBlank(),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                    )
-                }
+                Spacer(modifier = Modifier.width(8.dp))
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    text = stringResource(R.string.confirm),
+                    onClick = {
+                        onConfirm(authorizer)
+                        onDismiss()
+                    },
+                    enabled = authorizer.isNotBlank(),
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                )
             }
+        },
+        content = {
+            TextField(
+                modifier = Modifier.padding(top = 8.dp),
+                value = authorizer,
+                onValueChange = { authorizer = it },
+                label = stringResource(R.string.config_authorizer_customize),
+                useLabelAsPlaceholder = true,
+                minHeight = 0.dp,
+                singleLine = false,
+                maxLines = 4,
+            )
         },
     )
 }

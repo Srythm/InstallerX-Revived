@@ -217,12 +217,12 @@ private fun ExtendedMenuLazyList(
 
                         val unifiedEntries = remember(modeSelf, modeInitiator, installerFollowSettingsText, managedPackages) {
                             val list = mutableListOf(
-                                DropdownItem(title = modeSelf),
-                                DropdownItem(title = modeInitiator),
-                                DropdownItem(title = installerFollowSettingsText),
+                                DropdownItem(text = modeSelf),
+                                DropdownItem(text = modeInitiator),
+                                DropdownItem(text = installerFollowSettingsText),
                             )
                             managedPackages.forEach { pkg ->
-                                list.add(DropdownItem(title = pkg.name))
+                                list.add(DropdownItem(text = pkg.name))
                             }
                             list
                         }
@@ -280,7 +280,7 @@ private fun ExtendedMenuLazyList(
                         val userEntries = remember(availableUsers) {
                             // Ensure consistent order, e.g., sort by ID
                             availableUsers.entries.sortedBy { it.key }.map { (id, name) ->
-                                DropdownItem(title = "$name ($id)")
+                                DropdownItem(text = "$name ($id)")
                             }
                         }
                         val userKeysSorted = remember(availableUsers) {

@@ -39,7 +39,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -83,6 +85,7 @@ import com.rosan.installer.ui.library.effect.BgEffectBackground
 import com.rosan.installer.ui.navigation.LocalNavigator
 import com.rosan.installer.ui.navigation.Route
 import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
+import com.rosan.installer.ui.page.coui.widgets.CouiContentDialog
 import com.rosan.installer.ui.page.coui.widgets.CouiNavigationItemWidget
 import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
 import com.rosan.installer.ui.page.coui.widgets.CouiUpdateDialog
@@ -121,7 +124,6 @@ import io.github.suqi8.coui.kmp.theme.LocalDismissState
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
 import io.github.suqi8.coui.kmp.window.WindowBottomSheet
-import io.github.suqi8.coui.kmp.window.WindowDialog
 import io.github.suqi8.coui.kmp.window.WindowListPopup
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.blur.BlendColorEntry
@@ -177,10 +179,12 @@ fun CouiAboutPage(
         onDismiss = { showUpdateDialog.value = false },
     )
 
-    WindowDialog(show = showLoadingDialog.value) {
+    CouiContentDialog(show = showLoadingDialog.value) {
         BackHandler { /* Block Input */ }
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             InfiniteProgressIndicator()
@@ -257,9 +261,9 @@ private fun CouiAboutPageInternal(
                 color = if (topBarBackdrop != null && scrollProgress == 1f) {
                     Color.Transparent
                 } else {
-                    COUITheme.colorScheme.surface.copy(alpha = if (scrollProgress == 1f) 1f else 0f)
+                    COUITheme.colorScheme.backgroundWithCard.copy(alpha = if (scrollProgress == 1f) 1f else 0f)
                 },
-                titleColor = COUITheme.colorScheme.onSurface.copy(alpha = scrollProgress),
+                titleColor = COUITheme.colorScheme.labelPrimary.copy(alpha = scrollProgress),
                 defaultWindowInsetsPadding = false,
                 navigationIcon = { CouiBackButton(onClick = { navigator.pop() }) },
             )
@@ -322,7 +326,7 @@ private fun AboutContentBody(
     var saturation by remember { mutableFloatStateOf(1f) }
 
     val backdrop = rememberCouiBlurBackdrop(useBlur)
-    val surface = COUITheme.colorScheme.surface.copy(alpha = 0.6f)
+    val surface = COUITheme.colorScheme.backgroundWithCard.copy(alpha = 0.6f)
 
     // Blend configurations map
     val blendConfigs = remember(isDark) {
@@ -393,7 +397,7 @@ private fun AboutContentBody(
         bgModifier = backdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier,
         effectBackground = effectBackground.value,
         alpha = { 1f - scrollProgressProvider() },
-        surfaceColor = COUITheme.colorScheme.surface,
+        surfaceColor = COUITheme.colorScheme.backgroundWithCard,
     ) {
         // Sticky animated header section
         Column(
@@ -486,7 +490,7 @@ private fun AboutContentBody(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    color = COUITheme.colorScheme.onSurfaceVariantSummary,
+                    color = COUITheme.colorScheme.labelSecondaryVariant,
                     text = versionInfoText,
                     fontSize = 14.sp,
                     textAlign = TextAlign.Center,
@@ -568,7 +572,7 @@ private fun AboutContentBody(
                                 },
                             ),
                         colors = CardDefaults.defaultColors(
-                            if (backdrop != null && blurEnable) Color.Transparent else COUITheme.colorScheme.surfaceContainer,
+                            if (backdrop != null && blurEnable) Color.Transparent else COUITheme.colorScheme.cardBackground,
                             Color.Transparent,
                         ),
                     ) {
@@ -622,7 +626,7 @@ private fun AboutContentBody(
                                     },
                                 ),
                             colors = CardDefaults.defaultColors(
-                                if (backdrop != null && blurEnable) Color.Transparent else COUITheme.colorScheme.surfaceContainer,
+                                if (backdrop != null && blurEnable) Color.Transparent else COUITheme.colorScheme.cardBackground,
                                 Color.Transparent,
                             ),
                         ) {
@@ -694,13 +698,13 @@ private fun AboutContentBody(
                                 modifier = Modifier
                                     .padding(end = 8.dp)
                                     .align(Alignment.CenterVertically),
-                                fontSize = COUITheme.textStyles.body2.fontSize,
-                                color = COUITheme.colorScheme.onSurfaceVariantActions,
+                                fontSize = COUITheme.textStyles.bodyM.fontSize,
+                                color = COUITheme.colorScheme.labelTertiary,
                                 textAlign = TextAlign.End,
                             )
 
                             DropdownArrowEndAction(
-                                actionColor = COUITheme.colorScheme.onSurfaceVariantActions,
+                                actionColor = COUITheme.colorScheme.labelTertiary,
                             )
 
                             WindowListPopup(
@@ -887,7 +891,7 @@ private fun AboutContentBody(
 private fun ValueText(text: String) {
     Text(
         text = text,
-        fontSize = COUITheme.textStyles.body2.fontSize,
-        color = COUITheme.colorScheme.onSurfaceVariantActions,
+        fontSize = COUITheme.textStyles.bodyM.fontSize,
+        color = COUITheme.colorScheme.labelTertiary,
     )
 }

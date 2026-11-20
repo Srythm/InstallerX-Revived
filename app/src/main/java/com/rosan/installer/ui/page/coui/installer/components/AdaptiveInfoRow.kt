@@ -42,7 +42,7 @@ internal fun AdaptiveInfoRow(
             // Index 0: Label
             Text(
                 text = stringResource(labelResId),
-                style = COUITheme.textStyles.body2,
+                style = COUITheme.textStyles.bodyM,
                 fontWeight = FontWeight.SemiBold,
             )
 
@@ -50,7 +50,7 @@ internal fun AdaptiveInfoRow(
                 // Index 1: Old text
                 Text(
                     text = oldTextContent,
-                    style = COUITheme.textStyles.body2,
+                    style = COUITheme.textStyles.bodyM,
                     textAlign = TextAlign.End,
                 )
                 // Index 2: Arrow
@@ -64,14 +64,14 @@ internal fun AdaptiveInfoRow(
                 // Index 3: New text
                 Text(
                     text = newValue,
-                    style = COUITheme.textStyles.body2,
+                    style = COUITheme.textStyles.bodyM,
                     textAlign = TextAlign.End,
                 )
             } else {
                 // Index 1: Single text when no comparison
                 Text(
                     text = newValue,
-                    style = COUITheme.textStyles.body2,
+                    style = COUITheme.textStyles.bodyM,
                     textAlign = TextAlign.End,
                 )
             }

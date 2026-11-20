@@ -201,7 +201,7 @@ fun CouiDefaultInstallerPage(useBlur: Boolean, viewModel: HomePageViewModel = ko
                             title = stringResource(R.string.home_lsp_inxlocker_title),
                             titleColor = BasicComponentColors(
                                 color = COUITheme.colorScheme.primary,
-                                disabledColor = COUITheme.colorScheme.disabledOnSecondaryVariant,
+                                disabledColor = COUITheme.colorScheme.disabledNeutral,
                             ),
                             onClick = { uriHandler.openUri("https://github.com/Chimioo/InxLocker") },
                         )

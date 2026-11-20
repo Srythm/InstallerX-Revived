@@ -35,6 +35,7 @@ import com.mikepenz.aboutlibraries.Libs
 import com.mikepenz.aboutlibraries.entity.Library
 import com.mikepenz.aboutlibraries.ui.compose.util.author
 import com.rosan.installer.R
+import com.rosan.installer.ui.page.coui.widgets.CouiContentDialog
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
 import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.CardDefaults
@@ -46,7 +47,6 @@ import io.github.suqi8.coui.kmp.theme.LocalDismissState
 import io.github.suqi8.coui.kmp.utils.PressFeedbackType
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
-import io.github.suqi8.coui.kmp.window.WindowDialog
 
 @Composable
 fun LibrariesContainer(modifier: Modifier = Modifier, contentPadding: PaddingValues, libraries: Libs?) {
@@ -78,79 +78,71 @@ fun LibrariesContainer(modifier: Modifier = Modifier, contentPadding: PaddingVal
             library.licenses.joinToString(", ") { it.name },
         )
 
-        WindowDialog(
+        CouiContentDialog(
             show = showLicenseDialog,
             title = library.name,
             summary = licenseSummary,
             onDismissRequest = { showLicenseDialog = false },
             onDismissFinished = { selectedLibrary = null },
-            content = {
+            actions = {
                 val dismissState = LocalDismissState.current
-                Column(
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    if (!library.website.isNullOrBlank()) {
+                        TextButton(
+                            modifier = Modifier.weight(1f),
+                            onClick = { uriHandler.openUri(library.website!!) },
+                            text = stringResource(R.string.visit_home_page),
+                        )
+                    }
+
+                    TextButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = { dismissState?.invoke() },
+                        text = stringResource(R.string.close),
+                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                    )
+                }
+            },
+            content = {
+                LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 420.dp),
+                        .heightIn(max = 420.dp)
+                        .scrollEndHaptic()
+                        .overScrollVertical(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    overscrollEffect = null,
                 ) {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f, fill = false)
-                            .scrollEndHaptic()
-                            .overScrollVertical(),
-                        contentPadding = PaddingValues(bottom = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        overscrollEffect = null,
-                    ) {
-                        items(library.licenses.toList()) { license ->
-                            CompositionLocalProvider(LocalSquircleEnabled provides false) {
-                                Card(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = CardDefaults.defaultColors(
-                                        color = COUITheme.colorScheme.surfaceContainerHighest,
-                                    ),
-                                ) {
-                                    Column(modifier = Modifier.padding(16.dp)) {
-                                        Text(
-                                            text = license.name,
-                                            style = COUITheme.textStyles.title4,
-                                            color = COUITheme.colorScheme.primary,
-                                            modifier = Modifier.clickable {
-                                                license.url?.let { uriHandler.openUri(it) }
-                                            },
-                                        )
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Text(
-                                            text = license.licenseContent
-                                                ?: stringResource(R.string.no_license_text),
-                                            style = COUITheme.textStyles.body2,
-                                            color = COUITheme.colorScheme.onSurfaceContainer,
-                                        )
-                                    }
+                    items(library.licenses.toList()) { license ->
+                        CompositionLocalProvider(LocalSquircleEnabled provides false) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.defaultColors(
+                                    color = COUITheme.colorScheme.surfaceContainerHighest,
+                                ),
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = license.name,
+                                        style = COUITheme.textStyles.headlineS,
+                                        color = COUITheme.colorScheme.primary,
+                                        modifier = Modifier.clickable {
+                                            license.url?.let { uriHandler.openUri(it) }
+                                        },
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = license.licenseContent
+                                            ?: stringResource(R.string.no_license_text),
+                                        style = COUITheme.textStyles.bodyM,
+                                        color = COUITheme.colorScheme.labelPrimary,
+                                    )
                                 }
                             }
                         }
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        if (!library.website.isNullOrBlank()) {
-                            TextButton(
-                                modifier = Modifier.weight(1f),
-                                onClick = { uriHandler.openUri(library.website!!) },
-                                text = stringResource(R.string.visit_home_page),
-                            )
-                        }
-
-                        TextButton(
-                            modifier = Modifier.weight(1f),
-                            onClick = { dismissState?.invoke() },
-                            text = stringResource(R.string.close),
-                            colors = ButtonDefaults.textButtonColorsPrimary(),
-                        )
                     }
                 }
             },
@@ -177,7 +169,7 @@ fun LibraryCard(library: Library, modifier: Modifier = Modifier, onClick: () -> 
             ) {
                 Text(
                     text = library.name,
-                    style = COUITheme.textStyles.title2,
+                    style = COUITheme.textStyles.displayXS,
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 1,
                     modifier = Modifier
@@ -187,8 +179,8 @@ fun LibraryCard(library: Library, modifier: Modifier = Modifier, onClick: () -> 
                 library.artifactVersion?.let {
                     Text(
                         text = it,
-                        style = COUITheme.textStyles.headline1,
-                        color = COUITheme.colorScheme.secondary,
+                        style = COUITheme.textStyles.headlineXS,
+                        color = COUITheme.colorScheme.divider,
                     )
                 }
             }
@@ -197,8 +189,8 @@ fun LibraryCard(library: Library, modifier: Modifier = Modifier, onClick: () -> 
 
             Text(
                 text = library.author,
-                style = COUITheme.textStyles.body1,
-                color = COUITheme.colorScheme.onSurface,
+                style = COUITheme.textStyles.bodyXL,
+                color = COUITheme.colorScheme.labelPrimary,
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -206,8 +198,8 @@ fun LibraryCard(library: Library, modifier: Modifier = Modifier, onClick: () -> 
             library.licenses.forEach { license ->
                 Card(
                     colors = CardDefaults.defaultColors(
-                        color = COUITheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
-                        contentColor = COUITheme.colorScheme.onSurface,
+                        color = COUITheme.colorScheme.containerTheme.copy(alpha = 0.2f),
+                        contentColor = COUITheme.colorScheme.labelPrimary,
                     ),
                 ) {
                     Box(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {

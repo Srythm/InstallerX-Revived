@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,10 +38,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rosan.installer.R
 import com.rosan.installer.ui.icons.AppIcons
-import com.rosan.installer.ui.library.FloatingBottomBar
-import com.rosan.installer.ui.library.FloatingBottomBarDefaults
-import com.rosan.installer.ui.library.FloatingBottomBarItem
-import com.rosan.installer.ui.library.FloatingBottomBarMode
 import com.rosan.installer.ui.navigation.LocalNavigator
 import com.rosan.installer.ui.navigation.MainPagerState
 import com.rosan.installer.ui.navigation.Route
@@ -50,7 +45,10 @@ import com.rosan.installer.ui.page.coui.settings.config.all.CouiAllPage
 import com.rosan.installer.ui.page.coui.settings.history.CouiHistoryPage
 import com.rosan.installer.ui.page.coui.settings.home.CouiHomePage
 import com.rosan.installer.ui.page.coui.settings.preferred.CouiPreferredPage
+import com.rosan.installer.ui.theme.ProvideCouiMaterialBackdrop
 import io.github.suqi8.coui.kmp.basic.FloatingActionButton
+import io.github.suqi8.coui.kmp.basic.FloatingNavigationBar
+import io.github.suqi8.coui.kmp.basic.FloatingNavigationBarItem
 import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.NavigationBar
 import io.github.suqi8.coui.kmp.basic.NavigationBarItem
@@ -69,57 +67,21 @@ import top.yukonga.miuix.kmp.blur.LayerBackdrop as CouiLayerBackdrop
 import top.yukonga.miuix.kmp.blur.layerBackdrop as couiLayerBackdrop
 import top.yukonga.miuix.kmp.blur.textureBlur
 
-/**
- * Reusable Floating Bottom Bar
- */
 @Composable
 private fun SettingsFloatingBottomBar(
     mainPagerState: MainPagerState,
     navigationItems: List<NavigationItem>,
-    floatingBottomBarMode: FloatingBottomBarMode,
-    floatingBackdrop: CouiLayerBackdrop,
+    backdrop: CouiLayerBackdrop?,
 ) {
-    Box(
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        FloatingBottomBar(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(
-                    bottom = 12.dp + WindowInsets.navigationBars.asPaddingValues()
-                        .calculateBottomPadding(),
-                ),
-            selectedIndex = { mainPagerState.selectedPage },
-            onSelected = { index ->
-                mainPagerState.animateToPage(index)
-            },
-            backdrop = floatingBackdrop,
-            tabsCount = navigationItems.size,
-            mode = floatingBottomBarMode,
-            colors = FloatingBottomBarDefaults.colors(
-                containerColor = COUITheme.colorScheme.surfaceContainer,
-                indicatorColor = COUITheme.colorScheme.primary,
-                contentColor = COUITheme.colorScheme.onSurface,
-            ),
-        ) {
+    ProvideCouiMaterialBackdrop(backdrop) {
+        FloatingNavigationBar(materialEffect = backdrop != null) {
             navigationItems.forEachIndexed { index, item ->
-                FloatingBottomBarItem(
+                FloatingNavigationBarItem(
+                    selected = mainPagerState.selectedPage == index,
                     onClick = { mainPagerState.animateToPage(index) },
-                    modifier = Modifier.defaultMinSize(minWidth = 76.dp),
-                ) {
-                    Icon(
-                        imageVector = item.icon,
-                        contentDescription = item.label,
-                    )
-                    Text(
-                        text = item.label,
-                        fontSize = 11.sp,
-                        lineHeight = 14.sp,
-                        maxLines = 1,
-                        softWrap = false,
-                        overflow = TextOverflow.Visible,
-                    )
-                }
+                    icon = item.icon,
+                    label = item.label,
+                )
             }
         }
     }
@@ -135,7 +97,6 @@ fun SettingsCompactLayout(
     navigationItems: List<NavigationItem>,
     snackbarHostState: SnackbarHostState,
     useFloatingBottomBar: Boolean,
-    floatingBottomBarMode: FloatingBottomBarMode,
     floatingBackdrop: CouiLayerBackdrop?,
     couiBackdrop: CouiLayerBackdrop?,
 ) {
@@ -144,16 +105,15 @@ fun SettingsCompactLayout(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            if (useFloatingBottomBar && floatingBackdrop != null) {
+            if (useFloatingBottomBar) {
                 SettingsFloatingBottomBar(
                     mainPagerState = mainPagerState,
                     navigationItems = navigationItems,
-                    floatingBottomBarMode = floatingBottomBarMode,
-                    floatingBackdrop = floatingBackdrop,
+                    backdrop = floatingBackdrop,
                 )
-            } else if (!useFloatingBottomBar) {
+            } else {
                 val blurActive = couiBackdrop != null
-                val barColor = if (blurActive) Color.Transparent else COUITheme.colorScheme.surface
+                val barColor = if (blurActive) Color.Transparent else COUITheme.colorScheme.bottomBar
                 Box(
                     modifier = Modifier
                         .then(
@@ -164,7 +124,7 @@ fun SettingsCompactLayout(
                                     blurRadius = 25f,
                                     colors = BlurColors(
                                         blendColors = listOf(
-                                            BlendColorEntry(color = COUITheme.colorScheme.surface.copy(0.8f)),
+                                            BlendColorEntry(color = COUITheme.colorScheme.bottomBar.copy(alpha = 0.8f)),
                                         ),
                                     ),
                                 )
@@ -198,18 +158,18 @@ fun SettingsCompactLayout(
                 enter = scaleIn(),
                 exit = scaleOut(),
             ) {
-                FloatingActionButton(
-                    modifier = Modifier.padding(end = 16.dp),
-                    containerColor = if (COUITheme.isDynamicColor) COUITheme.colorScheme.primary else COUITheme.colorScheme.background,
-                    shadowElevation = 2.dp,
-                    onClick = { navigator.push(Route.EditConfig(-1)) },
-                ) {
-                    Icon(
-                        imageVector = AppIcons.Add,
-                        modifier = Modifier.size(40.dp),
-                        contentDescription = stringResource(id = R.string.add),
-                        tint = if (COUITheme.isDynamicColor) COUITheme.colorScheme.onPrimary else COUITheme.colorScheme.primary,
-                    )
+                ProvideCouiMaterialBackdrop(if (useFloatingBottomBar) floatingBackdrop else couiBackdrop) {
+                    FloatingActionButton(
+                        modifier = Modifier.padding(end = 16.dp),
+                        material = couiBackdrop != null,
+                        onClick = { navigator.push(Route.EditConfig(-1)) },
+                    ) {
+                        Icon(
+                            imageVector = AppIcons.Add,
+                            modifier = Modifier.size(24.dp),
+                            contentDescription = stringResource(id = R.string.add),
+                        )
+                    }
                 }
             }
         },
@@ -238,7 +198,6 @@ fun SettingsWideScreenLayout(
     navigationItems: List<NavigationItem>,
     snackbarHostState: SnackbarHostState,
     useFloatingBottomBar: Boolean,
-    floatingBottomBarMode: FloatingBottomBarMode,
     floatingBackdrop: CouiLayerBackdrop?,
     couiBackdrop: CouiLayerBackdrop?,
 ) {
@@ -249,7 +208,6 @@ fun SettingsWideScreenLayout(
             navigationItems = navigationItems,
             snackbarHostState = snackbarHostState,
             useFloatingBottomBar = true,
-            floatingBottomBarMode = floatingBottomBarMode,
             floatingBackdrop = floatingBackdrop,
             couiBackdrop = couiBackdrop,
         )
@@ -268,7 +226,7 @@ fun SettingsWideScreenLayout(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .background(COUITheme.colorScheme.surface),
+                .background(COUITheme.colorScheme.backgroundWithCard),
         ) {
             NavigationRail(
                 mode = railMode,
@@ -296,7 +254,6 @@ fun SettingsWideScreenLayout(
                     navigationItems = navigationItems,
                     snackbarHostState = snackbarHostState,
                     useFloatingBottomBar = false,
-                    floatingBottomBarMode = FloatingBottomBarMode.None,
                     floatingBackdrop = floatingBackdrop,
                     couiBackdrop = couiBackdrop,
                     contentWindowInsets = contentWindowInsets,
@@ -313,7 +270,6 @@ private fun SettingsWideContent(
     navigationItems: List<NavigationItem>,
     snackbarHostState: SnackbarHostState,
     useFloatingBottomBar: Boolean,
-    floatingBottomBarMode: FloatingBottomBarMode,
     floatingBackdrop: CouiLayerBackdrop?,
     couiBackdrop: CouiLayerBackdrop?,
     contentWindowInsets: WindowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout),
@@ -323,12 +279,11 @@ private fun SettingsWideContent(
         modifier = Modifier.fillMaxSize(),
         contentWindowInsets = contentWindowInsets,
         bottomBar = {
-            if (useFloatingBottomBar && floatingBackdrop != null) {
+            if (useFloatingBottomBar) {
                 SettingsFloatingBottomBar(
                     mainPagerState = mainPagerState,
                     navigationItems = navigationItems,
-                    floatingBottomBarMode = floatingBottomBarMode,
-                    floatingBackdrop = floatingBackdrop,
+                    backdrop = floatingBackdrop,
                 )
             }
         },
@@ -339,18 +294,18 @@ private fun SettingsWideContent(
                 enter = scaleIn(),
                 exit = scaleOut(),
             ) {
-                FloatingActionButton(
-                    modifier = Modifier.padding(end = 16.dp),
-                    containerColor = if (COUITheme.isDynamicColor) COUITheme.colorScheme.primary else COUITheme.colorScheme.background,
-                    shadowElevation = 2.dp,
-                    onClick = { navigator.push(Route.EditConfig(-1)) },
-                ) {
-                    Icon(
-                        imageVector = AppIcons.Add,
-                        modifier = Modifier.size(40.dp),
-                        contentDescription = stringResource(id = R.string.add),
-                        tint = if (COUITheme.isDynamicColor) COUITheme.colorScheme.onPrimary else COUITheme.colorScheme.primary,
-                    )
+                ProvideCouiMaterialBackdrop(if (useFloatingBottomBar) floatingBackdrop else couiBackdrop) {
+                    FloatingActionButton(
+                        modifier = Modifier.padding(end = 16.dp),
+                        material = couiBackdrop != null,
+                        onClick = { navigator.push(Route.EditConfig(-1)) },
+                    ) {
+                        Icon(
+                            imageVector = AppIcons.Add,
+                            modifier = Modifier.size(24.dp),
+                            contentDescription = stringResource(id = R.string.add),
+                        )
+                    }
                 }
             }
         },
@@ -399,7 +354,7 @@ private fun SettingsPagerContent(
             .then(if (useFloatingBottomBar && floatingBackdrop != null) Modifier.couiLayerBackdrop(floatingBackdrop) else Modifier)
             .then(if (!useFloatingBottomBar && couiBackdrop != null) Modifier.couiLayerBackdrop(couiBackdrop) else Modifier),
     ) { page ->
-        val useBlur = floatingBackdrop != null && couiBackdrop != null
+        val useBlur = couiBackdrop != null
         when (page) {
             0 -> CouiHomePage(
                 enableBlur = useBlur,

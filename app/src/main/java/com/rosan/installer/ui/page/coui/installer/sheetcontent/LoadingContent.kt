@@ -29,8 +29,8 @@ fun LoadingContent(statusText: String) {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = statusText,
-                color = COUITheme.colorScheme.onSurface,
-                style = COUITheme.textStyles.body1,
+                color = COUITheme.colorScheme.labelPrimary,
+                style = COUITheme.textStyles.bodyXL,
             )
         }
     }

@@ -152,8 +152,8 @@ fun AppInfoSlot(
                     )
                 },
             text = appInfo.label,
-            style = COUITheme.textStyles.title2,
-            color = COUITheme.colorScheme.onSurface,
+            style = COUITheme.textStyles.displayXS,
+            color = COUITheme.colorScheme.labelPrimary,
         )
         Text(
             modifier = Modifier
@@ -171,8 +171,8 @@ fun AppInfoSlot(
                     )
                 },
             text = appInfo.packageName,
-            style = COUITheme.textStyles.subtitle,
-            color = COUITheme.colorScheme.onSurfaceVariantSummary,
+            style = COUITheme.textStyles.buttonM,
+            color = COUITheme.colorScheme.labelSecondaryVariant,
         )
     }
 }

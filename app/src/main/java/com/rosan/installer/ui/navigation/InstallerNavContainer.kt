@@ -74,7 +74,7 @@ fun InstallerNavContainer(uiState: ThemeState) {
             uiState.predictiveBackAnimation == PredictiveBackAnimation.Scale ||
             uiState.predictiveBackAnimation == PredictiveBackAnimation.Classic
         val backdropColor = if (uiState.useCoui) {
-            COUITheme.colorScheme.surface
+            COUITheme.colorScheme.backgroundWithCard
         } else {
             MaterialTheme.colorScheme.surfaceContainer
         }

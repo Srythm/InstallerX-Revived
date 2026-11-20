@@ -19,6 +19,7 @@ import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.colorResource
@@ -28,8 +29,10 @@ import com.rosan.installer.domain.settings.model.preferences.theme.ThemeColorSpe
 import com.rosan.installer.domain.settings.model.preferences.theme.ThemeMode
 import com.rosan.installer.ui.theme.material.animateAsState
 import com.rosan.installer.ui.theme.material.dynamicColorScheme
+import io.github.suqi8.coui.kmp.effect.LocalCOUIMaterialEffectEnabled
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.theme.Colors
+import io.github.suqi8.coui.kmp.theme.LocalContentColor as LocalCouiContentColor
 import io.github.suqi8.coui.kmp.theme.darkColorScheme as couiDarkColorScheme
 import io.github.suqi8.coui.kmp.theme.lightColorScheme as couiLightColorScheme
 
@@ -87,6 +90,7 @@ fun InstallerTheme(
     useCouiMonet: Boolean,
     seedColor: Color,
     useAmoled: Boolean = false,
+    useBlur: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val preservedContent = remember {
@@ -104,7 +108,11 @@ fun InstallerTheme(
     // ColorOS and other OPlus ROMs expose the exact palette seed the user picked in the system
     // settings, which is more accurate than the quantized android.R.color.system_accent1_500
     // bucket. Roms without the setting fall back to that bucket.
-    val systemSeedColor = rememberSystemSeedColor()
+    val systemSeedColor = if (useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        rememberSystemSeedColor()
+    } else {
+        null
+    }
     val keyColor = if (useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         systemSeedColor ?: colorResource(id = android.R.color.system_accent1_500)
     } else {
@@ -144,6 +152,7 @@ fun InstallerTheme(
         LocalUseCouiMonet provides useCouiMonet,
         LocalUseDynamicColor provides useDynamicColor,
         LocalThemeColorSpec provides colorSpec,
+        LocalCOUIMaterialEffectEnabled provides (useBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU),
     ) {
         // Disable navigation bar contrast enforced for Android 10 and above
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -212,7 +221,11 @@ fun InstallerCOUITheme(
     paletteStyle: PaletteStyle,
     colorSpec: ThemeColorSpec,
     useAmoled: Boolean = false,
-    systemSeedColor: Color? = null,
+    systemSeedColor: Color? = if (useCouiMonet && useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        rememberSystemSeedColor()
+    } else {
+        null
+    },
     content: @Composable () -> Unit,
 ) {
     if (compatStatusBarColor) {
@@ -231,118 +244,116 @@ fun InstallerCOUITheme(
         ThemeMode.DARK -> true
     }
 
-    /*
-     * COUI 1.1.0 derives its palette through material-color-utilities 5.x, whose
-     * DynamicScheme no longer exists in the 6.x line this module depends on.
-     * Calling ThemeController with a key color would therefore fail at runtime,
-     * so the palette is produced by our own material-kolor pipeline and handed
-     * to COUI as a finished Colors instance.
-     */
-    // Always resolved, even when the caller already passed a seed: making this call conditional
-    // would change the composition's slot structure when a system palette appears or disappears
-    // at runtime.
-    val fallbackSystemSeed = rememberSystemSeedColor()
-
+    // COUI still calls the removed DynamicScheme API; retain the MaterialKolor 6 pipeline.
     val colors = if (useCouiMonet) {
-        val resolvedSystemSeed = systemSeedColor ?: fallbackSystemSeed
         val keyColor = if (useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            resolvedSystemSeed ?: colorResource(id = android.R.color.system_accent1_500)
+            systemSeedColor ?: colorResource(id = android.R.color.system_accent1_500)
         } else {
             seedColor
         }
         remember(keyColor, isDark, paletteStyle, colorSpec, useAmoled) {
-            val scheme = dynamicColorScheme(keyColor, isDark, paletteStyle, 0.0, colorSpec)
-            // AMOLED only applies to the generated palette; the built-in COUI
-            // schemes below are fixed and stay as they are.
-            val amoledScheme = if (useAmoled && isDark) {
-                scheme.copy(
-                    background = Color.Black,
-                    surface = Color.Black,
-                    surfaceContainer = Color.Black,
-                )
-            } else {
-                scheme
-            }
-            amoledScheme.toCouiColors()
+            dynamicColorScheme(keyColor, isDark, paletteStyle, 0.0, colorSpec)
+                .toCouiColors(isDark = isDark, useAmoled = useAmoled)
         }
-    } else if (isDark) {
-        couiDarkColorScheme()
     } else {
-        couiLightColorScheme()
+        remember(isDark) { if (isDark) couiDarkColorScheme() else couiLightColorScheme() }
     }
 
-    COUITheme(
-        colors = colors,
-        content = content,
-    )
+    // COUI's explicit-colors overload omits its dynamic flag and LocalContentColor.
+    CompositionLocalProvider(
+        LocalUseCouiMonet provides useCouiMonet,
+        LocalCouiContentColor provides colors.labelPrimary,
+    ) {
+        COUITheme(
+            colors = colors,
+            content = content,
+        )
+    }
 }
 
-/**
- * Maps a Material 3 [ColorScheme] onto COUI's role palette.
- *
- * The two designs share most of the Material 3 role model, so the mapping is
- * direct where a role exists in both and falls back to the closest M3 role
- * (container roles for the "variant" slots, onSurface alpha steps for the
- * disabled slots) where COUI has no counterpart.
- */
-private fun ColorScheme.toCouiColors(): Colors {
-    val disabledContainer = onSurface.copy(alpha = 0.12f)
-    val disabledContent = onSurface.copy(alpha = 0.38f)
+// Preserve COUI's semantic colors and neutral alpha steps while replacing the theme palette.
+internal fun ColorScheme.toCouiColors(isDark: Boolean, useAmoled: Boolean): Colors {
+    val base = if (isDark) couiDarkColorScheme() else couiLightColorScheme()
+    val pageBackground = if (isDark && useAmoled) Color.Black else background
+    val pageWithCard = if (isDark && useAmoled) Color.Black else surface
+    val disabledSecondaryFill = surfaceContainerHigh.copy(alpha = 0.6f).compositeOver(surfaceContainerLow)
 
-    return Colors(
+    return base.copy(
         primary = primary,
         onPrimary = onPrimary,
-        primaryVariant = primaryContainer,
-        onPrimaryVariant = onPrimaryContainer,
+        primaryText = primary,
+        primaryTextOnPopup = primary,
+        labelTheme = primary,
+        link = primary,
+        // COUI containers carry the accent itself, not M3's primaryContainer tone.
+        containerTheme = primary,
+        containerThemeHalftone = primary.copy(alpha = base.containerThemeHalftone.alpha),
+        secondary = primary.copy(alpha = base.secondary.alpha),
+        textColorHighlight = primary.copy(alpha = base.textColorHighlight.alpha),
+        disable = primary.copy(alpha = base.disable.alpha),
+        focus = primary.copy(alpha = base.focus.alpha),
+        focusOutline = primary.copy(alpha = base.focusOutline.alpha),
+        tips = primary,
+        additional = tertiary,
+        assist = secondary,
         error = error,
         onError = onError,
-        errorContainer = errorContainer,
-        onErrorContainer = onErrorContainer,
-        disabledPrimary = disabledContainer,
-        disabledOnPrimary = disabledContent,
-        disabledPrimaryButton = disabledContainer,
-        disabledOnPrimaryButton = disabledContent,
-        disabledPrimarySlider = disabledContainer,
-        primaryContainer = primaryContainer,
-        onPrimaryContainer = onPrimaryContainer,
-        secondary = secondary,
-        onSecondary = onSecondary,
-        secondaryVariant = secondaryContainer,
-        onSecondaryVariant = onSecondaryContainer,
-        disabledSecondary = disabledContainer,
-        disabledOnSecondary = disabledContent,
-        disabledSecondaryVariant = disabledContainer,
-        disabledOnSecondaryVariant = disabledContent,
-        secondaryContainer = secondaryContainer,
-        onSecondaryContainer = onSecondaryContainer,
-        secondaryContainerVariant = secondaryContainer,
-        onSecondaryContainerVariant = onSecondaryContainer,
-        tertiaryContainer = tertiaryContainer,
-        onTertiaryContainer = onTertiaryContainer,
-        tertiaryContainerVariant = tertiaryContainer,
-        background = background,
-        onBackground = onBackground,
-        onBackgroundVariant = onSurfaceVariant,
-        surface = surface,
-        onSurface = onSurface,
-        surfaceVariant = surfaceVariant,
-        onSurfaceSecondary = onSurfaceVariant,
-        onSurfaceVariantSummary = onSurfaceVariant,
-        onSurfaceVariantActions = primary,
-        disabledOnSurface = disabledContent,
-        surfaceContainer = surfaceContainer,
-        onSurfaceContainer = onSurface,
-        onSurfaceContainerVariant = onSurfaceVariant,
-        surfaceContainerHigh = surfaceContainerHigh,
-        onSurfaceContainerHigh = onSurface,
+        errorDisabled = error.copy(alpha = base.errorDisabled.alpha),
+        errorTextBg = error.copy(alpha = base.errorTextBg.alpha),
+        // AMOLED affects pages only: panels, floating bars and cards stay elevated.
+        background = pageBackground,
+        backgroundWithCard = pageWithCard,
+        backgroundElevated = surfaceContainerLow,
+        backgroundElevatedWithCard = surfaceContainerLow,
+        surface = surfaceContainerLow,
+        surfaceWithCard = surfaceContainerLow,
+        surfaceTop = surfaceContainerHighest,
+        backgroundTop = surfaceContainerHighest,
+        bar = surfaceContainer,
+        bottomBar = surfaceContainer,
+        card = surfaceContainer,
+        cardBackground = surfaceContainer,
+        cardPressed = surfaceContainerHigh,
         surfaceContainerHighest = surfaceContainerHighest,
-        onSurfaceContainerHighest = onSurface,
+        labelPrimary = onSurface,
+        labelPrimaryVariant = onSurface.copy(alpha = base.labelPrimaryVariant.alpha),
+        labelSecondary = onSurface.copy(alpha = base.labelSecondary.alpha),
+        labelSecondaryVariant = onSurface.copy(alpha = base.labelSecondaryVariant.alpha),
+        labelTertiary = onSurface.copy(alpha = base.labelTertiary.alpha),
+        labelQuaternary = onSurface.copy(alpha = base.labelQuaternary.alpha),
+        labelOnColor = onPrimary,
+        disabledNeutral = onSurface.copy(alpha = base.disabledNeutral.alpha),
+        hintNeutral = onSurface.copy(alpha = base.hintNeutral.alpha),
+        quarternaryNeutral = onSurface.copy(alpha = base.quarternaryNeutral.alpha),
+        container4 = onSurface.copy(alpha = base.container4.alpha),
+        container8 = onSurface.copy(alpha = base.container8.alpha),
+        container12 = onSurface.copy(alpha = base.container12.alpha),
+        container16 = onSurface.copy(alpha = base.container16.alpha),
+        containerSolid = surfaceContainerHigh,
+        fillSolid = surfaceContainerHigh,
+        fillThin = onSurface.copy(alpha = base.fillThin.alpha),
+        controls = onSurface.copy(alpha = base.controls.alpha),
         outline = outline,
-        dividerLine = outlineVariant,
-        windowDimming = scrim,
-        sliderKeyPoint = primary,
-        sliderKeyPointForeground = onPrimary,
-        sliderBackground = surfaceVariant,
+        divider = outlineVariant,
+        press = onSurface.copy(alpha = base.press.alpha),
+        hover = onSurface.copy(alpha = base.hover.alpha),
+        pressBackground = onSurface.copy(alpha = base.pressBackground.alpha),
+        secondaryVariant = surfaceContainerHigh,
+        disabledSecondaryVariant = disabledSecondaryFill,
+        secondaryContainer = secondaryContainer,
+        dialogButton = surfaceContainerHigh,
+        dragHandle = onSurface.copy(alpha = base.dragHandle.alpha),
+        secondaryButton = surfaceContainerHigh,
+        disabledSecondaryButton = disabledSecondaryFill,
+        disabledOnPrimaryButton = onPrimary.copy(alpha = base.disabledOnPrimaryButton.alpha),
+        disabledOnSecondaryButton = onSurface.copy(alpha = base.disabledOnSecondaryButton.alpha),
+        disabledProgress = surfaceContainerHigh,
+        disabledProgressBackground = onSurface.copy(alpha = base.disabledProgressBackground.alpha),
+        sliderBackground = primary.copy(alpha = 0.2f).compositeOver(surfaceContainer),
+        disabledSliderThumb = onPrimary.copy(alpha = base.disabledSliderThumb.alpha),
+        disabledSliderKeyPoint = onSurface.copy(alpha = base.disabledSliderKeyPoint.alpha),
+        disabledTextFieldBorder = onSurface.copy(alpha = base.disabledTextFieldBorder.alpha),
+        disabledChipText = onSurface.copy(alpha = base.disabledChipText.alpha),
     )
 }
 

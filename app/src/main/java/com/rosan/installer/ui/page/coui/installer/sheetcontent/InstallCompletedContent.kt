@@ -112,12 +112,12 @@ private fun CouiResultItemCard(result: InstallResult) {
             Column {
                 Text(
                     text = appLabel,
-                    style = COUITheme.textStyles.headline1,
+                    style = COUITheme.textStyles.headlineXS,
                 )
                 Text(
                     text = app.packageName,
-                    style = COUITheme.textStyles.subtitle,
-                    color = COUITheme.colorScheme.onSurfaceVariantSummary,
+                    style = COUITheme.textStyles.buttonM,
+                    color = COUITheme.colorScheme.labelSecondaryVariant,
                 )
             }
 
@@ -144,7 +144,7 @@ private fun CouiSuccessRow() {
         )
         Text(
             text = stringResource(R.string.installer_install_success),
-            style = COUITheme.textStyles.headline1,
+            style = COUITheme.textStyles.headlineXS,
             color = COUITheme.colorScheme.primary,
         )
     }
@@ -153,7 +153,7 @@ private fun CouiSuccessRow() {
 @Composable
 private fun CouiCompletedErrorCardContent(error: Throwable, modifier: Modifier = Modifier) {
     val isDark = isSystemInDarkTheme()
-    val contentColor = if (isDark) COUITheme.colorScheme.onSurface else Color(0xFF601A15)
+    val contentColor = if (isDark) COUITheme.colorScheme.labelPrimary else Color(0xFF601A15)
 
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
@@ -171,7 +171,7 @@ private fun CouiCompletedErrorCardContent(error: Throwable, modifier: Modifier =
             Text(
                 text = error.help(),
                 fontWeight = FontWeight.Bold,
-                style = COUITheme.textStyles.body1,
+                style = COUITheme.textStyles.bodyXL,
                 color = contentColor,
             )
         }
@@ -180,13 +180,13 @@ private fun CouiCompletedErrorCardContent(error: Throwable, modifier: Modifier =
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 0.dp),
-            color = MaterialTheme.colorScheme.outline,
+            color = COUITheme.colorScheme.divider,
         )
 
         Text(
             text = (error.message ?: "An unknown error occurred.").trim(),
-            style = COUITheme.textStyles.subtitle,
-            color = COUITheme.colorScheme.onSurfaceVariantSummary,
+            style = COUITheme.textStyles.buttonM,
+            color = COUITheme.colorScheme.labelSecondaryVariant,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 8.dp, bottom = 12.dp),

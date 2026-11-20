@@ -89,7 +89,7 @@ fun CouiNotificationSettingsPage(useBlur: Boolean, viewModel: NotificationSettin
 
     // Convert the string list to DropdownItem list for WindowSpinnerPreference
     val spinnerEntries = remember(styleNames) {
-        styleNames.map { DropdownItem(title = it) }
+        styleNames.map { DropdownItem(text = it) }
     }
 
     val activeStyle = if (styleOptions.contains(uiState.currentStyle)) {
@@ -251,7 +251,7 @@ private fun CouiAutoClearNotificationTimeWidget(modifier: Modifier = Modifier, c
             } else {
                 context.getString(R.string.installer_settings_auto_clear_time_seconds_format, time)
             }
-            DropdownItem(title = text)
+            DropdownItem(text = text)
         }
     }
 

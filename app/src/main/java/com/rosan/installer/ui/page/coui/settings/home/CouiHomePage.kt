@@ -54,6 +54,7 @@ import com.rosan.installer.ui.page.main.settings.home.HomePageViewModel
 import com.rosan.installer.ui.page.main.settings.home.HomePageViewState
 import com.rosan.installer.ui.page.main.widget.util.OnLifecycleEvent
 import com.rosan.installer.ui.theme.InstallerTheme
+import com.rosan.installer.ui.theme.InstallerTheme.useCouiMonet
 import com.rosan.installer.ui.theme.couiHomeStatusCardColorActivated
 import com.rosan.installer.ui.theme.couiHomeStatusCardColorDeactivated
 import com.rosan.installer.ui.theme.getCouiAppBarColor
@@ -69,7 +70,6 @@ import io.github.suqi8.coui.kmp.basic.SnackbarHostState
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TopAppBar
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import io.github.suqi8.coui.kmp.theme.COUITheme.isDynamicColor
 import io.github.suqi8.coui.kmp.utils.PressFeedbackType
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
@@ -242,24 +242,24 @@ private fun CouiStatusGrid(
     // 1. Calculate container background color based on state and theme
     val containerColor = if (isActive) {
         when {
-            isDynamicColor -> COUITheme.colorScheme.secondaryContainer
+            useCouiMonet -> COUITheme.colorScheme.secondaryContainer
             InstallerTheme.isDark -> Color(0xFF1A3825)
             else -> Color(0xFFDFFAE4)
         }
     } else {
         when {
-            isDynamicColor -> COUITheme.colorScheme.errorContainer
+            useCouiMonet -> COUITheme.colorScheme.error.copy(alpha = 0.12f)
             InstallerTheme.isDark -> Color(0xFF381A1A)
             else -> Color(0xFFFAEEEE)
         }
     }
 
     // 2. Calculate text content color
-    // Use proper Material 3 on-container colors for dynamic, and fallback to onSurface (black/white) for hardcoded
+    // Use COUI label/error roles for themed containers and a readable label for fixed colors.
     val textContentColor = if (isActive) {
-        if (isDynamicColor) COUITheme.colorScheme.onSecondaryContainer else COUITheme.colorScheme.onSurface
+        COUITheme.colorScheme.labelPrimary
     } else {
-        if (isDynamicColor) COUITheme.colorScheme.onErrorContainer else COUITheme.colorScheme.onSurface
+        if (useCouiMonet) COUITheme.colorScheme.error else COUITheme.colorScheme.labelPrimary
     }
 
     // 3. Derive description text color with slight transparency for hierarchy
@@ -290,7 +290,7 @@ private fun CouiStatusGrid(
                         modifier = Modifier.size(170.dp),
                         imageVector = if (isActive) AppIcons.Active else Icons.Rounded.ErrorOutline,
                         tint = if (isActive) {
-                            if (isDynamicColor) {
+                            if (useCouiMonet) {
                                 COUITheme.colorScheme.primary.copy(
                                     alpha = 0.8f,
                                 )
@@ -298,7 +298,7 @@ private fun CouiStatusGrid(
                                 couiHomeStatusCardColorActivated
                             }
                         } else {
-                            if (isDynamicColor) {
+                            if (useCouiMonet) {
                                 COUITheme.colorScheme.error.copy(
                                     alpha = 0.8f,
                                 )
@@ -408,14 +408,14 @@ private fun CouiStatCard(modifier: Modifier = Modifier, title: String, value: St
                 text = title,
                 fontWeight = FontWeight.Medium,
                 fontSize = 15.sp,
-                color = COUITheme.colorScheme.onSurfaceVariantSummary,
+                color = COUITheme.colorScheme.labelSecondaryVariant,
             )
             Text(
                 modifier = Modifier.fillMaxWidth(),
                 text = value,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = COUITheme.colorScheme.onSurface,
+                color = COUITheme.colorScheme.labelPrimary,
             )
         }
     }

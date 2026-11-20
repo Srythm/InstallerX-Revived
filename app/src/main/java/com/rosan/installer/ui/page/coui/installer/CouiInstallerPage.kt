@@ -52,13 +52,7 @@ import com.rosan.installer.domain.settings.model.preferences.RootMode
 import com.rosan.installer.ui.icons.AppCOUIIcons
 import com.rosan.installer.ui.page.coui.installer.components.AppInfoState
 import com.rosan.installer.ui.page.coui.installer.components.rememberAppInfoState
-import com.rosan.installer.ui.page.coui.installer.fullscreen.CouiFullScreenAppHeader
-import com.rosan.installer.ui.page.coui.installer.fullscreen.CouiFullScreenPermissionContent
-import com.rosan.installer.ui.page.coui.installer.fullscreen.CouiFullScreenPrepareContent
-import com.rosan.installer.ui.page.coui.installer.fullscreen.CouiFullScreenStatusContent
-import com.rosan.installer.ui.page.coui.installer.fullscreen.CouiPositionFullScreen
-import com.rosan.installer.ui.page.coui.installer.fullscreen.FullScreenHorizontalPadding
-import com.rosan.installer.ui.page.coui.installer.fullscreen.sensitiveCount
+import com.rosan.installer.ui.page.coui.installer.fullscreen.CouiFullScreenInstaller
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.InstallChoiceContent
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.InstallCompletedContent
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.InstallConfirmContent
@@ -90,8 +84,6 @@ import com.rosan.installer.ui.page.main.widget.util.InstallerEventCollector
 import com.rosan.installer.ui.theme.InstallerCOUITheme
 import com.rosan.installer.ui.theme.InstallerTheme
 import com.rosan.installer.ui.theme.LocalInstallerColorScheme
-import com.rosan.installer.ui.theme.couiSheetColorDark
-import com.rosan.installer.ui.theme.couiSheetColorLight
 import com.rosan.installer.ui.theme.material.dynamicColorScheme
 import com.rosan.installer.ui.util.WindowBlurEffect
 import com.rosan.installer.ui.util.getSupportTitle
@@ -103,7 +95,6 @@ import io.github.suqi8.coui.kmp.basic.ListPopupDefaults
 import io.github.suqi8.coui.kmp.basic.PopupPositionProvider
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import io.github.suqi8.coui.kmp.theme.COUITheme.isDynamicColor
 import io.github.suqi8.coui.kmp.window.WindowBottomSheet
 import io.github.suqi8.coui.kmp.window.WindowListPopup
 import org.koin.androidx.compose.koinViewModel
@@ -114,6 +105,7 @@ import org.koin.core.parameter.parametersOf
 fun CouiInstallerPage(
     session: InstallerSessionRepository,
     viewModel: InstallerViewModel = koinViewModel { parametersOf(session) },
+    useAmoled: Boolean = false,
 ) {
     val context = LocalContext.current
     val showBottomSheet = remember { mutableStateOf(true) }
@@ -281,6 +273,7 @@ fun CouiInstallerPage(
             useCouiMonet = useCouiMonet,
             useDynamicColor = useDynamicColor && temporarySeedColor == null,
             compatStatusBarColor = false,
+            useAmoled = useAmoled,
         ) {
             // Full-screen install mode. The window itself never changes: this
             // page is already laid out edge-to-edge inside the activity, so the
@@ -306,6 +299,7 @@ fun CouiInstallerPage(
                     showSettings = showSettings,
                     isClosing = isClosingFullscreen,
                     viewModel = viewModel,
+                    session = session,
                     onClose = { viewModel.dispatch(InstallerViewAction.Close) },
                 )
                 return@InstallerCOUITheme
@@ -313,13 +307,7 @@ fun CouiInstallerPage(
 
             WindowBottomSheet(
                 show = showBottomSheet.value, // Always true as long as this page is composed.
-                backgroundColor = if (isDynamicColor) {
-                    COUITheme.colorScheme.surfaceContainerHigh
-                } else if (isDark) {
-                    couiSheetColorDark
-                } else {
-                    couiSheetColorLight
-                },
+                backgroundColor = COUITheme.colorScheme.surface,
                 startAction = {
                     when (stage) {
                         is InstallerStage.Preparing,
@@ -327,7 +315,7 @@ fun CouiInstallerPage(
                         -> {
                             CouiBackButton(
                                 icon = AppCOUIIcons.Close,
-                                iconTint = COUITheme.colorScheme.onSurface,
+                                iconTint = COUITheme.colorScheme.labelPrimary,
                                 onClick = {
                                     dismissSheet {
                                         viewModel.dispatch(InstallerViewAction.Cancel)
@@ -339,21 +327,21 @@ fun CouiInstallerPage(
                         is InstallerStage.InstallChoice -> {
                             if (isApkChoice) {
                                 CouiBackButton(
-                                    iconTint = COUITheme.colorScheme.onSurface,
+                                    iconTint = COUITheme.colorScheme.labelPrimary,
                                     onClick = backToTypeChoice,
                                 )
                             } else if (uiState.navigatedFromPrepareToChoice && !returnedToTypeChoice) {
                                 // Came from Prepare (re-selecting splits) -> Show Back icon, go back to Prepare
                                 CouiBackButton(
                                     icon = AppCOUIIcons.Back,
-                                    iconTint = COUITheme.colorScheme.onSurface,
+                                    iconTint = COUITheme.colorScheme.labelPrimary,
                                     onClick = { viewModel.dispatch(InstallerViewAction.InstallPrepare) },
                                 )
                             } else {
                                 // Initial choice or other origin -> Show Cancel icon, force close
                                 CouiBackButton(
                                     icon = AppCOUIIcons.Close,
-                                    iconTint = COUITheme.colorScheme.onSurface,
+                                    iconTint = COUITheme.colorScheme.labelPrimary,
                                     onClick = closeSheet,
                                 )
                             }
@@ -362,7 +350,7 @@ fun CouiInstallerPage(
                         is InstallerStage.InstallConfirm -> {
                             CouiBackButton(
                                 icon = AppCOUIIcons.Close,
-                                iconTint = COUITheme.colorScheme.onSurface,
+                                iconTint = COUITheme.colorScheme.labelPrimary,
                                 onClick = {
                                     if (stage.isSelfSession) {
                                         viewModel.dispatch(InstallerViewAction.ApproveSession(stage.sessionId, false))
@@ -389,7 +377,7 @@ fun CouiInstallerPage(
                         -> {
                             CouiBackButton(
                                 icon = AppCOUIIcons.Close,
-                                iconTint = COUITheme.colorScheme.onSurface,
+                                iconTint = COUITheme.colorScheme.labelPrimary,
                                 onClick = {
                                     if (uiState.isDismissible) {
                                         dismissSheet {
@@ -403,7 +391,7 @@ fun CouiInstallerPage(
                         is InstallerStage.InstallPrepare -> {
                             CouiBackButton(
                                 icon = if (showSettings || showPermissions || preparedFromTypeChoice) AppCOUIIcons.Back else AppCOUIIcons.Close,
-                                iconTint = COUITheme.colorScheme.onSurface,
+                                iconTint = COUITheme.colorScheme.labelPrimary,
                                 onClick = {
                                     if (showSettings) {
                                         viewModel.dispatch(InstallerViewAction.HideCouiSheetRightActionSettings)
@@ -423,7 +411,7 @@ fun CouiInstallerPage(
                         is InstallerStage.InstallExtendedMenu -> {
                             CouiBackButton(
                                 icon = AppCOUIIcons.Back,
-                                iconTint = COUITheme.colorScheme.onSurface,
+                                iconTint = COUITheme.colorScheme.labelPrimary,
                                 onClick = { viewModel.dispatch(InstallerViewAction.InstallPrepare) },
                             )
                         }
@@ -440,7 +428,7 @@ fun CouiInstallerPage(
                                 }) {
                                     Icon(
                                         imageVector = AppCOUIIcons.Settings,
-                                        tint = COUITheme.colorScheme.onSurface,
+                                        tint = COUITheme.colorScheme.labelPrimary,
                                         contentDescription = stringResource(R.string.installer_settings),
                                     )
                                 }
@@ -461,7 +449,7 @@ fun CouiInstallerPage(
                             }) {
                                 Icon(
                                     imageVector = AppCOUIIcons.Info,
-                                    tint = COUITheme.colorScheme.onSurface,
+                                    tint = COUITheme.colorScheme.labelPrimary,
                                     contentDescription = stringResource(R.string.installer_settings),
                                 )
                             }
@@ -854,273 +842,6 @@ private fun isFullScreenStage(stage: InstallerStage): Boolean = when (stage) {
     else -> false
 }
 
-/**
- * One full-screen page as seen by [AnimatedContent].
- *
- * [key] is the animation identity (page class / sub-page), while [stage] is the
- * snapshot that this slot paints. Keeping them apart lets a cross-fade show two
- * different pages, while a plain progress tick updates the current page in place.
- */
-private data class FullScreenPage(val stage: InstallerStage, val key: Any)
-
-/**
- * Full-screen install flow.
- *
- * Mirrors the sheet's state machine for the migrated stages but keeps its own
- * information hierarchy: the app identity stays pinned, the body carries the
- * stage, and the shell owns the action row so the status marks line up.
- *
- * Exit is *not* handled here. Every close path dispatches
- * [InstallerViewAction.Close], the ViewModel turns that into
- * `requestFullscreenClose()` when the current mode is full screen, and only
- * [isClosing] is read back — so cancel, finish, close and the system back
- * gesture all fade out identically.
- */
-@Composable
-private fun CouiFullScreenInstaller(
-    stage: InstallerStage,
-    title: String,
-    appInfo: AppInfoState,
-    entity: AppEntity.BaseEntity?,
-    versionName: String?,
-    sourceLabel: String?,
-    permissions: List<String>,
-    showPermissions: Boolean,
-    showSettings: Boolean,
-    isClosing: Boolean,
-    viewModel: InstallerViewModel,
-    onClose: () -> Unit,
-) {
-    val subPage = showPermissions || showSettings
-    val isInstalling = stage is InstallerStage.Installing || stage is InstallerStage.InstallingModule
-    // The module log and the sub-pages bring their own action row inside their
-    // content, and a package that is already being written offers no cancel
-    // action at all (the sheet exposes "run in background" there instead, which
-    // makes no sense on a full-screen page).
-    val hasShellActions = !subPage && !isInstalling
-    // The bar slot is still reserved while a package is being written: dropping
-    // it would grow the content area and make the centred status mark jump
-    // between "installing" and "success".
-    val hasBarSlot = !subPage && stage !is InstallerStage.InstallingModule
-
-    val headerContent: (@Composable () -> Unit)? = if (subPage) {
-        null
-    } else {
-        { CouiFullScreenAppHeader(appInfo = appInfo, versionName = versionName) }
-    }
-    val bottomBarContent: (@Composable () -> Unit)? = if (hasBarSlot) {
-        {
-            if (hasShellActions) {
-                CouiFullScreenActionRow(stage = stage, viewModel = viewModel, onClose = onClose)
-            }
-        }
-    } else {
-        null
-    }
-
-    val pageTitle = when {
-        showPermissions -> stringResource(R.string.permission_list)
-        showSettings -> stringResource(R.string.installer_settings)
-        else -> title
-    }
-
-    // Nothing to go back to while a package is being written; the action row
-    // owns cancelling at that point, so the chrome button is disabled instead.
-    val backAction: (() -> Unit)? = when {
-        isInstalling -> null
-        showPermissions -> ({ viewModel.dispatch(InstallerViewAction.HideCouiPermissionList) })
-        showSettings -> ({ viewModel.dispatch(InstallerViewAction.HideCouiSheetRightActionSettings) })
-        else -> onClose
-    }
-
-    // Keyed by page rather than by stage instance so a progress tick does not
-    // re-run the transition, while any real page change still cross-fades.
-    val pageKey: Any = when {
-        stage is InstallerStage.InstallPrepare && showSettings -> "settings"
-        stage is InstallerStage.InstallPrepare && showPermissions -> "permissions"
-        else -> stage.javaClass
-    }
-
-    CouiPositionFullScreen(
-        title = pageTitle,
-        isClosing = isClosing,
-        onBack = backAction,
-        contentKey = pageKey,
-        onMore = if (!subPage && stage is InstallerStage.InstallPrepare) {
-            { viewModel.dispatch(InstallerViewAction.ShowCouiSheetRightActionSettings) }
-        } else {
-            null
-        },
-        header = headerContent,
-        bottomBar = bottomBarContent,
-    ) {
-        AnimatedContent(
-            targetState = FullScreenPage(stage, pageKey),
-            modifier = Modifier.fillMaxSize(),
-            label = "CouiFullScreenPage",
-            // Page identity drives the cross-fade; a progress tick only re-composes.
-            contentKey = { it.key },
-            transitionSpec = {
-                fadeIn(animationSpec = tween(durationMillis = 180)) togetherWith
-                    fadeOut(animationSpec = tween(durationMillis = 120))
-            },
-        ) { page ->
-            // Render the snapshot handed to this slot instead of the live `stage`, so the
-            // outgoing page keeps its own content while it fades out. Reading the live value
-            // here made both slots paint the incoming page, which read as the text animating
-            // on its own.
-            val stage = page.stage
-            when {
-                stage is InstallerStage.Preparing -> {
-                    // The sheet's version carries a "run in background" button;
-                    // in a full-screen presentation that belongs to the system
-                    // back gesture / the cancel action instead.
-                    InstallPreparingContent(
-                        viewModel = viewModel,
-                        onBackground = {},
-                        showButton = false,
-                    )
-                }
-
-                stage is InstallerStage.Resolving || stage is InstallerStage.Analysing -> {
-                    LoadingContent(
-                        statusText = if (stage is InstallerStage.Resolving) {
-                            stringResource(R.string.installer_resolving)
-                        } else {
-                            stringResource(R.string.installer_analysing)
-                        },
-                    )
-                }
-
-                stage is InstallerStage.InstallPrepare && showSettings -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = FullScreenHorizontalPadding),
-                    ) {
-                        PrepareSettingsContent(viewModel = viewModel)
-                    }
-                }
-
-                stage is InstallerStage.InstallPrepare && showPermissions -> {
-                    CouiFullScreenPermissionContent(permissions = permissions)
-                }
-
-                stage is InstallerStage.InstallPrepare -> {
-                    CouiFullScreenPrepareContent(
-                        entity = entity,
-                        sourceLabel = sourceLabel,
-                        permissionCount = permissions.size,
-                        sensitivePermissionCount = permissions.sensitiveCount(),
-                        onOpenPermissions = { viewModel.dispatch(InstallerViewAction.ShowCouiPermissionList) },
-                    )
-                }
-
-                stage is InstallerStage.Installing -> {
-                    CouiFullScreenStatusContent(
-                        title = stringResource(R.string.installer_installing),
-                        subtitle = "${(stage.progress.coerceIn(0f, 1f) * 100).toInt()}%",
-                        progress = stage.progress,
-                    )
-                }
-
-                stage is InstallerStage.InstallingModule -> {
-                    InstallModuleContent(
-                        outputLines = stage.output,
-                        isFinished = stage.isFinished,
-                        onClose = onClose,
-                    )
-                }
-
-                stage is InstallerStage.InstallCompleted || stage is InstallerStage.InstallSuccess -> {
-                    CouiFullScreenStatusContent(
-                        title = stringResource(R.string.installer_install_success),
-                        icon = AppCOUIIcons.Ok,
-                        iconTint = FullScreenSuccessColor,
-                        haloColor = FullScreenSuccessHaloColor,
-                    )
-                }
-
-                stage is InstallerStage.InstallFailed -> {
-                    CouiFullScreenStatusContent(
-                        title = stringResource(R.string.installer_install_failed),
-                        icon = AppCOUIIcons.Close,
-                        iconTint = COUITheme.colorScheme.error,
-                        haloColor = COUITheme.colorScheme.errorContainer,
-                    )
-                }
-            }
-        }
-    }
-}
-
-private val FullScreenSuccessColor = Color(0xFF16A34A)
-private val FullScreenSuccessHaloColor = Color(0x1F16A34A)
-
-/**
- * Shell-owned action row.
- *
- * The whole row keeps a constant height so the centred status marks in
- * `CouiFullScreenStatusContent` do not drift between stages.
- */
-@Composable
-private fun CouiFullScreenActionRow(
-    stage: InstallerStage,
-    viewModel: InstallerViewModel,
-    onClose: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = FullScreenHorizontalPadding, end = FullScreenHorizontalPadding, top = 8.dp, bottom = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        val secondaryColors = ButtonDefaults.textButtonColors(
-            color = if (isDynamicColor) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
-            textColor = if (isDynamicColor) COUITheme.colorScheme.onSecondaryContainer else COUITheme.colorScheme.onSecondaryVariant,
-        )
-
-        when (stage) {
-            is InstallerStage.InstallPrepare -> {
-                TextButton(
-                    onClick = onClose,
-                    text = stringResource(R.string.cancel),
-                    colors = secondaryColors,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(
-                    onClick = { viewModel.dispatch(InstallerViewAction.Install(true)) },
-                    text = stringResource(R.string.install),
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
-            is InstallerStage.Preparing,
-            is InstallerStage.Resolving,
-            is InstallerStage.Analysing,
-            -> {
-                TextButton(
-                    onClick = onClose,
-                    text = stringResource(R.string.cancel),
-                    colors = secondaryColors,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
-            else -> {
-                TextButton(
-                    onClick = onClose,
-                    text = stringResource(R.string.finish),
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-    }
-}
-
 @Composable
 private fun RebootListPopup(
     modifier: Modifier = Modifier,
@@ -1138,7 +859,7 @@ private fun RebootListPopup(
         Icon(
             imageVector = AppCOUIIcons.Refresh,
             contentDescription = stringResource(id = R.string.reboot),
-            tint = COUITheme.colorScheme.onBackground,
+            tint = COUITheme.colorScheme.labelPrimary,
         )
     }
 

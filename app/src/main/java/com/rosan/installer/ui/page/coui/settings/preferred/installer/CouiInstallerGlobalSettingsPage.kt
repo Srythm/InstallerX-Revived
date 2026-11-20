@@ -35,8 +35,10 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -66,6 +68,7 @@ import com.rosan.installer.ui.icons.AppIcons
 import com.rosan.installer.ui.navigation.LocalNavigator
 import com.rosan.installer.ui.navigation.Route
 import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
+import com.rosan.installer.ui.page.coui.widgets.CouiContentDialog
 import com.rosan.installer.ui.page.coui.widgets.CouiNavigationItemWidget
 import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
 import com.rosan.installer.ui.page.main.settings.preferred.installer.InstallerSettingsAction
@@ -91,7 +94,6 @@ import io.github.suqi8.coui.kmp.preference.WindowSpinnerPreference
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
-import io.github.suqi8.coui.kmp.window.WindowDialog
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 
@@ -183,7 +185,7 @@ fun CouiInstallerGlobalSettingsPage(useBlur: Boolean, viewModel: InstallerSettin
                                         R.string.installer_biometric_auth_mode_follow_config,
                                     )
                                 }
-                                DropdownItem(title = text)
+                                DropdownItem(text = text)
                             }
                         }
 
@@ -392,7 +394,7 @@ fun CouiInstallerGlobalSettingsPage(useBlur: Boolean, viewModel: InstallerSettin
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outline,
+                            color = COUITheme.colorScheme.divider,
                         )
                         CouiManagedPackagesWidget(
                             noContentTitle = stringResource(R.string.config_no_managed_shared_user_id_exempted_packages),
@@ -450,7 +452,7 @@ private fun CouiManagedPackagesWidget(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(50))
                                 .background(
-                                    COUITheme.colorScheme.primaryContainer.copy(
+                                    COUITheme.colorScheme.containerTheme.copy(
                                         alpha = 0.2f,
                                     ),
                                 )
@@ -502,7 +504,7 @@ private fun CouiManagedPackagesWidget(
             Button(
                 modifier = Modifier.padding(bottom = 8.dp),
                 onClick = { showAddDialog = true },
-                colors = ButtonDefaults.buttonColors(color = COUITheme.colorScheme.primaryContainer.copy(alpha = 0.25f)),
+                colors = ButtonDefaults.buttonColors(color = COUITheme.colorScheme.containerTheme.copy(alpha = 0.25f)),
             ) {
                 Icon(
                     imageVector = AppIcons.Add,
@@ -553,18 +555,39 @@ private fun CouiAddPackageDialog(onDismiss: () -> Unit, onConfirm: (NamedPackage
     val isConfirmEnabled = name.isNotBlank() && packageName.isNotBlank()
     val showState = remember { mutableStateOf(true) }
 
-    WindowDialog(
+    CouiContentDialog(
         show = showState.value,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.config_add_new_package),
+        actions = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+            ) {
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    text = stringResource(R.string.cancel),
+                    onClick = onDismiss,
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    text = stringResource(R.string.confirm),
+                    onClick = { onConfirm(NamedPackage(name, packageName)) },
+                    enabled = isConfirmEnabled,
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                )
+            }
+        },
         content = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 Spacer(modifier = Modifier.height(8.dp))
                 TextField(
                     value = name,
                     onValueChange = { name = it },
                     label = stringResource(R.string.config_name),
                     useLabelAsPlaceholder = true,
+                    minHeight = 0.dp,
                     singleLine = true,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -573,27 +596,9 @@ private fun CouiAddPackageDialog(onDismiss: () -> Unit, onConfirm: (NamedPackage
                     onValueChange = { packageName = it },
                     label = stringResource(R.string.config_package_name),
                     useLabelAsPlaceholder = true,
+                    minHeight = 0.dp,
                     singleLine = true,
                 )
-                Spacer(modifier = Modifier.height(24.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                ) {
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        text = stringResource(R.string.cancel),
-                        onClick = onDismiss,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        text = stringResource(R.string.confirm),
-                        onClick = { onConfirm(NamedPackage(name, packageName)) },
-                        enabled = isConfirmEnabled,
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                    )
-                }
             }
         },
     )
@@ -610,34 +615,36 @@ private fun CouiAddPackageDialog(onDismiss: () -> Unit, onConfirm: (NamedPackage
 private fun CouiDeleteNamedPackageConfirmationDialog(item: NamedPackage, onDismiss: () -> Unit, onConfirm: () -> Unit) {
     val showState = remember { mutableStateOf(true) }
 
-    WindowDialog(
+    CouiContentDialog(
         show = showState.value,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.config_confirm_deletion),
-        content = {
-            Column {
-                Text(stringResource(R.string.config_confirm_deletion_desc, item.name))
-                Spacer(modifier = Modifier.height(24.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        text = stringResource(R.string.cancel),
-                        onClick = onDismiss,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        text = stringResource(R.string.delete),
-                        colors = ButtonDefaults.textButtonColors(
-                            textColor = MaterialTheme.colorScheme.error,
-                        ),
-                        onClick = onConfirm,
-                    )
-                }
+        actions = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    text = stringResource(R.string.cancel),
+                    onClick = onDismiss,
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    text = stringResource(R.string.delete),
+                    colors = ButtonDefaults.textButtonColors(
+                        textColor = COUITheme.colorScheme.error,
+                    ),
+                    onClick = onConfirm,
+                )
             }
+        },
+        content = {
+            Text(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                text = stringResource(R.string.config_confirm_deletion_desc, item.name),
+            )
         },
     )
 }
@@ -682,7 +689,7 @@ private fun CouiManagedUidsWidget(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(50)) // Pill shape
                                 .background(
-                                    COUITheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+                                    COUITheme.colorScheme.containerTheme.copy(alpha = 0.15f),
                                 )
                                 .clickable { showDeleteConfirmation = item }
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -691,7 +698,7 @@ private fun CouiManagedUidsWidget(
                             Text(
                                 text = stringResource(R.string.delete),
                                 color = COUITheme.colorScheme.primary,
-                                style = COUITheme.textStyles.button,
+                                style = COUITheme.textStyles.buttonL,
                             )
                         }
                     },
@@ -708,7 +715,7 @@ private fun CouiManagedUidsWidget(
             Button(
                 modifier = Modifier.padding(bottom = 8.dp),
                 onClick = { showAddDialog = true },
-                colors = ButtonDefaults.buttonColors(color = COUITheme.colorScheme.primaryContainer.copy(alpha = 0.25f)),
+                colors = ButtonDefaults.buttonColors(color = COUITheme.colorScheme.containerTheme.copy(alpha = 0.25f)),
             ) {
                 Icon(
                     imageVector = AppIcons.Add,
@@ -765,18 +772,42 @@ private fun CouiAddUidDialog(onDismiss: () -> Unit, onConfirm: (SharedUid) -> Un
     // Confirm button is enabled if both name and value are not blank and value is a valid integer.
     val isConfirmEnabled = uidName.isNotBlank() && uidValueString.toIntOrNull() != null
 
-    WindowDialog(
+    CouiContentDialog(
         show = showState.value,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.config_add_new_shared_uid),
+        actions = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+            ) {
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    text = stringResource(R.string.cancel),
+                    onClick = onDismiss,
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    text = stringResource(R.string.confirm),
+                    onClick = {
+                        val uidValue = uidValueString.toInt()
+                        onConfirm(SharedUid(uidName, uidValue))
+                    },
+                    enabled = isConfirmEnabled,
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                )
+            }
+        },
         content = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 Spacer(modifier = Modifier.height(8.dp))
                 TextField(
                     value = uidName,
                     onValueChange = { uidName = it },
                     label = stringResource(R.string.config_shared_uid_name),
                     useLabelAsPlaceholder = true,
+                    minHeight = 0.dp,
                     singleLine = true,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -785,31 +816,10 @@ private fun CouiAddUidDialog(onDismiss: () -> Unit, onConfirm: (SharedUid) -> Un
                     onValueChange = { uidValueString = it },
                     label = stringResource(R.string.config_shared_uid_value),
                     useLabelAsPlaceholder = true,
+                    minHeight = 0.dp,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
-                Spacer(modifier = Modifier.height(24.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                ) {
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        text = stringResource(R.string.cancel),
-                        onClick = onDismiss,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        text = stringResource(R.string.confirm),
-                        onClick = {
-                            val uidValue = uidValueString.toInt()
-                            onConfirm(SharedUid(uidName, uidValue))
-                        },
-                        enabled = isConfirmEnabled,
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                    )
-                }
             }
         },
     )
@@ -826,13 +836,10 @@ private fun CouiAddUidDialog(onDismiss: () -> Unit, onConfirm: (SharedUid) -> Un
 private fun CouiDeleteSharedUidConfirmationDialog(item: SharedUid, onDismiss: () -> Unit, onConfirm: () -> Unit) {
     val showState = remember { mutableStateOf(true) }
 
-    WindowDialog(
+    CouiContentDialog(
         show = showState.value,
         title = stringResource(R.string.config_confirm_deletion),
-    ) {
-        Column {
-            Text(stringResource(R.string.config_confirm_deletion_desc, item.uidName))
-            Spacer(modifier = Modifier.height(24.dp))
+        actions = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
@@ -847,11 +854,16 @@ private fun CouiDeleteSharedUidConfirmationDialog(item: SharedUid, onDismiss: ()
                     modifier = Modifier.weight(1f),
                     text = stringResource(R.string.delete),
                     colors = ButtonDefaults.textButtonColors(
-                        textColor = MaterialTheme.colorScheme.error,
+                        textColor = COUITheme.colorScheme.error,
                     ),
                     onClick = onConfirm,
                 )
             }
-        }
+        },
+    ) {
+        Text(
+            modifier = Modifier.verticalScroll(rememberScrollState()),
+            text = stringResource(R.string.config_confirm_deletion_desc, item.uidName),
+        )
     }
 }

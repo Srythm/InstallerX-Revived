@@ -114,7 +114,7 @@ object ProgressButtonDefaults {
         progressColor: Color = COUITheme.colorScheme.primary,
         contentColor: Color = COUITheme.colorScheme.onPrimary,
         disabledTrackColor: Color = COUITheme.colorScheme.disabledSecondaryVariant,
-        disabledProgressColor: Color = COUITheme.colorScheme.disabledPrimaryButton,
+        disabledProgressColor: Color = COUITheme.colorScheme.disable,
         disabledContentColor: Color = COUITheme.colorScheme.disabledOnPrimaryButton,
     ): ProgressButtonColors = remember(
         trackColor,

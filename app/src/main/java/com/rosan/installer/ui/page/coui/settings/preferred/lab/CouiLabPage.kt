@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,6 +53,7 @@ import com.rosan.installer.domain.settings.model.preferences.RootMode
 import com.rosan.installer.domain.settings.model.preferences.SmartAuthorizerCandidate
 import com.rosan.installer.ui.navigation.LocalNavigator
 import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
+import com.rosan.installer.ui.page.coui.widgets.CouiContentDialog
 import com.rosan.installer.ui.page.coui.widgets.CouiDraggableList
 import com.rosan.installer.ui.page.coui.widgets.CouiInstallerTipCard
 import com.rosan.installer.ui.page.coui.widgets.CouiRootImplementationDialog
@@ -79,7 +82,6 @@ import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
 import io.github.suqi8.coui.kmp.window.WindowBottomSheet
-import io.github.suqi8.coui.kmp.window.WindowDialog
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.blur.layerBackdrop
@@ -101,34 +103,36 @@ fun CouiLabPage(useBlur: Boolean, viewModel: LabSettingsViewModel = koinViewMode
     val showSmartAuthorizerSheet = remember { mutableStateOf(false) }
     var showNonAdbConfirmation by rememberSaveable { mutableStateOf(false) }
 
-    WindowDialog(
+    CouiContentDialog(
         show = showNonAdbConfirmation,
         onDismissRequest = { showNonAdbConfirmation = false },
         title = stringResource(R.string.lab_shizuku_non_adb_install),
-        content = {
-            Column {
-                Text(stringResource(R.string.lab_shizuku_non_adb_install_confirmation, context.packageName))
-                Spacer(modifier = Modifier.size(24.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = { showNonAdbConfirmation = false },
-                        text = stringResource(R.string.cancel),
-                    )
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            showNonAdbConfirmation = false
-                            viewModel.dispatch(LabSettingsAction.LabChangeShizukuNonAdbInstall(true))
-                        },
-                        text = stringResource(R.string.confirm),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                    )
-                }
+        actions = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = { showNonAdbConfirmation = false },
+                    text = stringResource(R.string.cancel),
+                )
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        showNonAdbConfirmation = false
+                        viewModel.dispatch(LabSettingsAction.LabChangeShizukuNonAdbInstall(true))
+                    },
+                    text = stringResource(R.string.confirm),
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                )
             }
+        },
+        content = {
+            Text(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                text = stringResource(R.string.lab_shizuku_non_adb_install_confirmation, context.packageName),
+            )
         },
     )
 
@@ -254,7 +258,7 @@ fun CouiLabPage(useBlur: Boolean, viewModel: LabSettingsViewModel = koinViewMode
 
                         val spinnerEntries = remember(data) {
                             data.values.map { modeName ->
-                                DropdownItem(title = modeName)
+                                DropdownItem(text = modeName)
                             }
                         }
 

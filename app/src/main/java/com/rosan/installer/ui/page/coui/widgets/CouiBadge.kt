@@ -5,7 +5,6 @@ package com.rosan.installer.ui.page.coui.widgets
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,7 +17,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,14 +37,13 @@ import io.github.suqi8.coui.kmp.basic.Surface
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import io.github.suqi8.coui.kmp.window.WindowDialog
 
 @Composable
 fun CouiBadge(
     text: String,
     modifier: Modifier = Modifier,
     textColor: Color = COUITheme.colorScheme.primary,
-    containerColor: Color = COUITheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
+    containerColor: Color = COUITheme.colorScheme.containerTheme.copy(alpha = 0.2f),
 ) {
     Surface(
         // Set a minimum height to eliminate visual differences between languages
@@ -64,7 +61,7 @@ fun CouiBadge(
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 // Remove default font padding for accurate vertical centering
-                style = LocalTextStyle.current.copy(
+                style = COUITheme.textStyles.bodyS.copy(
                     platformStyle = PlatformTextStyle(
                         includeFontPadding = false,
                     ),
@@ -105,7 +102,7 @@ fun CouiInfoChipGroup(modifier: Modifier = Modifier, notices: List<NoticeModel>)
     }
 
     if (selectedNotice != null) {
-        WindowDialog(
+        CouiContentDialog(
             show = showDialog.value,
             title = selectedNotice!!.shortLabel,
             titleColor = selectedNotice!!.color,
@@ -115,29 +112,28 @@ fun CouiInfoChipGroup(modifier: Modifier = Modifier, notices: List<NoticeModel>)
             onDismissFinished = {
                 selectedNotice = null
             },
+            actions = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    TextButton(
+                        modifier = Modifier.weight(1f),
+                        text = stringResource(R.string.confirm),
+                        onClick = { showDialog.value = false },
+                    )
+                }
+            },
             content = {
-                Column {
-                    SelectionContainer(
-                        modifier = Modifier
-                            .heightIn(max = 360.dp)
-                            .verticalScroll(rememberScrollState()),
-                    ) {
-                        Text(
-                            text = selectedNotice!!.fullDescription,
-                            color = COUITheme.colorScheme.onSurface,
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        TextButton(
-                            modifier = Modifier.weight(1f),
-                            text = stringResource(R.string.confirm),
-                            onClick = { showDialog.value = false },
-                        )
-                    }
+                SelectionContainer(
+                    modifier = Modifier
+                        .heightIn(max = 360.dp)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    Text(
+                        text = selectedNotice!!.fullDescription,
+                        color = COUITheme.colorScheme.labelPrimary,
+                    )
                 }
             },
         )

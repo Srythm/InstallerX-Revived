@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,7 +22,7 @@ import com.rosan.installer.R
 import com.rosan.installer.core.env.AppConfig
 import com.rosan.installer.ui.page.main.settings.config.all.AllViewAction
 import com.rosan.installer.ui.page.main.settings.config.all.AllViewModel
-import com.rosan.installer.ui.theme.InstallerTheme
+import com.rosan.installer.ui.theme.InstallerTheme.useCouiMonet
 import com.rosan.installer.util.help
 import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.CardColors
@@ -36,7 +34,6 @@ import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.icon.COUIIcons
 import io.github.suqi8.coui.kmp.icon.extended.Close
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import io.github.suqi8.coui.kmp.theme.COUITheme.isDynamicColor
 
 @Composable
 private fun TipCard(
@@ -49,8 +46,8 @@ private fun TipCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.defaultColors(
-            color = COUITheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
-            contentColor = COUITheme.colorScheme.onSurface,
+            color = COUITheme.colorScheme.containerTheme.copy(alpha = 0.25f),
+            contentColor = COUITheme.colorScheme.labelPrimary,
         ),
     ) {
         Row(
@@ -79,7 +76,7 @@ fun WarningCard(isDark: Boolean, message: String) {
             .fillMaxWidth(),
         colors = CardDefaults.defaultColors(
             color = when {
-                isDynamicColor -> COUITheme.colorScheme.errorContainer
+                useCouiMonet -> COUITheme.colorScheme.error.copy(alpha = 0.12f)
                 isDark -> Color(0XFF310808)
                 else -> Color(0xFFF8E2E2)
             },
@@ -92,8 +89,8 @@ fun WarningCard(isDark: Boolean, message: String) {
         ) {
             Text(
                 text = message,
-                style = COUITheme.textStyles.body2,
-                color = if (isDynamicColor) COUITheme.colorScheme.onErrorContainer else Color(0xFFF72727),
+                style = COUITheme.textStyles.bodyM,
+                color = if (useCouiMonet) COUITheme.colorScheme.error else Color(0xFFF72727),
                 fontWeight = FontWeight.SemiBold,
             )
         }
@@ -107,7 +104,7 @@ fun CouiScopeTipCard(viewModel: AllViewModel) {
         tipContent = {
             Text(
                 text = stringResource(R.string.scope_tips),
-                style = COUITheme.textStyles.body2,
+                style = COUITheme.textStyles.bodyM,
                 color = COUITheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -135,7 +132,7 @@ fun CouiSettingsTipCard(text: String) {
         tipContent = {
             Text(
                 text = text,
-                style = COUITheme.textStyles.body2,
+                style = COUITheme.textStyles.bodyM,
                 color = COUITheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -150,7 +147,7 @@ fun CouiInstallerTipCard(text: String) {
         tipContent = {
             Text(
                 text = text,
-                style = COUITheme.textStyles.body2,
+                style = COUITheme.textStyles.bodyM,
                 color = COUITheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -171,16 +168,8 @@ fun CouiInstallerTipCard(text: String) {
  */
 @Composable
 fun CouiErrorTextBlock(error: Throwable, modifier: Modifier = Modifier) {
-    val scheme = if (InstallerTheme.useCouiMonet) {
-        InstallerTheme.colorScheme
-    } else {
-        InstallerTheme.colorScheme.copy(
-            errorContainer = COUITheme.colorScheme.errorContainer,
-            onErrorContainer = COUITheme.colorScheme.onErrorContainer,
-        )
-    }
-    val cardBackgroundColor = scheme.errorContainer
-    val contentColor = scheme.onErrorContainer
+    val cardBackgroundColor = COUITheme.colorScheme.error.copy(alpha = 0.12f)
+    val contentColor = COUITheme.colorScheme.labelPrimary
 
     Card(
         modifier = modifier,
@@ -192,10 +181,10 @@ fun CouiErrorTextBlock(error: Throwable, modifier: Modifier = Modifier) {
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
-                color = scheme.error,
+                color = COUITheme.colorScheme.error,
                 text = error.help(),
                 fontWeight = FontWeight.Bold,
-                style = COUITheme.textStyles.body1,
+                style = COUITheme.textStyles.bodyXL,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp, 16.dp, 16.dp, 8.dp),
@@ -205,7 +194,7 @@ fun CouiErrorTextBlock(error: Throwable, modifier: Modifier = Modifier) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                color = MaterialTheme.colorScheme.outline,
+                color = COUITheme.colorScheme.divider,
             )
 
             val textToShow = if (AppConfig.isDebug) {
@@ -223,7 +212,7 @@ fun CouiErrorTextBlock(error: Throwable, modifier: Modifier = Modifier) {
                     value = textToShow,
                     onValueChange = {},
                     readOnly = true,
-                    textStyle = LocalTextStyle.current.copy(color = contentColor),
+                    textStyle = COUITheme.textStyles.bodyM.copy(color = contentColor),
                     modifier = Modifier
                         .fillMaxWidth()
                         // Allow vertical scrolling for long stack traces

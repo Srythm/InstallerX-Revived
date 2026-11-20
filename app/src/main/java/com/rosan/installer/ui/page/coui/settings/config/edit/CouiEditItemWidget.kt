@@ -48,10 +48,8 @@ import io.github.suqi8.coui.kmp.basic.DropdownItem
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.basic.TextField
-import io.github.suqi8.coui.kmp.basic.TextFieldDefaults
 import io.github.suqi8.coui.kmp.preference.WindowSpinnerPreference
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import io.github.suqi8.coui.kmp.window.WindowDialog
 import org.koin.compose.koinInject
 
 @Composable
@@ -66,10 +64,10 @@ fun CouiDataNameWidget(
             dispatch(EditViewAction.ChangeDataName(it))
         },
         labelText = stringResource(id = R.string.config_name),
+        isError = state.data.errorName,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp, horizontal = 12.dp)
-            .focusable(),
+            .padding(vertical = 8.dp, horizontal = 12.dp),
     )
     trailingContent()
 }
@@ -82,8 +80,7 @@ fun CouiDataDescriptionWidget(state: EditViewState, dispatch: (EditViewAction) -
         labelText = stringResource(id = R.string.config_description),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp, horizontal = 12.dp)
-            .focusable(),
+            .padding(vertical = 8.dp, horizontal = 12.dp),
     )
 }
 
@@ -140,7 +137,7 @@ fun CouiDataAuthorizerWidget(state: EditViewState, dispatch: (EditViewAction) ->
 
     val spinnerEntries = remember(authorizerNames) {
         authorizerNames.map { authorizerName ->
-            DropdownItem(title = authorizerName)
+            DropdownItem(text = authorizerName)
         }
     }
 
@@ -197,7 +194,7 @@ fun CouiDataInstallModeWidget(state: EditViewState, dispatch: (EditViewAction) -
 
     val spinnerEntries = remember(data) {
         data.values.map { modeName ->
-            DropdownItem(title = modeName)
+            DropdownItem(text = modeName)
         }
     }
 
@@ -257,7 +254,7 @@ fun CouiToastModeWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit
 
     val spinnerEntries = remember(data) {
         data.values.map { modeName ->
-            DropdownItem(title = modeName)
+            DropdownItem(text = modeName)
         }
     }
 
@@ -323,7 +320,7 @@ fun CouiInstallReasonWidget(state: EditViewState, dispatch: (EditViewAction) -> 
             )
 
             val spinnerEntries = remember(data) {
-                data.values.map { sourceName -> DropdownItem(title = sourceName) }
+                data.values.map { sourceName -> DropdownItem(text = sourceName) }
             }
 
             val selectedIndex = remember(currentInstallReason, data) {
@@ -383,7 +380,7 @@ fun CouiDataPackageSourceWidget(state: EditViewState, dispatch: (EditViewAction)
             )
 
             val spinnerEntries = remember(data) {
-                data.values.map { sourceName -> DropdownItem(title = sourceName) }
+                data.values.map { sourceName -> DropdownItem(text = sourceName) }
             }
 
             val selectedIndex = remember(currentSource, data) {
@@ -420,7 +417,7 @@ fun CouiDataInstallRequesterWidget(state: EditViewState, dispatch: (EditViewActi
     )
 
     val spinnerEntries = remember(data) {
-        data.values.map { modeName -> DropdownItem(title = modeName) }
+        data.values.map { modeName -> DropdownItem(text = modeName) }
     }
 
     val selectedIndex = remember(currentMode, data) {
@@ -468,9 +465,7 @@ fun CouiDataInstallRequesterWidget(state: EditViewState, dispatch: (EditViewActi
                 onValueChange = {
                     dispatch(EditViewAction.ChangeDataInstallRequester(it))
                 },
-                colors = TextFieldDefaults.textFieldColors(
-                    borderColor = if (isError) COUITheme.colorScheme.error else COUITheme.colorScheme.primary,
-                ),
+                isError = isError,
                 label = stringResource(id = R.string.config_install_requester),
                 useLabelAsPlaceholder = true,
                 singleLine = true,
@@ -485,12 +480,12 @@ fun CouiDataInstallRequesterWidget(state: EditViewState, dispatch: (EditViewActi
             val textColor = if (packageName.isNotEmpty() && uid == null) {
                 COUITheme.colorScheme.error
             } else {
-                COUITheme.colorScheme.onBackgroundVariant
+                COUITheme.colorScheme.labelSecondary
             }
 
             Text(
                 text = displayText,
-                fontSize = COUITheme.textStyles.subtitle.fontSize,
+                fontSize = COUITheme.textStyles.buttonM.fontSize,
                 fontWeight = FontWeight.Bold,
                 color = textColor,
                 modifier = Modifier.padding(horizontal = 32.dp),
@@ -539,7 +534,7 @@ fun CouiDataDeclareInstallerWidget(state: EditViewState, dispatch: (EditViewActi
         )
 
         val spinnerEntries = remember(data) {
-            data.values.map { modeName -> DropdownItem(title = modeName) }
+            data.values.map { modeName -> DropdownItem(text = modeName) }
         }
 
         val selectedIndex = remember(currentMode, data) {
@@ -587,9 +582,7 @@ fun CouiDataInstallerWidget(state: EditViewState, dispatch: (EditViewAction) -> 
                 .focusable(),
             value = currentInstaller,
             onValueChange = { dispatch(EditViewAction.ChangeDataInstaller(it)) },
-            colors = TextFieldDefaults.textFieldColors(
-                borderColor = if (isError) COUITheme.colorScheme.error else COUITheme.colorScheme.primary,
-            ),
+            isError = isError,
             label = stringResource(id = R.string.config_installer),
             useLabelAsPlaceholder = true,
             singleLine = true,
@@ -598,7 +591,7 @@ fun CouiDataInstallerWidget(state: EditViewState, dispatch: (EditViewAction) -> 
         if (isError) {
             Text(
                 text = stringResource(R.string.config_error_installer),
-                fontSize = COUITheme.textStyles.subtitle.fontSize,
+                fontSize = COUITheme.textStyles.buttonM.fontSize,
                 fontWeight = FontWeight.Bold,
                 color = COUITheme.colorScheme.error,
                 modifier = Modifier.padding(horizontal = 32.dp),
@@ -633,7 +626,7 @@ fun CouiDataUserWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit)
             exit = shrinkVertically() + fadeOut(),
         ) {
             val spinnerEntries = remember(availableUsers) {
-                availableUsers.values.map { userName -> DropdownItem(title = userName) }
+                availableUsers.values.map { userName -> DropdownItem(text = userName) }
             }
 
             val selectedIndex = remember(targetUserId, availableUsers) {
@@ -695,7 +688,7 @@ fun CouiDataManualDexoptWidget(state: EditViewState, dispatch: (EditViewAction) 
 
             val spinnerEntries = remember(data) {
                 data.values.map { modeName ->
-                    DropdownItem(title = modeName)
+                    DropdownItem(text = modeName)
                 }
             }
 

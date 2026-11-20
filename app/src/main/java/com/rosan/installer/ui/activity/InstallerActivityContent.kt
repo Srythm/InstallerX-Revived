@@ -43,10 +43,11 @@ fun InstallerActivityContent(
         useDynamicColor = uiState.useDynamicColor,
         useCouiMonet = uiState.useCouiMonet,
         seedColor = androidx.compose.ui.graphics.Color(uiState.seedColor),
+        useBlur = uiState.useBlur,
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (uiState.useCoui) {
-                CouiInstallerPage(session)
+                CouiInstallerPage(session, useAmoled = uiState.useAmoled)
             } else {
                 InstallerPage(session)
             }

@@ -65,6 +65,7 @@ import com.rosan.installer.ui.page.main.installer.InstallerViewAction
 import com.rosan.installer.ui.page.main.installer.InstallerViewModel
 import com.rosan.installer.ui.page.main.installer.mapper.InstallNoticeResources
 import com.rosan.installer.ui.page.main.installer.mapper.InstallStateUiMapper
+import com.rosan.installer.ui.theme.InstallerTheme.useCouiMonet
 import com.rosan.installer.ui.theme.couiSheetCardColors
 import com.rosan.installer.ui.util.formatSize
 import com.rosan.installer.ui.util.isGestureNavigation
@@ -76,7 +77,6 @@ import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import io.github.suqi8.coui.kmp.theme.COUITheme.isDynamicColor
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -141,7 +141,7 @@ fun InstallPrepareContent(
     val isSplitUpdateMode = (isBundleSplitUpdate || isPureSplit) && currentPackage.installedAppInfo != null
 
     val primaryColor = COUITheme.colorScheme.primary
-    val errorColor = MaterialTheme.colorScheme.error
+    val errorColor = COUITheme.colorScheme.error
 
     val tagDowngrade = stringResource(R.string.tag_downgrade)
     val downgradeWarning = stringResource(R.string.installer_prepare_type_downgrade)
@@ -704,8 +704,8 @@ fun InstallPrepareContent(
                         onClick = { isExpanded = !isExpanded },
                         text = if (isExpanded) stringResource(R.string.collapse) else stringResource(R.string.more),
                         colors = ButtonDefaults.textButtonColors(
-                            color = if (isDynamicColor) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
-                            textColor = if (isDynamicColor) COUITheme.colorScheme.onSecondaryContainer else COUITheme.colorScheme.onSecondaryVariant,
+                            color = if (useCouiMonet) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
+                            textColor = COUITheme.colorScheme.labelPrimary,
                         ),
                         modifier = Modifier.weight(1f),
                     )
@@ -714,8 +714,8 @@ fun InstallPrepareContent(
                         onClick = onCancel,
                         text = stringResource(R.string.cancel),
                         colors = ButtonDefaults.textButtonColors(
-                            color = if (isDynamicColor) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
-                            textColor = if (isDynamicColor) COUITheme.colorScheme.onSecondaryContainer else COUITheme.colorScheme.onSecondaryVariant,
+                            color = if (useCouiMonet) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
+                            textColor = COUITheme.colorScheme.labelPrimary,
                         ),
                         modifier = Modifier.weight(1f),
                     )
@@ -799,7 +799,7 @@ private fun SdkInfoRow(
         // Label to the left.
         Text(
             text = stringResource(labelResId),
-            style = COUITheme.textStyles.body2,
+            style = COUITheme.textStyles.bodyM,
             fontWeight = FontWeight.SemiBold,
         )
 
@@ -808,7 +808,6 @@ private fun SdkInfoRow(
             if (showComparison) {
                 // val isDowngrade = newSdkInt < oldSdkInt
                 // val isIncompatible = type == "min" && newSdkInt > Build.VERSION.SDK_INT
-                // val color = if (isDowngrade || isIncompatible) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
 
                 val oldText = when {
                     isUninstalled -> stringResource(R.string.old_version_uninstalled)
@@ -816,7 +815,7 @@ private fun SdkInfoRow(
                     else -> oldSdk
                 }
 
-                Text(text = oldText, style = COUITheme.textStyles.body2)
+                Text(text = oldText, style = COUITheme.textStyles.bodyM)
 
                 Icon(
                     imageVector = AppIcons.ArrowIndicator,
@@ -827,12 +826,12 @@ private fun SdkInfoRow(
                         .size(16.dp),
                 )
 
-                Text(text = newSdk/*, color = color*/, style = COUITheme.textStyles.body2)
+                Text(text = newSdk/*, color = color*/, style = COUITheme.textStyles.bodyM)
             } else {
                 val isIncompatible = type == "min" && newSdkInt != null && newSdkInt > Build.VERSION.SDK_INT
-                val color = if (isIncompatible) MaterialTheme.colorScheme.error else Color.Unspecified
+                val color = if (isIncompatible) COUITheme.colorScheme.error else Color.Unspecified
 
-                Text(text = newSdk, color = color, style = COUITheme.textStyles.body2)
+                Text(text = newSdk, color = color, style = COUITheme.textStyles.bodyM)
             }
         }
     }

@@ -2,6 +2,7 @@
 // Copyright (C) 2026 InstallerX Revived contributors
 package com.rosan.installer.ui.page.coui.installer.fullscreen
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -87,8 +88,8 @@ fun CouiFullScreenPermissionContent(
 private fun PermissionSectionTitle(text: String) {
     Text(
         text = text,
-        style = COUITheme.textStyles.footnote1,
-        color = COUITheme.colorScheme.onSurfaceVariantSummary,
+        style = COUITheme.textStyles.bodyS,
+        color = COUITheme.colorScheme.labelSecondaryVariant,
         modifier = Modifier.padding(
             start = FullScreenHorizontalPadding,
             end = FullScreenHorizontalPadding,
@@ -110,24 +111,25 @@ private fun PermissionCard(
             .fillMaxWidth()
             .padding(horizontal = FullScreenHorizontalPadding),
     ) {
-        Column(modifier = Modifier.padding(horizontal = 14.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
             permissions.forEachIndexed { index, permission ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 12.dp),
+                        .padding(vertical = 14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = context.getBestPermissionLabel(permission),
-                        style = COUITheme.textStyles.body1,
-                        color = COUITheme.colorScheme.onSurface,
+                        style = COUITheme.textStyles.bodyXL,
+                        color = COUITheme.colorScheme.labelPrimary,
                         modifier = Modifier.weight(1f),
                     )
                     if (isSensitive) {
                         Text(
                             text = stringResource(R.string.installer_permission_requires_grant),
-                            style = COUITheme.textStyles.footnote1,
+                            style = COUITheme.textStyles.bodyS,
                             color = COUITheme.colorScheme.error,
                         )
                     }

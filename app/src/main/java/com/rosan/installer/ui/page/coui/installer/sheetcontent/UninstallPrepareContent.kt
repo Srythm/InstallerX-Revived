@@ -27,6 +27,7 @@ import com.rosan.installer.ui.page.coui.installer.components.AppInfoState
 import com.rosan.installer.ui.page.coui.widgets.CouiCheckboxWidget
 import com.rosan.installer.ui.page.main.installer.InstallerViewAction
 import com.rosan.installer.ui.page.main.installer.InstallerViewModel
+import com.rosan.installer.ui.theme.InstallerTheme.useCouiMonet
 import com.rosan.installer.ui.theme.couiSheetCardColors
 import com.rosan.installer.ui.util.isGestureNavigation
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
@@ -34,7 +35,6 @@ import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import io.github.suqi8.coui.kmp.theme.COUITheme.isDynamicColor
 
 @Composable
 fun UninstallPrepareContent(
@@ -68,9 +68,9 @@ fun UninstallPrepareContent(
             Text(
                 text = stringResource(R.string.uninstall_archive_message),
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-                color = COUITheme.colorScheme.onSurfaceVariantSummary,
+                color = COUITheme.colorScheme.labelSecondaryVariant,
                 textAlign = TextAlign.Center,
-                style = COUITheme.textStyles.body1,
+                style = COUITheme.textStyles.bodyXL,
             )
         } else {
             Card(
@@ -135,8 +135,8 @@ fun UninstallPrepareContent(
                 text = stringResource(R.string.cancel),
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.textButtonColors(
-                    color = if (isDynamicColor) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
-                    textColor = if (isDynamicColor) COUITheme.colorScheme.onSecondaryContainer else COUITheme.colorScheme.onSecondaryVariant,
+                    color = if (useCouiMonet) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
+                    textColor = COUITheme.colorScheme.labelPrimary,
                 ),
                 onClick = onCancel,
             )
@@ -144,8 +144,8 @@ fun UninstallPrepareContent(
                 text = stringResource(if (isArchived) R.string.uninstall_archive else R.string.uninstall),
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.textButtonColors(
-                    color = if (isDynamicColor) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
-                    textColor = MaterialTheme.colorScheme.error,
+                    color = if (useCouiMonet) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
+                    textColor = COUITheme.colorScheme.error,
                 ),
                 onClick = onUninstall,
             )

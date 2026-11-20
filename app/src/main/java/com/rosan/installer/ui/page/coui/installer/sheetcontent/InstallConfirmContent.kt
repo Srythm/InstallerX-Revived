@@ -30,12 +30,12 @@ import com.rosan.installer.domain.session.model.ConfirmationRequestType
 import com.rosan.installer.ui.page.coui.widgets.CouiInstallerTipCard
 import com.rosan.installer.ui.page.main.installer.InstallerStage
 import com.rosan.installer.ui.page.main.installer.InstallerViewModel
+import com.rosan.installer.ui.theme.InstallerTheme.useCouiMonet
 import com.rosan.installer.ui.util.isGestureNavigation
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import io.github.suqi8.coui.kmp.theme.COUITheme.isDynamicColor
 
 @Composable
 fun InstallConfirmContent(
@@ -73,8 +73,8 @@ fun InstallConfirmContent(
 
                 Text(
                     text = sessionInfo.appLabel.toString(),
-                    style = COUITheme.textStyles.title3,
-                    color = COUITheme.colorScheme.onSurface,
+                    style = COUITheme.textStyles.headlineM,
+                    color = COUITheme.colorScheme.labelPrimary,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(horizontal = 24.dp),
@@ -124,8 +124,8 @@ fun InstallConfirmContent(
                     enabled = !uiState.isConfirmationSubmitting,
                     text = stringResource(R.string.cancel),
                     colors = ButtonDefaults.textButtonColors(
-                        color = if (isDynamicColor) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
-                        textColor = if (isDynamicColor) COUITheme.colorScheme.onSecondaryContainer else COUITheme.colorScheme.onSecondaryVariant,
+                        color = if (useCouiMonet) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
+                        textColor = COUITheme.colorScheme.labelPrimary,
                     ),
                     modifier = Modifier.weight(1f),
                 )

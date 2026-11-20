@@ -32,12 +32,12 @@ import com.rosan.installer.ui.page.coui.installer.components.AppInfoSlot
 import com.rosan.installer.ui.page.coui.installer.components.AppInfoState
 import com.rosan.installer.ui.page.main.installer.InstallerViewAction
 import com.rosan.installer.ui.page.main.installer.InstallerViewModel
+import com.rosan.installer.ui.theme.InstallerTheme.useCouiMonet
 import com.rosan.installer.ui.util.isGestureNavigation
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import io.github.suqi8.coui.kmp.theme.COUITheme.isDynamicColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -74,7 +74,7 @@ fun InstallSuccessContent(
 
         Text(
             text = stringResource(R.string.installer_install_success),
-            style = COUITheme.textStyles.headline2,
+            style = COUITheme.textStyles.headlineXS,
             fontWeight = FontWeight.Bold,
             color = COUITheme.colorScheme.primary,
         )
@@ -90,8 +90,8 @@ fun InstallSuccessContent(
                     text = stringResource(R.string.open_lsposed),
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.textButtonColors(
-                        color = if (isDynamicColor) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
-                        textColor = if (isDynamicColor) COUITheme.colorScheme.onSecondaryContainer else COUITheme.colorScheme.onSecondaryVariant,
+                        color = if (useCouiMonet) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
+                        textColor = COUITheme.colorScheme.labelPrimary,
                     ),
                     onClick = {
                         viewModel.dispatch(InstallerViewAction.PrepareClose)
@@ -128,8 +128,8 @@ fun InstallSuccessContent(
                 text = stringResource(R.string.finish),
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.textButtonColors(
-                    color = if (isDynamicColor) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
-                    textColor = if (isDynamicColor) COUITheme.colorScheme.onSecondaryContainer else COUITheme.colorScheme.onSecondaryVariant,
+                    color = if (useCouiMonet) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
+                    textColor = COUITheme.colorScheme.labelPrimary,
                 ),
                 onClick = onClose,
             )

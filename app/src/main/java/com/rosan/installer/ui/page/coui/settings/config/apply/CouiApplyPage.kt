@@ -10,14 +10,11 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -35,7 +32,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -66,12 +62,10 @@ import com.rosan.installer.ui.page.main.settings.config.apply.ApplyViewApp
 import com.rosan.installer.ui.page.main.settings.config.apply.ApplyViewModel
 import com.rosan.installer.ui.page.main.settings.config.apply.ApplyViewState
 import com.rosan.installer.ui.page.main.settings.config.apply.ViewContent
-import com.rosan.installer.ui.theme.CouiTokens
 import com.rosan.installer.ui.theme.getCouiAppBarColor
 import com.rosan.installer.ui.theme.installerCouiBlurEffect
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
 import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
-import io.github.suqi8.coui.kmp.basic.CardDefaults
 import io.github.suqi8.coui.kmp.basic.DropdownEntry
 import io.github.suqi8.coui.kmp.basic.DropdownItem
 import io.github.suqi8.coui.kmp.basic.FloatingActionButton
@@ -80,14 +74,13 @@ import io.github.suqi8.coui.kmp.basic.InfiniteProgressIndicator
 import io.github.suqi8.coui.kmp.basic.InputField
 import io.github.suqi8.coui.kmp.basic.PullToRefresh
 import io.github.suqi8.coui.kmp.basic.Scaffold
-import io.github.suqi8.coui.kmp.basic.Switch
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TopAppBar
 import io.github.suqi8.coui.kmp.icon.COUIIcons
 import io.github.suqi8.coui.kmp.icon.extended.Close
 import io.github.suqi8.coui.kmp.icon.extended.More
 import io.github.suqi8.coui.kmp.menu.WindowIconDropdownMenu
-import io.github.suqi8.coui.kmp.squircle.squircleSurface
+import io.github.suqi8.coui.kmp.preference.SwitchPreference
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
@@ -229,7 +222,7 @@ fun CouiApplyPage(id: Long, useBlur: Boolean, viewModel: ApplyViewModel = koinVi
                             InfiniteProgressIndicator()
                             Text(
                                 text = stringResource(id = R.string.loading),
-                                style = COUITheme.textStyles.main,
+                                style = COUITheme.textStyles.bodyXL,
                             )
                         }
                     }
@@ -291,9 +284,6 @@ fun CouiApplyPage(id: Long, useBlur: Boolean, viewModel: ApplyViewModel = koinVi
                                         onToggle = { isChecked ->
                                             viewModel.dispatch(ApplyViewAction.ApplyPackageName(null, isChecked))
                                         },
-                                        onClick = {
-                                            viewModel.dispatch(ApplyViewAction.ApplyPackageName(null, !isApplied))
-                                        },
                                     )
                                 }
                             }
@@ -343,9 +333,6 @@ fun CouiApplyPage(id: Long, useBlur: Boolean, viewModel: ApplyViewModel = koinVi
                                     onToggle = { isChecked ->
                                         viewModel.dispatch(ApplyViewAction.ApplyPackageName(app.packageName, isChecked))
                                     },
-                                    onClick = {
-                                        viewModel.dispatch(ApplyViewAction.ApplyPackageName(app.packageName, !isApplied))
-                                    },
                                     showPackageName = uiState.showPackageName,
                                 )
                             }
@@ -367,7 +354,6 @@ private fun ItemWidget(
     index: Int,
     count: Int,
     onToggle: (Boolean) -> Unit,
-    onClick: () -> Unit,
     showPackageName: Boolean,
 ) {
     CouiSettingsGroupItem(
@@ -375,58 +361,23 @@ private fun ItemWidget(
         count = count,
         modifier = modifier,
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(
-                    onClick = onClick,
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = ripple(color = COUITheme.colorScheme.primary),
-                )
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            // The redundant side-effect logic and Context usage have been completely removed.
-
-            if (icon != null) {
-                Image(
-                    bitmap = icon,
-                    modifier = Modifier
-                        .size(40.dp)
-                        .align(Alignment.CenterVertically),
-                    contentDescription = null,
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .align(Alignment.CenterVertically),
-                )
-            }
-
-            Column(
-                modifier = Modifier
-                    .align(Alignment.CenterVertically)
-                    .weight(1f),
-            ) {
-                Text(
-                    text = app.label ?: app.packageName,
-                    style = COUITheme.textStyles.title4,
-                )
-                AnimatedVisibility(showPackageName) {
-                    Text(
-                        text = app.packageName,
-                        fontSize = COUITheme.textStyles.body2.fontSize,
-                        color = COUITheme.colorScheme.onSurfaceVariantActions,
+        SwitchPreference(
+            title = app.label ?: app.packageName,
+            summary = app.packageName.takeIf { showPackageName },
+            checked = isApplied,
+            onCheckedChange = onToggle,
+            startAction = {
+                if (icon != null) {
+                    Image(
+                        bitmap = icon,
+                        modifier = Modifier.size(40.dp),
+                        contentDescription = null,
                     )
+                } else {
+                    Box(modifier = Modifier.size(40.dp))
                 }
-            }
-            Switch(
-                modifier = Modifier.align(Alignment.CenterVertically),
-                checked = isApplied,
-                onCheckedChange = onToggle,
-            )
-        }
+            },
+        )
     }
 }
 
@@ -436,44 +387,25 @@ private fun UnknownScopeItemWidget(
     title: String,
     isApplied: Boolean,
     onToggle: (Boolean) -> Unit,
-    onClick: () -> Unit,
 ) {
-    val containerColor = CardDefaults.defaultColors().color
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .squircleSurface(containerColor, CouiTokens.CardCornerRadius),
+    CouiSettingsGroupItem(
+        index = 0,
+        count = 1,
+        modifier = modifier.fillMaxWidth(),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(
-                    onClick = onClick,
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = ripple(color = COUITheme.colorScheme.primary),
+        SwitchPreference(
+            title = title,
+            checked = isApplied,
+            onCheckedChange = onToggle,
+            startAction = {
+                Icon(
+                    imageVector = AppIcons.InstallSource,
+                    contentDescription = null,
+                    modifier = Modifier.size(40.dp),
+                    tint = COUITheme.colorScheme.primary,
                 )
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = AppIcons.InstallSource,
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-                tint = COUITheme.colorScheme.primary,
-            )
-
-            Text(
-                modifier = Modifier.weight(1f),
-                text = title,
-                style = COUITheme.textStyles.title4,
-            )
-
-            Switch(
-                checked = isApplied,
-                onCheckedChange = onToggle,
-            )
-        }
+            },
+        )
     }
 }
 
@@ -539,7 +471,7 @@ private fun TopAppBarActions(viewModel: ApplyViewModel, uiState: ApplyViewState)
     ) {
         Icon(
             imageVector = COUIIcons.Regular.More,
-            tint = COUITheme.colorScheme.onBackground,
+            tint = COUITheme.colorScheme.labelPrimary,
             contentDescription = stringResource(R.string.menu),
         )
     }

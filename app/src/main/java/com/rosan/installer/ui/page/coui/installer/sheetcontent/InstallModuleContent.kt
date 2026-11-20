@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rosan.installer.R
+import com.rosan.installer.ui.theme.InstallerTheme.useCouiMonet
 import com.rosan.installer.ui.theme.couiSheetCardColors
 import com.rosan.installer.ui.util.KeyEventBlocker
 import com.rosan.installer.ui.util.isGestureNavigation
@@ -37,7 +38,6 @@ import io.github.suqi8.coui.kmp.basic.InfiniteProgressIndicator
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import io.github.suqi8.coui.kmp.theme.COUITheme.isDynamicColor
 
 /**
  * A Composable that displays the real-time output of a module installation process.
@@ -94,7 +94,7 @@ fun InstallModuleContent(
                         fontFamily = FontFamily.Monospace,
                         fontSize = 12.sp,
                         // Color-code the output: lines starting with "ERROR:" will be red.
-                        color = if (line.startsWith("ERROR:")) Color.Red else COUITheme.colorScheme.onSurface,
+                        color = if (line.startsWith("ERROR:")) Color.Red else COUITheme.colorScheme.labelPrimary,
                     )
                 }
             }
@@ -112,8 +112,8 @@ fun InstallModuleContent(
                     .navigationBarsPadding()
                     .padding(top = 24.dp, bottom = if (isGestureNavigation()) 24.dp else 0.dp),
                 colors = ButtonDefaults.textButtonColors(
-                    color = if (isDynamicColor) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
-                    textColor = if (isDynamicColor) COUITheme.colorScheme.onSecondaryContainer else COUITheme.colorScheme.onSecondaryVariant,
+                    color = if (useCouiMonet) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
+                    textColor = COUITheme.colorScheme.labelPrimary,
                 ),
             )
         } else {
@@ -121,7 +121,7 @@ fun InstallModuleContent(
                 enabled = false,
                 onClick = {},
                 colors = ButtonDefaults.buttonColors(
-                    color = if (isDynamicColor) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
+                    color = if (useCouiMonet) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
                 ),
                 modifier = Modifier
                     .fillMaxWidth()

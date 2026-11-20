@@ -3,7 +3,6 @@
 package com.rosan.installer.ui.page.coui.settings.preferred.network
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,6 +19,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,6 +42,7 @@ import com.rosan.installer.domain.settings.model.preferences.HttpProfile
 import com.rosan.installer.domain.settings.model.preferences.NetworkAppNameSource
 import com.rosan.installer.ui.navigation.LocalNavigator
 import com.rosan.installer.ui.page.coui.widgets.CouiBackButton
+import com.rosan.installer.ui.page.coui.widgets.CouiContentDialog
 import com.rosan.installer.ui.page.coui.widgets.CouiCustomGithubProxyUrlDialog
 import com.rosan.installer.ui.page.coui.widgets.CouiGithubUpdateChannelSelectionDialog
 import com.rosan.installer.ui.page.coui.widgets.CouiSwitchWidget
@@ -63,7 +65,6 @@ import io.github.suqi8.coui.kmp.preference.SwitchPreference
 import io.github.suqi8.coui.kmp.preference.WindowSpinnerPreference
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
-import io.github.suqi8.coui.kmp.window.WindowDialog
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 
@@ -240,7 +241,7 @@ fun CouiNetworkPage(useBlur: Boolean, viewModel: NetworkSettingsViewModel = koin
                             )
                         }
                         val profileEntries = remember(profileData) {
-                            profileData.values.map { name -> DropdownItem(title = name) }
+                            profileData.values.map { name -> DropdownItem(text = name) }
                         }
                         val profileIndex = profileData.keys.toList()
                             .indexOf(uiState.httpProfile)
@@ -289,32 +290,34 @@ private fun NetworkSourceModeWarningDialog(
     onDismiss: () -> Unit,
     onConfirm: (NetworkSourceMode) -> Unit,
 ) {
-    WindowDialog(
+    CouiContentDialog(
         show = mode != null,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.network_source_mode_warning_title),
-        content = {
-            Column {
-                Text(text = stringResource(R.string.network_source_mode_warning_desc))
-                Spacer(modifier = Modifier.size(24.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = onDismiss,
-                        text = stringResource(R.string.cancel),
-                    )
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = { mode?.let(onConfirm) },
-                        text = stringResource(R.string.confirm),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                    )
-                }
+        actions = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = onDismiss,
+                    text = stringResource(R.string.cancel),
+                )
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = { mode?.let(onConfirm) },
+                    text = stringResource(R.string.confirm),
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                )
             }
+        },
+        content = {
+            Text(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                text = stringResource(R.string.network_source_mode_warning_desc),
+            )
         },
     )
 }
@@ -327,8 +330,8 @@ private fun CouiNetworkAppNameSourcePreference(source: NetworkAppNameSource, onC
             if (source == NetworkAppNameSource.ServerFilename) R.string.network_app_name_server_desc else R.string.network_app_name_resources_desc,
         ),
         items = listOf(
-            DropdownItem(title = stringResource(R.string.network_app_name_server)),
-            DropdownItem(title = stringResource(R.string.network_app_name_resources)),
+            DropdownItem(text = stringResource(R.string.network_app_name_server)),
+            DropdownItem(text = stringResource(R.string.network_app_name_resources)),
         ),
         selectedIndex = NetworkAppNameSource.entries.indexOf(source),
         onSelectedIndexChange = { NetworkAppNameSource.entries.getOrNull(it)?.let(onChange) },
@@ -347,7 +350,7 @@ private fun CouiNetworkSourceModePreference(currentMode: NetworkSourceMode, onMo
         NetworkSourceMode.Automatic to stringResource(R.string.config_network_source_smart_desc),
         NetworkSourceMode.StreamOnly to stringResource(R.string.config_network_source_low_storage_desc),
     )
-    val entries = modes.values.map { DropdownItem(title = it) }
+    val entries = modes.values.map { DropdownItem(text = it) }
 
     WindowSpinnerPreference(
         title = stringResource(R.string.config_network_source_mode),

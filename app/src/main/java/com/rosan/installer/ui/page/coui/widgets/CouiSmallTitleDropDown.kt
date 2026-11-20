@@ -85,22 +85,22 @@ fun CouiDropdown(
         ) {
             // Display the selected item's text, styled like SmallTitle.
             val textColor = if (actualEnabled) {
-                COUITheme.colorScheme.onBackgroundVariant
+                COUITheme.colorScheme.labelSecondary
             } else {
-                COUITheme.colorScheme.disabledOnSecondaryVariant
+                COUITheme.colorScheme.disabledNeutral
             }
             Text(
                 text = if (itemsNotEmpty) items[selectedIndex] else placeholder,
-                fontSize = COUITheme.textStyles.subtitle.fontSize, // from SmallTitle
+                fontSize = COUITheme.textStyles.buttonM.fontSize, // from SmallTitle
                 fontWeight = FontWeight.Bold, // from SmallTitle
                 color = textColor,
             )
 
             // The dropdown arrow icon.
             val iconColor = if (actualEnabled) {
-                COUITheme.colorScheme.onSurfaceVariantActions
+                COUITheme.colorScheme.labelTertiary
             } else {
-                COUITheme.colorScheme.disabledOnSecondaryVariant
+                COUITheme.colorScheme.disabledNeutral
             }
             Image(
                 modifier = Modifier.size(10.dp, 16.dp),

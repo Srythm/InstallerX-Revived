@@ -54,14 +54,14 @@ fun CouiIntNumberPickerWidget(
                 Column {
                     Text(
                         text = title,
-                        color = COUITheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.titleMedium,
+                        color = COUITheme.colorScheme.labelPrimary,
+                        style = COUITheme.textStyles.bodyXL,
                     )
                     description?.let {
                         Text(
                             text = it,
-                            color = COUITheme.colorScheme.onSurfaceVariantSummary,
-                            style = MaterialTheme.typography.bodyMedium,
+                            color = COUITheme.colorScheme.labelSecondaryVariant,
+                            style = COUITheme.textStyles.bodyM,
                         )
                     }
                 }
@@ -100,12 +100,12 @@ fun CouiIntNumberPickerWidget(
                 text = "$value$valueSuffix",
                 modifier = valueModifier,
                 style = if (subduedValue) {
-                    MaterialTheme.typography.bodyMedium
+                    COUITheme.textStyles.bodyM
                 } else {
-                    COUITheme.textStyles.button
+                    COUITheme.textStyles.buttonL
                 },
                 color = if (subduedValue) {
-                    COUITheme.colorScheme.onSurfaceVariantSummary
+                    COUITheme.colorScheme.labelSecondaryVariant
                 } else {
                     COUITheme.colorScheme.primary
                 },
