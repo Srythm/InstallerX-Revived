@@ -52,7 +52,6 @@ import com.rosan.installer.domain.settings.model.preferences.RootMode
 import com.rosan.installer.ui.icons.AppCOUIIcons
 import com.rosan.installer.ui.page.coui.installer.components.AppInfoState
 import com.rosan.installer.ui.page.coui.installer.components.rememberAppInfoState
-import com.rosan.installer.ui.page.coui.installer.fullscreen.CouiFullScreenInstaller
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.InstallChoiceContent
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.InstallCompletedContent
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.InstallConfirmContent
@@ -123,7 +122,6 @@ fun CouiInstallerPage(
     // Owned by the ViewModel, not by this composition: it flips before the
     // session is torn down so the full-screen layer gets a full fade-out window
     // even though the teardown would otherwise remove it from the tree.
-    val isClosingFullscreen by viewModel.isClosingFullscreen.collectAsStateWithLifecycle()
 
     val globalSeedColor = InstallerTheme.seedColor
     val themeMode = InstallerTheme.themeMode
@@ -275,42 +273,8 @@ fun CouiInstallerPage(
             compatStatusBarColor = false,
             useAmoled = useAmoled,
         ) {
-            // Ready means the session has not resolved its config yet, so `uiState.config` is
-            // still the default (Dialog). Rendering the sheet here shows a "loading" dialog for a
-            // few frames and then jumps to the full-screen shell the user actually asked for.
-            // Nothing meaningful exists to show at this point anyway, so render nothing.
-            if (stage is InstallerStage.Ready) {
-                return@InstallerCOUITheme
-            }
-            // Full-screen install mode. The window itself never changes: this
-            // page is already laid out edge-to-edge inside the activity, so the
-            // mode only decides which shell renders the stage. Stages that are
-            // not listed in [isFullScreenStage] keep the bottom sheet, which
-            // means the switch happens once, when the user commits to
-            // installing, and never again mid-flow.
-            // `isClosingFullscreen` keeps the shell mounted for the whole fade
-            // even if the stage changes underneath it during the close window;
-            // without it the sheet would flash for the last frame.
-            if (uiState.config.installMode == InstallMode.FullScreen &&
-                (isFullScreenStage(stage) || isClosingFullscreen)
-            ) {
-                CouiFullScreenInstaller(
-                    stage = stage,
-                    title = sheetTitle,
-                    appInfo = appInfoState,
-                    entity = appInfoState.primaryEntity as? AppEntity.BaseEntity,
-                    versionName = (appInfoState.primaryEntity as? AppEntity.BaseEntity)?.versionName,
-                    sourceLabel = uiState.initiatorAppLabel,
-                    permissions = (appInfoState.primaryEntity as? AppEntity.BaseEntity)?.permissions.orEmpty(),
-                    showPermissions = showPermissions,
-                    showSettings = showSettings,
-                    isClosing = isClosingFullscreen,
-                    viewModel = viewModel,
-                    session = session,
-                    onClose = { viewModel.dispatch(InstallerViewAction.Close) },
-                )
-                return@InstallerCOUITheme
-            }
+            // The full-screen shell is parked for this release. It stays in the tree so it can be
+            // continued later, but no mode reaches it: the dialog below is the only shell.
 
             WindowBottomSheet(
                 show = showBottomSheet.value, // Always true as long as this page is composed.
@@ -820,31 +784,6 @@ fun CouiInstallerPage(
             }
         }
     }
-}
-
-/**
- * Stages the full-screen shell renders.
- *
- * The list covers the whole linear install flow, from the first byte read to the
- * final result, so a full-screen install never drops back to the sheet in the
- * middle. What stays on the sheet is either interactive (`InstallChoice`,
- * `InstallConfirm`, the extended menu, uninstall / unarchive) or a permission
- * gate (`InstallWaitingUnknownSource`), because those steps need the sheet's own
- * chrome and dismiss semantics.
- */
-private fun isFullScreenStage(stage: InstallerStage): Boolean = when (stage) {
-    is InstallerStage.Preparing,
-    is InstallerStage.Resolving,
-    is InstallerStage.Analysing,
-    is InstallerStage.InstallPrepare,
-    is InstallerStage.Installing,
-    is InstallerStage.InstallingModule,
-    is InstallerStage.InstallCompleted,
-    is InstallerStage.InstallSuccess,
-    is InstallerStage.InstallFailed,
-    -> true
-
-    else -> false
 }
 
 @Composable

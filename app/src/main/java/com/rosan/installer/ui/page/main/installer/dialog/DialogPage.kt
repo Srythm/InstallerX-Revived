@@ -281,8 +281,9 @@ fun DialogPage(
                 // existing dialog layout in notification mode so the
                 // silent-install flow continues to work without a UI takeover.
                 val isInstallChoice = stage is InstallerStage.InstallChoice
-                val useFullScreen = installMode == InstallMode.FullScreen ||
-                    (isInstallChoice && installMode.isNotification)
+                // The user-selectable full-screen mode is parked; only the notification flow
+                // still takes over the screen for its install-choice step.
+                val useFullScreen = isInstallChoice && installMode.isNotification
                 if (useFullScreen) {
                     // Fullscreen keeps the package header (icon, title, subtitle)
                     // constant across the whole install flow, while the body

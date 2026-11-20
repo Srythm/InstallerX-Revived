@@ -213,19 +213,20 @@ fun SegmentedColumnScope.dataAuthorizerWidget(state: EditViewState, dispatch: (E
 @Composable
 fun DataInstallModeWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit) {
     val stateInstallMode = state.data.installMode
+    // The full-screen shell is parked for now: it is not offered here, and a configuration
+    // that still stores it is read back as a dialog instead (see InstallModeSelectable).
     val data = mapOf(
         InstallMode.Dialog to stringResource(R.string.config_install_mode_dialog),
         InstallMode.AutoDialog to stringResource(R.string.config_install_mode_auto_dialog),
         InstallMode.Notification to stringResource(R.string.config_install_mode_notification),
         InstallMode.AutoNotification to stringResource(R.string.config_install_mode_auto_notification),
-        InstallMode.FullScreen to stringResource(R.string.config_install_mode_full_screen),
         InstallMode.Ignore to stringResource(R.string.config_install_mode_ignore),
     )
     DropDownMenuWidget(
         icon = Icons.TwoTone.Downloading,
         title = stringResource(R.string.config_install_mode),
-        description = if (data.containsKey(stateInstallMode)) data[stateInstallMode] else null,
-        choice = data.keys.toList().indexOf(stateInstallMode),
+        description = data[stateInstallMode.selectable],
+        choice = data.keys.toList().indexOf(stateInstallMode.selectable).coerceAtLeast(0),
         data = data.values.toList(),
     ) { index ->
         data.keys.toList().getOrNull(index)?.let {
