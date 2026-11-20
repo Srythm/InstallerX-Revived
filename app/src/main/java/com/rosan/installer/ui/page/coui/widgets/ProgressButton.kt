@@ -28,6 +28,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
 import io.github.suqi8.coui.kmp.basic.Surface
+import io.github.suqi8.coui.kmp.theme.COUIRoundCorner
 import io.github.suqi8.coui.kmp.theme.COUITheme
 
 /**
@@ -67,7 +68,13 @@ fun ProgressButton(
     // Coerce progress value to be between 0.0 and 1.0
     val progressCoerced = progress.coerceIn(0f, 1f)
 
-    val shape = RoundedCornerShape(cornerRadius)
+    // COUI's ButtonDefaults.CornerRadius is Dp.Unspecified, which means "derive the radius from the
+    // height". RoundedCornerShape turns that into NaN corners and the render thread throws
+    // "Corner size in Px can't be negative(topStart = NaN, ...)", so the unspecified value falls
+    // back to the library's full-round token: Compose clamps it to half the shorter side, which is
+    // the capsule COUI's own button draws.
+    val resolvedCornerRadius = if (cornerRadius == Dp.Unspecified) COUIRoundCorner.Full else cornerRadius
+    val shape = remember(resolvedCornerRadius) { RoundedCornerShape(resolvedCornerRadius) }
 
     val trackColor = if (enabled) colors.trackColor else colors.disabledTrackColor
     val progressColor = if (enabled) colors.progressColor else colors.disabledProgressColor
