@@ -122,7 +122,7 @@ fun CouiApplyPage(id: Long, useBlur: Boolean, viewModel: ApplyViewModel = koinVi
                     title = stringResource(R.string.config_scope),
                     navigationIcon = {
                         CouiBackButton(
-                            icon = COUIIcons.Regular.Close,
+                            icon = COUIIcons.Close,
                             onClick = { navigator.pop() },
                         )
                     },
@@ -470,7 +470,7 @@ private fun TopAppBarActions(viewModel: ApplyViewModel, uiState: ApplyViewState)
         collapseOnSelection = false,
     ) {
         Icon(
-            imageVector = COUIIcons.Regular.More,
+            imageVector = COUIIcons.More,
             tint = COUITheme.colorScheme.labelPrimary,
             contentDescription = stringResource(R.string.menu),
         )

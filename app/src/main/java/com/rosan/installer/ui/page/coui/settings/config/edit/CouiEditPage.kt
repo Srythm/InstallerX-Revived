@@ -198,7 +198,7 @@ fun CouiEditPage(id: Long? = null, viewModel: EditViewModel = koinViewModel { pa
                 title = stringResource(id?.let { R.string.update } ?: R.string.add),
                 navigationIcon = {
                     CouiBackButton(
-                        icon = COUIIcons.Regular.Close,
+                        icon = COUIIcons.Close,
                         onClick = { navigator.pop() },
                     )
                 },
@@ -207,7 +207,7 @@ fun CouiEditPage(id: Long? = null, viewModel: EditViewModel = koinViewModel { pa
                         onClick = { dispatch(EditViewAction.SaveData) },
                     ) {
                         Icon(
-                            imageVector = COUIIcons.Regular.Ok,
+                            imageVector = COUIIcons.Ok,
                             contentDescription = stringResource(R.string.save),
                         )
                     }

@@ -244,7 +244,7 @@ private fun DataItemWidget(viewModel: AllViewModel, entity: ConfigModel, isDefau
             ) {
                 Icon(
                     modifier = Modifier.size(20.dp),
-                    imageVector = COUIIcons.Regular.Edit,
+                    imageVector = COUIIcons.Edit,
                     tint = COUITheme.colorScheme.labelPrimary,
                     contentDescription = stringResource(id = R.string.edit),
                 )
@@ -258,7 +258,7 @@ private fun DataItemWidget(viewModel: AllViewModel, entity: ConfigModel, isDefau
                 ) {
                     Icon(
                         modifier = Modifier.size(20.dp),
-                        imageVector = COUIIcons.Regular.Delete,
+                        imageVector = COUIIcons.Delete,
                         tint = COUITheme.colorScheme.labelPrimary,
                         contentDescription = stringResource(id = R.string.delete),
                     )
@@ -279,7 +279,7 @@ private fun DataItemWidget(viewModel: AllViewModel, entity: ConfigModel, isDefau
                     ) {
                         Icon(
                             modifier = Modifier.size(20.dp),
-                            imageVector = COUIIcons.Regular.SelectAll,
+                            imageVector = COUIIcons.SelectAll,
                             tint = COUITheme.colorScheme.labelPrimary,
                             contentDescription = stringResource(id = R.string.apply),
                         )

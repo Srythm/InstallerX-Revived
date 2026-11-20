@@ -117,7 +117,7 @@ fun CouiScopeTipCard(viewModel: AllViewModel) {
             onClick = { viewModel.dispatch(AllViewAction.UserReadScopeTips) },
         ) {
             Icon(
-                imageVector = COUIIcons.Regular.Close,
+                imageVector = COUIIcons.Close,
                 contentDescription = null,
                 tint = COUITheme.colorScheme.primary,
             )

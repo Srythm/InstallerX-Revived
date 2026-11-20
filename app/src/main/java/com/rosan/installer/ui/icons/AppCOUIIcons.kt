@@ -21,17 +21,17 @@ import io.github.suqi8.coui.kmp.icon.extended.Tune
 
 object AppCOUIIcons {
     // --- App Icons ---
-    val Settings = COUIIcons.Regular.Settings
-    val Info = COUIIcons.Regular.Info
-    val Refresh = COUIIcons.Regular.Refresh
-    val Ok = COUIIcons.Regular.Ok
-    val Delete = COUIIcons.Regular.Delete
-    val Tune = COUIIcons.Regular.Tune
+    val Settings = COUIIcons.Settings
+    val Info = COUIIcons.Info
+    val Refresh = COUIIcons.Refresh
+    val Ok = COUIIcons.Ok
+    val Delete = COUIIcons.Delete
+    val Tune = COUIIcons.Tune
 
     // --- Navigation Icons ---
-    val Back = COUIIcons.Regular.Back
+    val Back = COUIIcons.Back
 
-    val More = COUIIcons.Regular.More
+    val More = COUIIcons.More
 
     val Close: ImageVector
         get() {

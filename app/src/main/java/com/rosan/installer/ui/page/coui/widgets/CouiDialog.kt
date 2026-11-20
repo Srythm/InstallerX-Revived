@@ -311,7 +311,7 @@ fun ErrorDisplaySheet(
         startAction = {
             val dismissState = LocalDismissState.current
             CouiBackButton(
-                icon = COUIIcons.Regular.Close,
+                icon = COUIIcons.Close,
                 onClick = { dismissState?.invoke() ?: onDismissRequest() },
             )
         },
