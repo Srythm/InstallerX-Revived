@@ -6,6 +6,9 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,6 +48,7 @@ import com.rosan.installer.ui.page.coui.installer.sheetcontent.PrepareSettingsCo
 import com.rosan.installer.ui.page.main.installer.InstallerStage
 import com.rosan.installer.ui.page.main.installer.InstallerViewAction
 import com.rosan.installer.ui.page.main.installer.InstallerViewModel
+import com.rosan.installer.ui.theme.colorOsSpring
 import com.rosan.installer.ui.util.KeyEventBlocker
 import com.rosan.installer.util.help
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
@@ -181,8 +185,17 @@ internal fun CouiFullScreenInstallerContent(
             targetState = page,
             modifier = Modifier.fillMaxSize(),
             contentKey = { it.key },
+            // ColorOS page change: the incoming page rises a little and settles with the system
+            // spring while the outgoing one fades and drifts back, instead of a flat cross-fade.
             transitionSpec = {
-                fadeIn(tween(180)) togetherWith fadeOut(tween(120))
+                (
+                    fadeIn(colorOsSpring(responseSeconds = 0.30f)) +
+                        slideInVertically(colorOsSpring(responseSeconds = 0.34f)) { it / 22 } +
+                        scaleIn(colorOsSpring(responseSeconds = 0.34f), initialScale = 0.97f)
+                    ) togetherWith (
+                    fadeOut(tween(durationMillis = 140)) +
+                        scaleOut(tween(durationMillis = 200), targetScale = 1.02f)
+                    )
             },
             label = "CouiFullScreenPage",
         ) { displayed ->

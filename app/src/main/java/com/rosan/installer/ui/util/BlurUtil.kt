@@ -3,6 +3,7 @@
 package com.rosan.installer.ui.util
 
 import android.os.Build
+import android.view.View
 import android.view.Window
 import android.view.WindowManager
 import androidx.activity.compose.LocalActivity
@@ -19,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.DialogWindowProvider
@@ -104,15 +106,24 @@ fun WindowBlurTransition(
     useBlur: Boolean,
     maxRadius: Int = 30,
     enterDurationMillis: Int = 220,
-    exitDurationMillis: Int = 200,
+    exitDurationMillis: Int = 160,
 ) {
     // Window-level blur is only supported on Android 12 (API 31) and above.
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
 
+    val view = LocalView.current
+    val attached = rememberAttachedToWindow(view)
     val progress = remember { Animatable(0f) }
 
-    LaunchedEffect(visible, useBlur) {
+    LaunchedEffect(visible, useBlur, attached) {
         val target = if (visible && useBlur) 1f else 0f
+        // A dialog's content is composed before its window is shown, so starting the ramp right
+        // away puts the first visible frame somewhere mid-ramp — that is the jump. Wait until the
+        // surface is actually attached (and one frame past it) before fading in.
+        if (target > 0f) {
+            if (!attached) return@LaunchedEffect
+            withFrameNanos { }
+        }
         if (progress.value == target) return@LaunchedEffect
         progress.animateTo(
             targetValue = target,
@@ -127,6 +138,30 @@ fun WindowBlurTransition(
         useBlur = useBlur,
         blurRadius = (progress.value * maxRadius).roundToInt(),
     )
+}
+
+/**
+ * Tracks whether [view] is currently attached to a window, re-reading it when it changes.
+ * A dialog's content is composed into a window that is not shown yet, so this is the only reliable
+ * "the surface is on screen now" signal available from inside the composition.
+ */
+@Composable
+private fun rememberAttachedToWindow(view: View): Boolean {
+    var attached by remember(view) { mutableStateOf(view.isAttachedToWindow) }
+    DisposableEffect(view) {
+        val listener = object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) {
+                attached = true
+            }
+
+            override fun onViewDetachedFromWindow(v: View) {
+                attached = false
+            }
+        }
+        view.addOnAttachStateChangeListener(listener)
+        onDispose { view.removeOnAttachStateChangeListener(listener) }
+    }
+    return attached
 }
 
 /**

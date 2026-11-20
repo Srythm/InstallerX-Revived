@@ -3,17 +3,23 @@
 package com.rosan.installer.ui.theme
 
 import android.os.Build
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import io.github.suqi8.coui.kmp.effect.LocalMaterialBackdrop
 import io.github.suqi8.coui.kmp.effect.MaterialBackdropProvider
 import io.github.suqi8.coui.kmp.theme.COUITheme
@@ -87,45 +93,90 @@ fun Modifier.installerCouiBlurEffect(
 }
 
 /**
- * The COUI 2 "condensed light" backing band for a main tab's `TopAppBar(glow = ...)`.
+ * The COUI 2 "condensed light" (凝光) band for a main tab's `TopAppBar(glow = ...)`.
  *
- * A vertical progressive blur instead of a uniform one: full strength at the status bar, clear
- * before the band's bottom edge, plus the library's 24dp tail that dissolves over the content.
- * The glow slot already spans the status bar and that tail, so no extra layout padding, spacer or
- * inset compensation is needed, and `TopAppBar` suppresses its divider on its own while a glow is
- * set.
+ * Ported from COUI's own `TopAppBarGlow` recipe, because the library's version takes a COUI
+ * `Backdrop` and cannot consume the Miuix layer this project records:
  *
- * The theme tint is passed through the same ramp pass as the blur (`blendColors` directly after
- * `progressiveBlur` is folded into one gradient-masked shader), so the 80% bar tint fades out
- * with the blur instead of covering the whole band uniformly.
+ * 1. A progressive backdrop blur whose radius falls off as `1 - (y / H)^3`, i.e. full strength at
+ *    the status bar and pixel-sharp at the bottom of the band.
+ * 2. A gradient sheet of the page colour over it: opaque at the top, ~70% at two thirds, clear at
+ *    the bottom edge (dark theme: 40% at the top). This is what makes the band readable — a
+ *    blur alone over a flat page background has nothing to show.
+ * 3. A scroll-driven alpha, `min(1, scrollOffsetPx / 30dp)`, so the frosting appears as content
+ *    slides beneath the bar. The [scrollOffsetPx] comes from `ScrollBehavior.glowScrollOffsetPx()`.
  *
- * Only call this when [backdrop] is non-null; without a backdrop the bar must fall back to its
- * solid color, which is why the call sites pass `glow = null` in that case.
+ * The glow slot already spans the status bar plus the library's 24dp tail, so no extra layout
+ * padding, spacer or inset compensation is needed, and `TopAppBar` suppresses its divider on its
+ * own while a glow is set.
+ *
+ * Call sites only pass this when a backdrop exists; without one the bar keeps its opaque colour,
+ * which is why they pass `glow = null` in that case.
+ *
+ * @param scrollOffsetPx The bar's resolved scroll distance in pixels.
  */
 @Composable
-fun CouiProgressiveTopBarGlow(
+fun BoxScope.CouiProgressiveTopBarGlow(
     backdrop: LayerBackdrop,
-    blurRadius: Float = 25f,
-    gradient: ProgressiveBlur = ProgressiveBlur.Top,
+    scrollOffsetPx: Float,
+    baseColor: Color = COUITheme.colorScheme.backgroundWithCard,
+    isDark: Boolean = COUITheme.isDark,
 ) {
-    val blendColor = COUITheme.colorScheme.bar.copy(alpha = 0.8f)
+    if (!isRuntimeShaderSupported()) {
+        // COUI's no-blur fallback: paint the opaque page colour over the bar band and leave the
+        // 24dp tail empty, so unblurred content never shows through.
+        Box(Modifier.matchParentSize().padding(bottom = TopBarGlowExtraHeight).background(baseColor))
+        return
+    }
+
+    // COUI 17 AppBarBlurOverlayBehavior.computeOverlayAlpha: alpha = min(1, scrollPx / 30dp).
+    val thresholdPx = with(LocalDensity.current) { TopBarGlowAlphaScrollThreshold.toPx() }
+    val overlayAlpha = (scrollOffsetPx / thresholdPx).coerceIn(0f, 1f)
+    if (overlayAlpha <= 0f) return
+
+    // COUI passes 30f straight through as raw pixels (createGradientBlurEffect), so this converts
+    // the token back from dp: miuix multiplies the dp it is given by the density.
+    val blurRadiusDp = with(LocalDensity.current) { TopBarGlowBlurRadiusPx / density }
+
+    // GradientBackgroundDrawable builds LinearGradient(0, height, 0, 0), whose position 0 is the
+    // bottom edge; the stops are mirrored here onto Compose's top-to-bottom axis.
+    val sheet = if (isDark) {
+        Brush.verticalGradient(
+            0f to baseColor.copy(alpha = 1f),
+            1f to baseColor.copy(alpha = 0.4f),
+        )
+    } else {
+        Brush.verticalGradient(
+            0f to baseColor.copy(alpha = 1f),
+            0.6f to baseColor.copy(alpha = 0.7f),
+            1f to baseColor.copy(alpha = 0f),
+        )
+    }
 
     Box(
         modifier = Modifier
-            .fillMaxSize()
+            .matchParentSize()
+            .graphicsLayer { alpha = overlayAlpha }
             .progressiveTextureBlur(
                 backdrop = backdrop,
                 shape = RectangleShape,
-                blurRadius = blurRadius,
-                gradient = gradient,
-                colors = BlurColors(
-                    blendColors = listOf(
-                        BlendColorEntry(color = blendColor),
-                    ),
-                ),
-            ),
+                blurRadius = blurRadiusDp,
+                // curve > 1 keeps the radius high through most of the band and drops it late,
+                // which is the 1 - (y / H)^3 falloff of the COUI SkSL ramp.
+                gradient = ProgressiveBlur(angle = 90f, startFraction = 0f, endFraction = 1f, curve = 3f),
+            )
+            .background(sheet),
     )
 }
+
+/** `AppBarBlurOverlayView.computeExtraHeightPx`: the glow runs 24dp past the bar's bottom edge. */
+private val TopBarGlowExtraHeight = 24.dp
+
+/** COUI `AppBarBlurOverlayBehavior` alpha threshold: fully frosted after a 30dp scroll. */
+private val TopBarGlowAlphaScrollThreshold = 30.dp
+
+/** COUI `createGradientBlurEffect(30f, ...)` — raw pixels, not dp. */
+private const val TopBarGlowBlurRadiusPx = 30f
 
 @Composable
 fun ProvideCouiMaterialBackdrop(

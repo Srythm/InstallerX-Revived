@@ -66,7 +66,9 @@ fun CouiDataNameWidget(
         },
         title = stringResource(id = R.string.config_name),
         errorMessage = if (state.data.errorName) stringResource(R.string.config_error_name) else "",
-        modifier = Modifier.padding(horizontal = 12.dp),
+        // InputView draws its own card, so the gap to the next card is this padding — without it
+        // the two cards sit flush and only their corner notches separate them.
+        modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
     )
     trailingContent()
 }

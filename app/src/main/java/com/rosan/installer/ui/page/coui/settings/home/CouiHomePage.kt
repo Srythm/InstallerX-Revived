@@ -69,6 +69,7 @@ import io.github.suqi8.coui.kmp.basic.Scaffold
 import io.github.suqi8.coui.kmp.basic.SnackbarHostState
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TopAppBar
+import io.github.suqi8.coui.kmp.basic.glowScrollOffsetPx
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.utils.PressFeedbackType
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
@@ -121,7 +122,12 @@ fun CouiHomePage(
                 // Progressive band: strongest at the status bar, clear before the content.
                 color = backdrop.getCouiAppBarColor(),
                 glow = if (backdrop != null) {
-                    { CouiProgressiveTopBarGlow(backdrop) }
+                    {
+                        CouiProgressiveTopBarGlow(
+                            backdrop = backdrop,
+                            scrollOffsetPx = scrollBehavior.glowScrollOffsetPx(),
+                        )
+                    }
                 } else {
                     null
                 },
