@@ -53,7 +53,9 @@ fun CouiFullScreenPrepareContent(
         entity?.minSdk?.takeIf { it.isNotBlank() }?.let {
             stringResource(R.string.installer_detail_min_sdk) to it
         },
-        entity?.arch?.let { stringResource(R.string.installer_detail_arch) to it.toString() },
+        entity?.arch?.toString()?.takeIf { it.isNotBlank() && it != "NONE" }?.let {
+            stringResource(R.string.installer_detail_arch) to it
+        },
         sourceLabel?.takeIf { it.isNotBlank() }?.let {
             stringResource(R.string.installer_detail_source) to it
         },
@@ -163,14 +165,16 @@ private fun DetailRow(label: String, value: String) {
             maxLines = 1,
             modifier = Modifier.weight(1f),
         )
+        // The value column gets the larger share: a source such as "Shell (com.android.shell)"
+        // used to wrap onto a second line and make that one row taller than the rest.
         Text(
             text = value,
             style = COUITheme.textStyles.bodyM,
             color = COUITheme.colorScheme.labelSecondaryVariant,
             textAlign = TextAlign.End,
-            maxLines = 2,
+            maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1.6f),
         )
     }
 }

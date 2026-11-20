@@ -276,14 +276,14 @@ private fun FullScreenBackgroundWash(base: Color, modifier: Modifier = Modifier)
             .drawBehind {
                 drawRect(
                     brush = Brush.radialGradient(
-                        colors = listOf(accent.copy(alpha = 0.16f), Color.Transparent),
+                        colors = listOf(accent.copy(alpha = 0.10f), Color.Transparent),
                         center = Offset(size.width * 0.85f, size.height * 0.05f),
                         radius = size.minDimension * 0.9f,
                     ),
                 )
                 drawRect(
                     brush = Brush.radialGradient(
-                        colors = listOf(assist.copy(alpha = 0.10f), Color.Transparent),
+                        colors = listOf(assist.copy(alpha = 0.06f), Color.Transparent),
                         center = Offset(size.width * 0.1f, size.height * 0.95f),
                         radius = size.minDimension * 0.8f,
                     ),
