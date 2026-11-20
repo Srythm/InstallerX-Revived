@@ -40,8 +40,8 @@ import com.rosan.installer.ui.page.main.settings.config.all.AllViewAction
 import com.rosan.installer.ui.page.main.settings.config.all.AllViewModel
 import com.rosan.installer.ui.page.main.settings.config.all.AllViewState
 import com.rosan.installer.ui.page.main.widget.util.AllViewEventCollector
+import com.rosan.installer.ui.theme.CouiProgressiveTopBarGlow
 import com.rosan.installer.ui.theme.getCouiAppBarColor
-import com.rosan.installer.ui.theme.installerCouiBlurEffect
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
 import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
 import io.github.suqi8.coui.kmp.basic.Card
@@ -97,73 +97,85 @@ fun CouiAllPage(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                modifier = Modifier.installerCouiBlurEffect(topBarBackdrop),
+                // Progressive band: strongest at the status bar, clear before the content.
                 color = topBarBackdrop.getCouiAppBarColor(),
+                glow = if (topBarBackdrop != null) {
+                    { CouiProgressiveTopBarGlow(topBarBackdrop) }
+                } else {
+                    null
+                },
                 title = title,
                 scrollBehavior = scrollBehavior,
             )
         },
     ) { innerPadding ->
-        when (uiState.data.progress) {
-            is AllViewState.Data.Progress.Loading if uiState.data.configs.isEmpty() -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(
-                            top = innerPadding.calculateTopPadding(),
-                            bottom = outerPadding.calculateBottomPadding(),
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+        // One recording layer for every state: the loading placeholder used to render under a
+        // transparent app bar without sampling anything, so the bar had no source to blur.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(topBarBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier),
+        ) {
+            when (uiState.data.progress) {
+                is AllViewState.Data.Progress.Loading if uiState.data.configs.isEmpty() -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(
+                                top = innerPadding.calculateTopPadding(),
+                                bottom = outerPadding.calculateBottomPadding(),
+                            ),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        InfiniteProgressIndicator()
-                        Text(
-                            text = stringResource(id = R.string.loading),
-                            style = COUITheme.textStyles.bodyXL,
-                        )
-                    }
-                }
-            }
-
-            is AllViewState.Data.Progress.Loaded if uiState.data.configs.isEmpty() -> {
-                // Since we don't allow removing default profile,
-                // There is no need to handle an empty state.
-            }
-
-            else -> {
-                val configs = uiState.data.configs
-                val minId = configs.minByOrNull { it.id }?.id
-
-                LazyVerticalGrid(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .then(topBarBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier)
-                        .overScrollVertical()
-                        .nestedScroll(scrollBehavior.nestedScrollConnection),
-                    columns = GridCells.Adaptive(350.dp),
-                    contentPadding = PaddingValues(
-                        start = innerPadding.calculateStartPadding(layoutDirection) + 16.dp,
-                        end = innerPadding.calculateEndPadding(layoutDirection) + 16.dp,
-                        top = innerPadding.calculateTopPadding() + 16.dp,
-                        bottom = outerPadding.calculateBottomPadding() + 16.dp,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    overscrollEffect = null,
-                    state = listState,
-                ) {
-                    if (!uiState.userReadScopeTips) {
-                        item {
-                            CouiScopeTipCard(viewModel = viewModel)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            InfiniteProgressIndicator()
+                            Text(
+                                text = stringResource(id = R.string.loading),
+                                style = COUITheme.textStyles.bodyXL,
+                            )
                         }
                     }
-                    /*else item { Spacer(modifier = Modifier.size(6.dp)) }*/
+                }
 
-                    items(configs) {
-                        DataItemWidget(viewModel, it, it.id == minId)
+                is AllViewState.Data.Progress.Loaded if uiState.data.configs.isEmpty() -> {
+                    // Since we don't allow removing default profile,
+                    // There is no need to handle an empty state.
+                }
+
+                else -> {
+                    val configs = uiState.data.configs
+                    val minId = configs.minByOrNull { it.id }?.id
+
+                    LazyVerticalGrid(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .overScrollVertical()
+                            .nestedScroll(scrollBehavior.nestedScrollConnection),
+                        columns = GridCells.Adaptive(350.dp),
+                        contentPadding = PaddingValues(
+                            start = innerPadding.calculateStartPadding(layoutDirection) + 16.dp,
+                            end = innerPadding.calculateEndPadding(layoutDirection) + 16.dp,
+                            top = innerPadding.calculateTopPadding() + 16.dp,
+                            bottom = outerPadding.calculateBottomPadding() + 16.dp,
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        overscrollEffect = null,
+                        state = listState,
+                    ) {
+                        if (!uiState.userReadScopeTips) {
+                            item {
+                                CouiScopeTipCard(viewModel = viewModel)
+                            }
+                        }
+                        /*else item { Spacer(modifier = Modifier.size(6.dp)) }*/
+
+                        items(configs) {
+                            DataItemWidget(viewModel, it, it.id == minId)
+                        }
                     }
                 }
             }

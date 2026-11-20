@@ -3,6 +3,8 @@
 package com.rosan.installer.ui.theme
 
 import android.os.Build
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -19,9 +21,11 @@ import top.yukonga.miuix.kmp.blur.BlendColorEntry
 import top.yukonga.miuix.kmp.blur.BlurBlendMode
 import top.yukonga.miuix.kmp.blur.BlurColors
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
+import top.yukonga.miuix.kmp.blur.ProgressiveBlur
 import top.yukonga.miuix.kmp.blur.blendColors
 import top.yukonga.miuix.kmp.blur.blur
 import top.yukonga.miuix.kmp.blur.drawBackdrop
+import top.yukonga.miuix.kmp.blur.progressiveTextureBlur
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.blur.textureBlur
 import top.yukonga.miuix.kmp.material.isRuntimeShaderSupported
@@ -79,6 +83,47 @@ fun Modifier.installerCouiBlurEffect(
                 ),
             ),
         ),
+    )
+}
+
+/**
+ * The COUI 2 "condensed light" backing band for a main tab's `TopAppBar(glow = ...)`.
+ *
+ * A vertical progressive blur instead of a uniform one: full strength at the status bar, clear
+ * before the band's bottom edge, plus the library's 24dp tail that dissolves over the content.
+ * The glow slot already spans the status bar and that tail, so no extra layout padding, spacer or
+ * inset compensation is needed, and `TopAppBar` suppresses its divider on its own while a glow is
+ * set.
+ *
+ * The theme tint is passed through the same ramp pass as the blur (`blendColors` directly after
+ * `progressiveBlur` is folded into one gradient-masked shader), so the 80% bar tint fades out
+ * with the blur instead of covering the whole band uniformly.
+ *
+ * Only call this when [backdrop] is non-null; without a backdrop the bar must fall back to its
+ * solid color, which is why the call sites pass `glow = null` in that case.
+ */
+@Composable
+fun CouiProgressiveTopBarGlow(
+    backdrop: LayerBackdrop,
+    blurRadius: Float = 25f,
+    gradient: ProgressiveBlur = ProgressiveBlur.Top,
+) {
+    val blendColor = COUITheme.colorScheme.bar.copy(alpha = 0.8f)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .progressiveTextureBlur(
+                backdrop = backdrop,
+                shape = RectangleShape,
+                blurRadius = blurRadius,
+                gradient = gradient,
+                colors = BlurColors(
+                    blendColors = listOf(
+                        BlendColorEntry(color = blendColor),
+                    ),
+                ),
+            ),
     )
 }
 
@@ -195,6 +240,48 @@ fun Modifier.installerMaterial3BlurEffect(
             backdrop = backdrop,
             shape = shape,
             blurRadius = blurRadius,
+            colors = BlurColors(
+                blendColors = listOf(
+                    BlendColorEntry(color = blendColor),
+                ),
+            ),
+        ),
+    )
+}
+
+/**
+ * Material 3 counterpart of [CouiProgressiveTopBarGlow]: the same vertical ramp, applied directly
+ * to the app bar instead of a dedicated glow slot, because the Material 3 top app bar has none.
+ *
+ * The bar keeps its own layout and touch bounds; only the painted band ramps, and no extra
+ * padding or inset is involved.
+ *
+ * @param backdrop The LayerBackdrop providing the visual source.
+ * @param enabled Whether the effect is locally enabled for this component.
+ * @param blurRadius The radius of the Gaussian blur at full strength, in dp.
+ * @param gradient Where the ramp is full strength and where it reaches clear.
+ */
+@Composable
+fun Modifier.installerMaterial3ProgressiveBlurEffect(
+    backdrop: LayerBackdrop?,
+    enabled: Boolean = true,
+    blurRadius: Float = 25f,
+    gradient: ProgressiveBlur = ProgressiveBlur.Top,
+    shape: Shape = RectangleShape,
+): Modifier {
+    // Return early if disabled or backdrop is unavailable
+    if (!enabled || backdrop == null) return this
+
+    // Same 80% surfaceContainer tint as the uniform version; inside the progressive pipeline the
+    // blend is folded into the ramp pass, so it fades out with the blur.
+    val blendColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.8f)
+
+    return this.then(
+        Modifier.progressiveTextureBlur(
+            backdrop = backdrop,
+            shape = shape,
+            blurRadius = blurRadius,
+            gradient = gradient,
             colors = BlurColors(
                 blendColors = listOf(
                     BlendColorEntry(color = blendColor),

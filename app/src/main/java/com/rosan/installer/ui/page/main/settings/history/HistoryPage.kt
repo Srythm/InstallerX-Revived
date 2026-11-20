@@ -72,7 +72,7 @@ import com.rosan.installer.ui.page.main.widget.chip.CapsuleTag
 import com.rosan.installer.ui.page.main.widget.menu.GroupedDropdownMenuPopup
 import com.rosan.installer.ui.theme.bottomShape
 import com.rosan.installer.ui.theme.getMaterial3AppBarColor
-import com.rosan.installer.ui.theme.installerMaterial3BlurEffect
+import com.rosan.installer.ui.theme.installerMaterial3ProgressiveBlurEffect
 import com.rosan.installer.ui.theme.middleShape
 import com.rosan.installer.ui.theme.rememberMaterial3BlurBackdrop
 import com.rosan.installer.ui.theme.singleShape
@@ -131,7 +131,7 @@ private fun HistoryPageContent(
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             LargeFlexibleTopAppBar(
-                modifier = Modifier.installerMaterial3BlurEffect(backdrop),
+                modifier = Modifier.installerMaterial3ProgressiveBlurEffect(backdrop),
                 title = {
                     Text(
                         text = title,
@@ -212,7 +212,13 @@ private fun HistoryPageContent(
             )
         },
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        // One recording layer for every state: the loading placeholder used to render under a
+        // transparent app bar without sampling anything, so the bar had no source to blur.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(backdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier),
+        ) {
             if (state.isLoading && state.records.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -239,9 +245,7 @@ private fun HistoryPageContent(
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .then(backdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier),
+                    modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
                         start = paddingValues.calculateStartPadding(layoutDirection) + outerPadding.calculateStartPadding(
                             layoutDirection,

@@ -53,12 +53,12 @@ import com.rosan.installer.ui.page.main.settings.home.HomePageViewEvent
 import com.rosan.installer.ui.page.main.settings.home.HomePageViewModel
 import com.rosan.installer.ui.page.main.settings.home.HomePageViewState
 import com.rosan.installer.ui.page.main.widget.util.OnLifecycleEvent
+import com.rosan.installer.ui.theme.CouiProgressiveTopBarGlow
 import com.rosan.installer.ui.theme.InstallerTheme
 import com.rosan.installer.ui.theme.InstallerTheme.useCouiMonet
 import com.rosan.installer.ui.theme.couiHomeStatusCardColorActivated
 import com.rosan.installer.ui.theme.couiHomeStatusCardColorDeactivated
 import com.rosan.installer.ui.theme.getCouiAppBarColor
-import com.rosan.installer.ui.theme.installerCouiBlurEffect
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
 import io.github.suqi8.coui.kmp.basic.BasicComponent
 import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
@@ -118,8 +118,13 @@ fun CouiHomePage(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                modifier = Modifier.installerCouiBlurEffect(backdrop),
+                // Progressive band: strongest at the status bar, clear before the content.
                 color = backdrop.getCouiAppBarColor(),
+                glow = if (backdrop != null) {
+                    { CouiProgressiveTopBarGlow(backdrop) }
+                } else {
+                    null
+                },
                 title = title,
                 scrollBehavior = scrollBehavior,
             )

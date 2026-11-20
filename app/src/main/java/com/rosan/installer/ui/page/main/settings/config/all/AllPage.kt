@@ -64,11 +64,10 @@ import com.rosan.installer.ui.page.main.widget.chip.CapsuleTag
 import com.rosan.installer.ui.page.main.widget.snackbar.SwipeableSnackbarHost
 import com.rosan.installer.ui.page.main.widget.util.AllViewEventCollector
 import com.rosan.installer.ui.theme.getMaterial3AppBarColor
-import com.rosan.installer.ui.theme.installerMaterial3BlurEffect
+import com.rosan.installer.ui.theme.installerMaterial3ProgressiveBlurEffect
 import com.rosan.installer.ui.theme.rememberMaterial3BlurBackdrop
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
-import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -132,7 +131,7 @@ fun AllPage(
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             LargeFlexibleTopAppBar(
-                modifier = Modifier.installerMaterial3BlurEffect(backdrop),
+                modifier = Modifier.installerMaterial3ProgressiveBlurEffect(backdrop),
                 title = {
                     Text(
                         text = title,
@@ -178,7 +177,13 @@ fun AllPage(
             )
         },
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        // One recording layer for every state: the loading placeholder used to render under a
+        // transparent app bar without sampling anything, so the bar had no source to blur.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(backdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier),
+        ) {
             when (uiState.data.progress) {
                 is AllViewState.Data.Progress.Loading if uiState.data.configs.isEmpty() -> {
                     Box(
@@ -212,7 +217,6 @@ fun AllPage(
                     ShowDataWidget(
                         viewModel = viewModel,
                         listState = listState,
-                        backdrop = backdrop,
                         contentPadding = PaddingValues(16.dp) + outerPadding + innerPadding,
                     )
                 }
@@ -226,7 +230,6 @@ private fun ShowDataWidget(
     viewModel: AllViewModel,
     listState: LazyGridState = rememberLazyGridState(),
     contentPadding: PaddingValues = PaddingValues(16.dp),
-    backdrop: LayerBackdrop? = null,
     adaptiveMinSize: Dp = 320.dp,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -234,9 +237,7 @@ private fun ShowDataWidget(
     val minId = configs.minByOrNull { it.id }?.id
 
     LazyVerticalGrid(
-        modifier = Modifier
-            .fillMaxSize()
-            .then(backdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier),
+        modifier = Modifier.fillMaxSize(),
         columns = GridCells.Adaptive(adaptiveMinSize),
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(16.dp),

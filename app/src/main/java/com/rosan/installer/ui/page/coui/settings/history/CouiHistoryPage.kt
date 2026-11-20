@@ -60,8 +60,8 @@ import com.rosan.installer.ui.page.main.settings.history.formatHistoryTime
 import com.rosan.installer.ui.page.main.settings.history.historyAuthorizerText
 import com.rosan.installer.ui.page.main.settings.history.historyBadgeType
 import com.rosan.installer.ui.page.main.settings.history.labelRes
+import com.rosan.installer.ui.theme.CouiProgressiveTopBarGlow
 import com.rosan.installer.ui.theme.getCouiAppBarColor
-import com.rosan.installer.ui.theme.installerCouiBlurEffect
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
 import com.rosan.installer.util.toast
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
@@ -147,8 +147,13 @@ fun CouiHistoryPage(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                modifier = Modifier.installerCouiBlurEffect(topBarBackdrop),
+                // Progressive band: strongest at the status bar, clear before the content.
                 color = topBarBackdrop.getCouiAppBarColor(),
+                glow = if (topBarBackdrop != null) {
+                    { CouiProgressiveTopBarGlow(topBarBackdrop) }
+                } else {
+                    null
+                },
                 title = title,
                 actions = {
                     IconButton(
@@ -176,65 +181,72 @@ fun CouiHistoryPage(
             )
         },
     ) { innerPadding ->
-        if (state.isLoading && state.records.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(
-                        top = innerPadding.calculateTopPadding(),
-                        bottom = outerPadding.calculateBottomPadding(),
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+        // One recording layer for both states: the loading placeholder used to render under a
+        // transparent app bar without sampling anything, so the bar had no source to blur.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(topBarBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier),
+        ) {
+            if (state.isLoading && state.records.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(
+                            top = innerPadding.calculateTopPadding(),
+                            bottom = outerPadding.calculateBottomPadding(),
+                        ),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    InfiniteProgressIndicator()
-                    Text(
-                        text = stringResource(id = R.string.loading),
-                        style = COUITheme.textStyles.bodyXL,
-                    )
-                }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .then(topBarBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier)
-                    .overScrollVertical()
-                    .nestedScroll(scrollBehavior.nestedScrollConnection),
-                contentPadding = PaddingValues(
-                    start = innerPadding.calculateStartPadding(layoutDirection) + outerPadding.calculateStartPadding(
-                        layoutDirection,
-                    ) + 16.dp,
-                    top = innerPadding.calculateTopPadding() + 16.dp,
-                    end = innerPadding.calculateEndPadding(layoutDirection) + outerPadding.calculateEndPadding(
-                        layoutDirection,
-                    ) + 16.dp,
-                    bottom = outerPadding.calculateBottomPadding() + 16.dp,
-                ),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                if (!state.isHistoryEnabled || state.records.isEmpty()) {
-                    item {
-                        EmptyHistory(
-                            isHistoryEnabled = state.isHistoryEnabled,
-                            modifier = Modifier
-                                .fillParentMaxSize()
-                                .padding(horizontal = 8.dp),
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        InfiniteProgressIndicator()
+                        Text(
+                            text = stringResource(id = R.string.loading),
+                            style = COUITheme.textStyles.bodyXL,
                         )
                     }
-                } else {
-                    items(state.records, key = { it.id }) { record ->
-                        HistoryRecordBriefCard(
-                            record = record,
-                            showIndicator = state.areIndicatorsEnabled,
-                            onClick = {
-                                selectedRecord = record
-                                showRecordDetailSheet = true
-                            },
-                        )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .overScrollVertical()
+                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                    contentPadding = PaddingValues(
+                        start = innerPadding.calculateStartPadding(layoutDirection) + outerPadding.calculateStartPadding(
+                            layoutDirection,
+                        ) + 16.dp,
+                        top = innerPadding.calculateTopPadding() + 16.dp,
+                        end = innerPadding.calculateEndPadding(layoutDirection) + outerPadding.calculateEndPadding(
+                            layoutDirection,
+                        ) + 16.dp,
+                        bottom = outerPadding.calculateBottomPadding() + 16.dp,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    if (!state.isHistoryEnabled || state.records.isEmpty()) {
+                        item {
+                            EmptyHistory(
+                                isHistoryEnabled = state.isHistoryEnabled,
+                                modifier = Modifier
+                                    .fillParentMaxSize()
+                                    .padding(horizontal = 8.dp),
+                            )
+                        }
+                    } else {
+                        items(state.records, key = { it.id }) { record ->
+                            HistoryRecordBriefCard(
+                                record = record,
+                                showIndicator = state.areIndicatorsEnabled,
+                                onClick = {
+                                    selectedRecord = record
+                                    showRecordDetailSheet = true
+                                },
+                            )
+                        }
                     }
                 }
             }
