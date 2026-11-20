@@ -146,7 +146,7 @@ fun CouiInstallerGlobalSettingsPage(useBlur: Boolean, viewModel: InstallerSettin
             item {
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 12.dp),
                 ) {
                     CouiNavigationItemWidget(
@@ -226,7 +226,7 @@ fun CouiInstallerGlobalSettingsPage(useBlur: Boolean, viewModel: InstallerSettin
             item {
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 12.dp),
                 ) {
                     CouiSwitchWidget(
@@ -287,7 +287,7 @@ fun CouiInstallerGlobalSettingsPage(useBlur: Boolean, viewModel: InstallerSettin
             item {
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 12.dp),
                 ) {
                     CouiSwitchWidget(
@@ -319,7 +319,7 @@ fun CouiInstallerGlobalSettingsPage(useBlur: Boolean, viewModel: InstallerSettin
                 item {
                     Card(
                         modifier = Modifier
-                            .padding(horizontal = 12.dp)
+                            .padding(horizontal = 16.dp)
                             .padding(bottom = 12.dp),
                     ) {
                         CouiSwitchWidget(
@@ -336,7 +336,7 @@ fun CouiInstallerGlobalSettingsPage(useBlur: Boolean, viewModel: InstallerSettin
             item {
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 12.dp),
                 ) {
                     CouiManagedPackagesWidget(
@@ -356,7 +356,7 @@ fun CouiInstallerGlobalSettingsPage(useBlur: Boolean, viewModel: InstallerSettin
             item {
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 12.dp),
                 ) {
                     CouiManagedPackagesWidget(
@@ -376,7 +376,7 @@ fun CouiInstallerGlobalSettingsPage(useBlur: Boolean, viewModel: InstallerSettin
             item {
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 16.dp),
                 ) {
                     CouiManagedUidsWidget(

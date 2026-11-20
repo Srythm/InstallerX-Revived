@@ -154,7 +154,7 @@ fun LibrariesContainer(modifier: Modifier = Modifier, contentPadding: PaddingVal
 fun LibraryCard(library: Library, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Card(
         modifier = modifier
-            .padding(horizontal = 12.dp)
+            .padding(horizontal = 16.dp)
             .padding(bottom = 12.dp),
         onClick = onClick,
         pressFeedbackType = PressFeedbackType.Sink,

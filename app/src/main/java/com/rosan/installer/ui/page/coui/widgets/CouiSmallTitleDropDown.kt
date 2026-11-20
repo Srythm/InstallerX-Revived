@@ -179,6 +179,6 @@ private val DropdownWithStartMarginProvider = object : PopupPositionProvider {
         )
     }
 
-    // Provide a 12.dp horizontal margin.
-    override fun getMargins(): PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+    // Match the page margin the cards below use.
+    override fun getMargins(): PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
 }

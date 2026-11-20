@@ -278,7 +278,7 @@ fun CouiApplyPage(id: Long, useBlur: Boolean, viewModel: ApplyViewModel = koinVi
                                 ) {
                                     val isApplied = appliedPackageSet.contains(null)
                                     UnknownScopeItemWidget(
-                                        modifier = Modifier.padding(horizontal = 12.dp),
+                                        modifier = Modifier.padding(horizontal = 16.dp),
                                         title = unknownLabel,
                                         isApplied = isApplied,
                                         onToggle = { isChecked ->
@@ -315,7 +315,7 @@ fun CouiApplyPage(id: Long, useBlur: Boolean, viewModel: ApplyViewModel = koinVi
 
                                 ItemWidget(
                                     modifier = Modifier
-                                        .padding(horizontal = 12.dp)
+                                        .padding(horizontal = 16.dp)
                                         .zIndex(-index.toFloat())
                                         .animateItem(
                                             fadeInSpec = null,

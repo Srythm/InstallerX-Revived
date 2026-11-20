@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import io.github.suqi8.coui.kmp.effect.LocalMaterialBackdrop
 import io.github.suqi8.coui.kmp.effect.MaterialBackdropProvider
+import io.github.suqi8.coui.kmp.effect.MaterialBlurProvider
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import top.yukonga.miuix.kmp.blur.BlendColorEntry
 import top.yukonga.miuix.kmp.blur.BlurBlendMode
@@ -48,6 +49,41 @@ fun rememberCouiBlurBackdrop(enableBlur: Boolean): LayerBackdrop? {
     return rememberLayerBackdrop {
         drawRect(surfaceColor)
         drawContent()
+    }
+}
+
+/**
+ * The COUI 17 popup material (menus, dropdowns, context menus), backed by the miuix layer this
+ * project already records for the bars.
+ *
+ * COUI leaves every list popup on its opaque fill unless the app supplies one of these through
+ * [LocalPopupMaterialBlur]; the popup then paints a blurred copy of the page behind it instead.
+ * The spec arrives in raw pixels (COUI hands the platform 160px), while miuix takes dp, so the
+ * radius is divided by the current density.
+ *
+ * @param backdrop The recording of the page the menus open over. Must not contain the popups
+ *   themselves, which is why it is provided above the page content and not inside it.
+ * @return A provider, or null when blur is off or the runtime has no shaders — the popups then
+ *   keep their opaque surface, which is COUI's own fallback.
+ */
+@Composable
+fun rememberCouiPopupBlurProvider(backdrop: LayerBackdrop?): MaterialBlurProvider? {
+    if (backdrop == null || !isRuntimeShaderSupported()) return null
+    val density = LocalDensity.current.density
+    return remember(backdrop, density) {
+        MaterialBlurProvider { spec, shape ->
+            Modifier.textureBlur(
+                backdrop = backdrop,
+                shape = shape,
+                blurRadius = spec.blurRadiusPx / density,
+                colors = BlurColors(
+                    blendColors = listOf(
+                        BlendColorEntry(color = spec.mixColor),
+                        BlendColorEntry(color = spec.blendColor),
+                    ),
+                ),
+            )
+        }
     }
 }
 

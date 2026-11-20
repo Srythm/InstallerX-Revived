@@ -161,7 +161,7 @@ fun CouiDefaultInstallerPage(useBlur: Boolean, viewModel: HomePageViewModel = ko
             item {
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 12.dp),
                 ) {
                     val defaultInstallerActionsEnabled =
@@ -182,7 +182,7 @@ fun CouiDefaultInstallerPage(useBlur: Boolean, viewModel: HomePageViewModel = ko
                 item {
                     Card(
                         modifier = Modifier
-                            .padding(horizontal = 12.dp)
+                            .padding(horizontal = 16.dp)
                             .padding(bottom = 12.dp),
                     ) {
                         CouiSwitchWidget(
@@ -198,7 +198,7 @@ fun CouiDefaultInstallerPage(useBlur: Boolean, viewModel: HomePageViewModel = ko
                 item {
                     Card(
                         modifier = Modifier
-                            .padding(horizontal = 12.dp)
+                            .padding(horizontal = 16.dp)
                             .padding(bottom = 12.dp),
                     ) {
                         BasicComponent(

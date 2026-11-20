@@ -100,7 +100,7 @@ fun WarningCard(isDark: Boolean, message: String) {
 @Composable
 fun CouiScopeTipCard(viewModel: AllViewModel) {
     TipCard(
-        // modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+        // modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         tipContent = {
             Text(
                 text = stringResource(R.string.scope_tips),
@@ -128,7 +128,7 @@ fun CouiScopeTipCard(viewModel: AllViewModel) {
 @Composable
 fun CouiSettingsTipCard(text: String) {
     TipCard(
-        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         tipContent = {
             Text(
                 text = text,

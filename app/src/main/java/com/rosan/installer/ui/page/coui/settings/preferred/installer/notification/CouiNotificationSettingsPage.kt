@@ -138,7 +138,7 @@ fun CouiNotificationSettingsPage(useBlur: Boolean, viewModel: NotificationSettin
             item {
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 12.dp),
                 ) {
                     // 1. Notification style dropdown
@@ -212,7 +212,7 @@ fun CouiNotificationSettingsPage(useBlur: Boolean, viewModel: NotificationSettin
             item {
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 12.dp),
                 ) {
                     // 3. Show dialog when pressing notification

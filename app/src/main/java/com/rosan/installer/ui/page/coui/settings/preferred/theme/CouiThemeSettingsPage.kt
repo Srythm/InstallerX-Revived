@@ -120,7 +120,7 @@ fun COUIThemeSettingsPage(
             item {
                 CouiSettingsCard(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 12.dp),
                 ) {
                     COUIThemeEngineWidget(
@@ -143,7 +143,7 @@ fun COUIThemeSettingsPage(
             item {
                 CouiSettingsCard(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 12.dp),
                 ) {
                     COUIThemeModeWidget(
@@ -252,7 +252,7 @@ fun COUIThemeSettingsPage(
                         SmallTitle(stringResource(R.string.theme_settings_theme_color))
                         CouiSettingsCard(
                             modifier = Modifier
-                                .padding(horizontal = 12.dp)
+                                .padding(horizontal = 16.dp)
                                 .padding(bottom = 12.dp),
                         ) {
                             BoxWithConstraints(
@@ -321,7 +321,7 @@ fun COUIThemeSettingsPage(
                 item {
                     CouiSettingsCard(
                         modifier = Modifier
-                            .padding(horizontal = 12.dp)
+                            .padding(horizontal = 16.dp)
                             .padding(bottom = 12.dp),
                     ) {
                         CouiPredictiveBackAnimationWidget(
@@ -351,7 +351,7 @@ fun COUIThemeSettingsPage(
             item {
                 CouiSettingsCard(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 12.dp),
                 ) {
                     CouiSwitchWidget(

@@ -236,7 +236,7 @@ fun CouiEditPage(id: Long? = null, viewModel: EditViewModel = koinViewModel { pa
             item {
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 12.dp),
                 ) {
                     CouiDataAuthorizerWidget(state = state, dispatch = dispatch)
@@ -262,7 +262,7 @@ fun CouiEditPage(id: Long? = null, viewModel: EditViewModel = koinViewModel { pa
             item {
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 12.dp),
                 ) {
                     CouiDataUserWidget(state = state, dispatch = dispatch)
@@ -282,7 +282,7 @@ fun CouiEditPage(id: Long? = null, viewModel: EditViewModel = koinViewModel { pa
             item {
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 16.dp),
                 ) {
                     CouiDataForAllUserWidget(state = state, dispatch = dispatch)
@@ -301,7 +301,7 @@ fun CouiEditPage(id: Long? = null, viewModel: EditViewModel = koinViewModel { pa
             item {
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 16.dp),
                 ) {
                     CouiDataSplitChooseAllWidget(state = state, dispatch = dispatch)

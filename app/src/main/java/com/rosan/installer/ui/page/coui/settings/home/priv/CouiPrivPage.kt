@@ -133,7 +133,7 @@ fun CouiPrivPage(useBlur: Boolean, viewModel: HomePageViewModel = koinViewModel(
                 SmallTitle(text = stringResource(id = R.string.config_authorizer))
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 12.dp),
                 ) {
                     // None / System App

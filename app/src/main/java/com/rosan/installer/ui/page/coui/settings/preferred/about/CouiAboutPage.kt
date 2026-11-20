@@ -550,7 +550,7 @@ private fun AboutContentBody(
 
                     Card(
                         modifier = Modifier
-                            .padding(horizontal = 12.dp)
+                            .padding(horizontal = 16.dp)
                             .padding(bottom = 12.dp)
                             .then(
                                 if (backdrop != null) {
@@ -604,7 +604,7 @@ private fun AboutContentBody(
                         SmallTitle(stringResource(R.string.debug))
                         Card(
                             modifier = Modifier
-                                .padding(horizontal = 12.dp)
+                                .padding(horizontal = 16.dp)
                                 .padding(bottom = 12.dp)
                                 .then(
                                     if (backdrop != null) {

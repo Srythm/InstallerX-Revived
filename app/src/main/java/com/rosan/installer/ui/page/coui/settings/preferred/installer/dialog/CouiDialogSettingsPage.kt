@@ -92,7 +92,7 @@ fun CouiDialogSettingsPage(useBlur: Boolean, viewModel: DialogSettingsViewModel 
             item {
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 12.dp),
                 ) {
                     val comparisonOptions = listOf(
@@ -168,7 +168,7 @@ fun CouiDialogSettingsPage(useBlur: Boolean, viewModel: DialogSettingsViewModel 
             item {
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 12.dp),
                 ) {
                     CouiSwitchWidget(
@@ -195,7 +195,7 @@ fun CouiDialogSettingsPage(useBlur: Boolean, viewModel: DialogSettingsViewModel 
             item {
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 12.dp),
                 ) {
                     CouiSwitchWidget(

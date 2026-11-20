@@ -195,7 +195,7 @@ fun CouiLabPage(useBlur: Boolean, viewModel: LabSettingsViewModel = koinViewMode
             item {
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 12.dp),
                 ) {
                     CouiSwitchWidget(
@@ -231,7 +231,7 @@ fun CouiLabPage(useBlur: Boolean, viewModel: LabSettingsViewModel = koinViewMode
             item {
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 12.dp),
                 ) {
                     CouiSwitchWidget(
@@ -295,7 +295,7 @@ fun CouiLabPage(useBlur: Boolean, viewModel: LabSettingsViewModel = koinViewMode
             item {
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 12.dp),
                 ) {
                     CouiSwitchWidget(
@@ -339,7 +339,7 @@ fun CouiLabPage(useBlur: Boolean, viewModel: LabSettingsViewModel = koinViewMode
                 item {
                     Card(
                         modifier = Modifier
-                            .padding(horizontal = 12.dp)
+                            .padding(horizontal = 16.dp)
                             .padding(bottom = 12.dp),
                     ) {
                         CouiSwitchWidget(

@@ -109,7 +109,7 @@ fun CouiAuthorizerCustPage(
             item {
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 12.dp),
                 ) {
                     if (isSystemApp) {
@@ -136,7 +136,7 @@ fun CouiAuthorizerCustPage(
                 item {
                     Card(
                         modifier = Modifier
-                            .padding(horizontal = 12.dp)
+                            .padding(horizontal = 16.dp)
                             .padding(bottom = 12.dp),
                     ) {
                         CouiIntNumberPickerWidget(

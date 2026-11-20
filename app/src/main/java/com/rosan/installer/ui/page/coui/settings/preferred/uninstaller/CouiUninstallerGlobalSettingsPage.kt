@@ -131,7 +131,7 @@ fun CouiUninstallerGlobalSettingsPage(useBlur: Boolean, viewModel: UninstallerSe
             item {
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 16.dp),
                 ) {
                     CouiSwitchWidget(
@@ -185,7 +185,7 @@ fun CouiUninstallerGlobalSettingsPage(useBlur: Boolean, viewModel: UninstallerSe
             item {
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 16.dp),
                 ) {
                     CouiNavigationItemWidget(

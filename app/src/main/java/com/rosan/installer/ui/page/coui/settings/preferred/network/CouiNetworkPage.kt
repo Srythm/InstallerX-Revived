@@ -176,7 +176,7 @@ fun CouiNetworkPage(useBlur: Boolean, viewModel: NetworkSettingsViewModel = koin
             item {
                 Card(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 12.dp),
                 ) {
                     SwitchPreference(
@@ -199,7 +199,7 @@ fun CouiNetworkPage(useBlur: Boolean, viewModel: NetworkSettingsViewModel = koin
                 item {
                     Card(
                         modifier = Modifier
-                            .padding(horizontal = 12.dp)
+                            .padding(horizontal = 16.dp)
                             .padding(bottom = 12.dp),
                     ) {
                         CouiNetworkSourceModePreference(
