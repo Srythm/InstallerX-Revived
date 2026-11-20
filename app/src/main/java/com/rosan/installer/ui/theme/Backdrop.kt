@@ -53,6 +53,23 @@ fun rememberCouiBlurBackdrop(enableBlur: Boolean): LayerBackdrop? {
 }
 
 /**
+ * A recording without the opaque fill [rememberCouiBlurBackdrop] paints.
+ *
+ * Use it for a surface that already paints its own background across the whole recorded node, such
+ * as a bottom sheet: the fill would cover the node's padding as well and leave a coloured margin
+ * around the panel.
+ *
+ * @param enableBlur Whether the blur effect is globally enabled.
+ * @return A LayerBackdrop instance if supported and enabled, null otherwise.
+ */
+@Composable
+fun rememberCouiSurfaceBackdrop(enableBlur: Boolean): LayerBackdrop? {
+    if (!enableBlur || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return null
+    if (!isRuntimeShaderSupported()) return null
+    return rememberLayerBackdrop()
+}
+
+/**
  * The COUI 17 popup material (menus, dropdowns, context menus), backed by the miuix layer this
  * project already records for the bars.
  *

@@ -79,12 +79,6 @@ fun InstallChoiceContent(
         .count { it.app is AppEntity.ModuleEntity }
     val isInstallTypeChoice = isModuleApk ||
         (isMixedModuleZip && selectionMode == MmzSelectionMode.INITIAL_CHOICE && totalModuleCount == 1)
-    val primaryButtonTextRes = if (isMultiApk) R.string.install else R.string.next
-    val primaryButtonAction = if (isMultiApk) {
-        { viewModel.dispatch(InstallerViewAction.InstallMultiple) }
-    } else {
-        { viewModel.dispatch(InstallerViewAction.InstallPrepare) }
-    }
 
     // Flatten all selected entities across all package results
     val allSelectedEntities = analysisResults.flatMap { it.appEntities }.filter { it.selected }
@@ -93,21 +87,32 @@ fun InstallChoiceContent(
     val selectedModuleCount = allSelectedEntities.count { it.app is AppEntity.ModuleEntity }
     val selectedAppCount = allSelectedEntities.count { it.app !is AppEntity.ModuleEntity }
 
+    // Modules are installed one after another, so selecting several is a valid batch; only mixing
+    // modules with apps is still refused.
+    val isModuleBatch = selectedModuleCount > 1
+    val installsMultiple = isMultiApk || isModuleBatch ||
+        (isMixedModuleZip && totalModuleCount > 1 && selectionMode == MmzSelectionMode.INITIAL_CHOICE)
+
+    val primaryButtonTextRes = if (installsMultiple) R.string.install else R.string.next
+    val primaryButtonAction = if (installsMultiple) {
+        { viewModel.dispatch(InstallerViewAction.InstallMultiple) }
+    } else {
+        { viewModel.dispatch(InstallerViewAction.InstallPrepare) }
+    }
+
     // Define error conditions
     val isMixedError = selectedModuleCount > 0 && selectedAppCount > 0
-    // Error: Cannot select multiple modules
-    val isMultiModuleError = selectedModuleCount > 1
 
     // Determine error message
-    val errorMessage = when {
-        isMixedError -> stringResource(R.string.installer_error_mixed_selection)
-        isMultiModuleError -> stringResource(R.string.installer_error_multiple_modules)
-        else -> null
+    val errorMessage = if (isMixedError) {
+        stringResource(R.string.installer_error_mixed_selection)
+    } else {
+        null
     }
 
     // Determine if the primary action should be enabled
     // Must have at least one selection, and no errors
-    val isPrimaryActionEnabled = allSelectedEntities.isNotEmpty() && !isMixedError && !isMultiModuleError
+    val isPrimaryActionEnabled = allSelectedEntities.isNotEmpty() && !isMixedError
 
     Column(
         modifier = Modifier
@@ -156,7 +161,8 @@ fun InstallChoiceContent(
                     analysisResults = resultsForList,
                     viewModel = viewModel,
                     isModuleApk = isModuleApk,
-                    isMultiApk = isMultiApk || (isMixedModuleZip && selectionMode == MmzSelectionMode.APK_CHOICE),
+                    isMultiApk = isMultiApk ||
+                        (isMixedModuleZip && (selectionMode == MmzSelectionMode.APK_CHOICE || totalModuleCount > 1)),
                     onSelectMixedModuleType = onSelectMixedModuleType,
                 )
             }
@@ -192,10 +198,10 @@ fun InstallChoiceContent(
                 // Determine if primary button should be shown
                 // 1. MultiApk mode (always show)
                 // 2. Normal mode (not module, not mixed zip)
-                // 3. Mixed zip in APK choice mode
+                // 3. Mixed zip in APK choice mode, or a mixed zip carrying several modules
                 val showPrimaryButton = isMultiApk ||
                     (!isModuleApk && !isMixedModuleZip) ||
-                    (isMixedModuleZip && selectionMode == MmzSelectionMode.APK_CHOICE)
+                    (isMixedModuleZip && (selectionMode == MmzSelectionMode.APK_CHOICE || totalModuleCount > 1))
 
                 if (showPrimaryButton) {
                     val (currentPrimaryTextRes, currentPrimaryAction) =

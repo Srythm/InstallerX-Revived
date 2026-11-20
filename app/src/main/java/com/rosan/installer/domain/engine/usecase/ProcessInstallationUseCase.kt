@@ -95,7 +95,10 @@ class ProcessInstallationUseCase(
         val firstApp = selected.first().app
 
         if (firstApp is AppEntity.ModuleEntity) {
-            installModule(config, firstApp).collect { emit(it) }
+            // Every selected module is installed in order; a batch of modules used to install only
+            // the first one, because this branch took `selected.first()` and dropped the rest.
+            val modules = selected.mapNotNull { it.app as? AppEntity.ModuleEntity }
+            installModules(config, modules, current = current, total = total).collect { emit(it) }
         } else {
             // 1. Get the label first
             val appLabel = selected.firstOrNull()?.app?.let {
@@ -150,61 +153,88 @@ class ProcessInstallationUseCase(
         }
     }
 
-    private fun installModule(config: ConfigModel, module: AppEntity.ModuleEntity): Flow<ProgressEntity> = flow {
-        Timber.d("installModule: Starting module installation for ${module.name}")
+    /**
+     * Installs [modules] one after another, publishing a single growing log so the sheet shows the
+     * same module console for a batch as it does for one file.
+     *
+     * Modules cannot be handed to the platform in one call the way split APKs can: each one runs its
+     * own installer script, so they are sequenced here. A failing module does not stop the batch —
+     * its error stays in the log and the next one starts.
+     *
+     * @param current 1-based index of this batch within the whole session, used to keep the ASCII
+     *   banner from repeating between batches.
+     * @param total Number of batches in the session. A batch waits for the session-level completion
+     *   instead of reporting success itself, so the console does not flash "finished" between
+     *   modules.
+     */
+    private fun installModules(
+        config: ConfigModel,
+        modules: List<AppEntity.ModuleEntity>,
+        current: Int,
+        total: Int,
+    ): Flow<ProgressEntity> = flow {
         val output = mutableListOf<String>()
         val prefs = appSettingsRepo.snapshot()
         val showArt = prefs.labRootShowModuleArt
+        val rootImpl = prefs.labRootMode
+        val systemUseRoot = capabilityProvider.isSystemApp && prefs.alwaysUseRootInSystem
 
-        if (showArt) {
+        if (showArt && current <= 1) {
             output.addAll(MODULE_INSTALL_BANNER.trimIndent().lines())
             output.add("")
         }
 
-        output.add("Starting installation...")
-        // Emit initial state
-        emit(ProgressEntity.InstallingModule(output.toList()))
-
-        val rootImpl = prefs.labRootMode
-        val systemUseRoot = capabilityProvider.isSystemApp && prefs.alwaysUseRootInSystem
-
-        moduleInstaller.doInstallWork(
-            config = config,
-            module = module,
-            useRoot = systemUseRoot,
-            rootMode = rootImpl,
-        ).collect { line ->
-            output.add(line)
-            // Interactive module installers use the log itself as their prompt. Publish every
-            // line in order so the answer to one volume-key choice is visible before the next
-            // choice is presented.
+        modules.forEachIndexed { index, module ->
+            if (modules.size > 1) {
+                output.add("")
+                output.add("── [${index + 1}/${modules.size}] ${module.name} ──")
+                output.add("")
+            }
+            Timber.d("installModules: ${index + 1}/${modules.size} ${module.name}")
+            output.add("Starting installation...")
+            // Emit the header before the first line so the sheet switches to the console at once.
             emit(ProgressEntity.InstallingModule(output.toList()))
-        }
 
-        Timber.d("installModule: Succeeded.")
-        if (config.shouldAutoDeleteSource(module.sourceType ?: DataType.MODULE_ZIP)) {
-            val sourcePath = module.data.sourcePath()
-            if (sourcePath != null) {
-                try {
-                    postInstallTaskProvider.executeTasks(
-                        authorizer = config.authorizer,
-                        customizeAuthorizer = config.customizeAuthorizer,
-                        info = PostInstallTaskInfo(
-                            packageName = module.packageName,
-                            enableAutoDelete = true,
-                            deletePaths = listOf(sourcePath),
-                        ),
-                    )
-                } catch (error: CancellationException) {
-                    throw error
-                } catch (error: Exception) {
-                    Timber.e(error, "Failed to delete module source after successful installation")
+            moduleInstaller.doInstallWork(
+                config = config,
+                module = module,
+                useRoot = systemUseRoot,
+                rootMode = rootImpl,
+            ).collect { line ->
+                output.add(line)
+                // Interactive module installers use the log itself as their prompt. Publish every
+                // line in order so the answer to one volume-key choice is visible before the next
+                // choice is presented.
+                emit(ProgressEntity.InstallingModule(output.toList()))
+            }
+
+            Timber.d("installModules: ${module.name} succeeded.")
+            if (config.shouldAutoDeleteSource(module.sourceType ?: DataType.MODULE_ZIP)) {
+                val sourcePath = module.data.sourcePath()
+                if (sourcePath != null) {
+                    try {
+                        postInstallTaskProvider.executeTasks(
+                            authorizer = config.authorizer,
+                            customizeAuthorizer = config.customizeAuthorizer,
+                            info = PostInstallTaskInfo(
+                                packageName = module.packageName,
+                                enableAutoDelete = true,
+                                deletePaths = listOf(sourcePath),
+                            ),
+                        )
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: Exception) {
+                        Timber.e(error, "Failed to delete module source after successful installation")
+                    }
+                } else {
+                    Timber.w("Module source has no path available for automatic deletion")
                 }
-            } else {
-                Timber.w("Module source has no path available for automatic deletion")
             }
         }
-        emit(ProgressEntity.InstallSuccess)
+        if (total <= 1) {
+            emit(ProgressEntity.InstallSuccess)
+        }
     }
 
     /**

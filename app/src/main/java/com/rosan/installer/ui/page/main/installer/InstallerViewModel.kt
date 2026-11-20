@@ -342,7 +342,19 @@ class InstallerViewModel(
             )
         }
 
-        is ProgressEntity.InstallCompleted -> InstallerStage.InstallCompleted(progress.results)
+        is ProgressEntity.InstallCompleted -> {
+            // A batch of modules keeps the module console, exactly like a single module does: the
+            // per-app result list would replace the log with a summary the flow never asked for.
+            if (isModuleInstallFlow() && progress.results.all { it.entity.app is AppEntity.ModuleEntity }) {
+                InstallerStage.InstallingModule(
+                    output = session.moduleLog,
+                    isFinished = true,
+                    failed = progress.results.any { !it.success },
+                )
+            } else {
+                InstallerStage.InstallCompleted(progress.results)
+            }
+        }
 
         ProgressEntity.InstallWaitingUnknownSource -> InstallerStage.InstallWaitingUnknownSource
 

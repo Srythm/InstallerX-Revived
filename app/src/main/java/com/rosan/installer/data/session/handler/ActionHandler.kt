@@ -491,8 +491,17 @@ class ActionHandler(override val scope: CoroutineScope, override val session: In
         val queue = session.multiInstallQueue
         if (queue.isEmpty()) return
 
+        // APKs group by package so their splits install in one pass. Modules never group: two module
+        // files can carry the same package name (a reinstall, or two forks of one module), and
+        // merging them would silently drop every module but the first.
         val groupedQueue: List<List<SelectInstallEntity>> = queue
-            .groupBy { it.app.packageName }
+            .groupBy {
+                if (it.app is AppEntity.ModuleEntity) {
+                    "module:${System.identityHashCode(it.app)}"
+                } else {
+                    "package:${it.app.packageName}"
+                }
+            }
             .values
             .toList()
 
@@ -508,6 +517,19 @@ class ActionHandler(override val scope: CoroutineScope, override val session: In
 
             val currentProgressIndex = session.currentMultiInstallIndex + 1
             val totalCount = groupedQueue.size
+            val moduleEntity = firstEntity.app as? AppEntity.ModuleEntity
+
+            // A module console grows across the whole batch: every module reports its own log and
+            // the earlier ones stay above it, so the sheet reads like one continuous session.
+            val moduleLogPrefix = if (moduleEntity != null && totalCount > 1) {
+                session.moduleLog + listOf(
+                    "",
+                    "── [$currentProgressIndex/$totalCount] ${moduleEntity.name.ifBlank { moduleEntity.packageName }} ──",
+                    "",
+                )
+            } else {
+                session.moduleLog
+            }
 
             try {
                 // Construct a temporary result list for the processor
@@ -528,9 +550,13 @@ class ActionHandler(override val scope: CoroutineScope, override val session: In
                             total = totalCount,
                         ).collect { progress ->
                             if (progress is ProgressEntity.InstallingModule) {
-                                session.moduleLog = progress.output
+                                // The processor reports one module's console; publish the batch.
+                                val merged = moduleLogPrefix + progress.output
+                                session.moduleLog = merged
+                                session.progress.emit(ProgressEntity.InstallingModule(merged))
+                            } else {
+                                session.progress.emit(progress)
                             }
-                            session.progress.emit(progress)
                         }
                     }
 
@@ -550,6 +576,13 @@ class ActionHandler(override val scope: CoroutineScope, override val session: In
                     return
                 }
                 Timber.e(e, "Batch install failed for ${firstEntity.app.packageName}")
+                if (moduleEntity != null) {
+                    // A module console has nowhere else to report the failure, so the reason goes
+                    // into the log the sheet is already showing.
+                    val failedLog = session.moduleLog + "ERROR: ${e.message ?: e::class.java.simpleName}"
+                    session.moduleLog = failedLog
+                    session.progress.emit(ProgressEntity.InstallingModule(failedLog))
+                }
                 appEntities.forEach { entity ->
                     session.multiInstallResults.add(InstallResult(entity, false, e))
                 }

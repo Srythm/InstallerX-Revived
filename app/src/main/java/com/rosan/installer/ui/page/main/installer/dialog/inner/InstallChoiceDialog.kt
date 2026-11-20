@@ -91,19 +91,23 @@ fun installChoiceDialog(
     val selectedAppCount = allSelectedEntities.count { it.app !is AppEntity.ModuleEntity }
     val totalModuleCount = allEntities.count { it.app is AppEntity.ModuleEntity }
 
-    val isMixedError = selectedModuleCount > 0 && selectedAppCount > 0
-    val isMultiModuleError = selectedModuleCount > 1
+    // Modules are installed one after another, so selecting several is a valid batch; only mixing
+    // modules with apps is still refused.
+    val isModuleBatch = selectedModuleCount > 1
+    val installsMultiple = isMultiApk || isModuleBatch
 
-    val errorMessage = when {
-        isMixedError -> stringResource(R.string.installer_error_mixed_selection)
-        isMultiModuleError -> stringResource(R.string.installer_error_multiple_modules)
-        else -> null
+    val isMixedError = selectedModuleCount > 0 && selectedAppCount > 0
+
+    val errorMessage = if (isMixedError) {
+        stringResource(R.string.installer_error_mixed_selection)
+    } else {
+        null
     }
 
-    val isPrimaryActionEnabled = allSelectedEntities.isNotEmpty() && !isMixedError && !isMultiModuleError
+    val isPrimaryActionEnabled = allSelectedEntities.isNotEmpty() && !isMixedError
 
-    val primaryButtonText = if (isMultiApk) R.string.install else R.string.next
-    val primaryButtonAction = if (isMultiApk) {
+    val primaryButtonText = if (installsMultiple) R.string.install else R.string.next
+    val primaryButtonAction = if (installsMultiple) {
         { if (isPrimaryActionEnabled) viewModel.dispatch(InstallerViewAction.InstallMultiple) }
     } else {
         { if (isPrimaryActionEnabled) viewModel.dispatch(InstallerViewAction.InstallPrepare) }
