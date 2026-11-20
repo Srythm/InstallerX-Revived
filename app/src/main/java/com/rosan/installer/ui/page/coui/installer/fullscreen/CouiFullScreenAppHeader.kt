@@ -6,7 +6,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -15,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rosan.installer.ui.page.coui.installer.components.AppInfoState
@@ -22,14 +22,15 @@ import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.squircle.SquircleShape
 import io.github.suqi8.coui.kmp.theme.COUITheme
 
-private val AppIconSize = 48.dp
+private val AppIconSize = 76.dp
+private val AppIconCorner = 20.dp
 
 /**
  * Application identity block for the full-screen installer.
  *
- * Kept outside the stage content so the icon, name and package line stay put
- * while the installation moves from prepare to installing to the result. The
- * stage body below it is what changes.
+ * Centred, like the system install confirmation: one large icon, the label under it, then the
+ * package line. It sits outside the stage body, so the install moves *below* a fixed identity
+ * instead of the whole page being rebuilt around it.
  */
 @Composable
 fun CouiFullScreenAppHeader(
@@ -37,13 +38,13 @@ fun CouiFullScreenAppHeader(
     versionName: String?,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = FullScreenHorizontalPadding, end = FullScreenHorizontalPadding, top = 10.dp, bottom = 18.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(top = 4.dp, bottom = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        val iconShape = SquircleShape(14.dp)
+        val iconShape = SquircleShape(AppIconCorner)
         val bitmap = appInfo.icon
 
         if (bitmap != null) {
@@ -65,32 +66,33 @@ fun CouiFullScreenAppHeader(
             ) {
                 Text(
                     text = appInfo.label.take(1).uppercase(),
-                    style = COUITheme.textStyles.headlineS,
+                    style = COUITheme.textStyles.headlineM,
                     color = COUITheme.colorScheme.labelOnColor,
                 )
             }
         }
 
-        Column(modifier = Modifier.padding(start = 12.dp)) {
-            Text(
-                text = appInfo.label,
-                style = COUITheme.textStyles.headlineS,
-                color = COUITheme.colorScheme.labelPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = if (versionName.isNullOrBlank()) {
-                    appInfo.packageName
-                } else {
-                    "${appInfo.packageName} · $versionName"
-                },
-                style = COUITheme.textStyles.bodyS,
-                color = COUITheme.colorScheme.labelSecondaryVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 2.dp),
-            )
-        }
+        Text(
+            text = appInfo.label,
+            style = COUITheme.textStyles.headlineM,
+            color = COUITheme.colorScheme.labelPrimary,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 14.dp, start = 32.dp, end = 32.dp),
+        )
+        Text(
+            text = if (versionName.isNullOrBlank()) {
+                appInfo.packageName
+            } else {
+                "${appInfo.packageName} · $versionName"
+            },
+            style = COUITheme.textStyles.bodyS,
+            color = COUITheme.colorScheme.labelSecondaryVariant,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 4.dp, start = 32.dp, end = 32.dp),
+        )
     }
 }

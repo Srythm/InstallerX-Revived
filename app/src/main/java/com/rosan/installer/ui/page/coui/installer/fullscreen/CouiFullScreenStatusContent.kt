@@ -2,6 +2,13 @@
 // Copyright (C) 2026 InstallerX Revived contributors
 package com.rosan.installer.ui.page.coui.installer.fullscreen
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +31,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.rosan.installer.ui.theme.colorOsSpring
 import io.github.suqi8.coui.kmp.basic.CircularProgressIndicator
 import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.ProgressIndicatorDefaults
@@ -37,7 +45,14 @@ private val RingStroke = 6.dp
 /** Negative/non-finite values mean unknown; zero is a genuine determinate value. */
 internal fun fullScreenProgress(progress: Float?): Float? = progress?.takeIf { it.isFinite() && it >= 0f }?.coerceAtMost(1f)
 
-// Text scrolls independently so status changes never move the mark.
+/**
+ * Progress and result state, built as one continuous surface.
+ *
+ * The mark slot never changes size or position: a ring is swapped for a check mark inside it, so
+ * "installing" to "installed" reads as the ring resolving rather than as a new screen appearing.
+ * The labels cross-fade for the same reason, and the text block animates its own height so a
+ * longer explanation does not shove the mark around.
+ */
 @Composable
 fun CouiFullScreenStatusContent(
     title: String,
@@ -54,16 +69,84 @@ fun CouiFullScreenStatusContent(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.weight(1f))
-        Box(Modifier.size(MarkSize), contentAlignment = Alignment.Center) {
-            if (icon == null) {
-                CircularProgressIndicator(
-                    progress = value,
-                    colors = ProgressIndicatorDefaults.loadingViewColors(),
-                    // The determinate variant subtracts 8dp from its visible ring diameter.
-                    size = if (value == null) RingDiameter else RingDiameter + 8.dp,
-                    strokeWidth = RingStroke,
+        StatusMark(
+            progress = value,
+            icon = icon,
+            iconTint = iconTint,
+            haloColor = haloColor,
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Crossfade(
+                targetState = title,
+                animationSpec = tween(durationMillis = 200),
+                label = "StatusTitle",
+            ) { label ->
+                Text(
+                    text = label,
+                    style = COUITheme.textStyles.headlineS,
+                    color = COUITheme.colorScheme.labelPrimary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 20.dp).semantics { liveRegion = LiveRegionMode.Polite },
                 )
-            } else {
+            }
+            Crossfade(
+                targetState = subtitle.orEmpty(),
+                animationSpec = tween(durationMillis = 200),
+                label = "StatusSubtitle",
+            ) { line ->
+                if (line.isNotBlank()) {
+                    Text(
+                        text = line,
+                        style = COUITheme.textStyles.bodyL,
+                        color = COUITheme.colorScheme.labelSecondary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The one mark slot. Both variants are 92dp boxes centred on the same point, and each fades in as
+ * the other fades out, so the transition has no jump in size, position or baseline.
+ */
+@Composable
+private fun StatusMark(
+    progress: Float?,
+    icon: ImageVector?,
+    iconTint: Color,
+    haloColor: Color,
+) {
+    Box(Modifier.size(MarkSize), contentAlignment = Alignment.Center) {
+        AnimatedVisibility(
+            visible = icon == null,
+            enter = fadeIn(tween(durationMillis = 200)) + scaleIn(tween(durationMillis = 220), initialScale = 0.9f),
+            exit = fadeOut(tween(durationMillis = 140)) + scaleOut(tween(durationMillis = 160), targetScale = 0.9f),
+            modifier = Modifier.align(Alignment.Center),
+        ) {
+            CircularProgressIndicator(
+                progress = progress,
+                colors = ProgressIndicatorDefaults.loadingViewColors(),
+                // The determinate variant subtracts 8dp from its visible ring diameter.
+                size = if (progress == null) RingDiameter else RingDiameter + 8.dp,
+                strokeWidth = RingStroke,
+            )
+        }
+        AnimatedVisibility(
+            visible = icon != null,
+            enter = fadeIn(tween(durationMillis = 240)) + scaleIn(colorOsSpring(responseSeconds = 0.36f), initialScale = 0.7f),
+            exit = fadeOut(tween(durationMillis = 120)),
+            modifier = Modifier.align(Alignment.Center),
+        ) {
+            if (icon != null) {
                 Box(
                     // Soft halo instead of a solid disc: a radial ramp fades out on its own, so
                     // the mark reads as light rather than as a second circle.
@@ -88,27 +171,6 @@ fun CouiFullScreenStatusContent(
                         modifier = Modifier.size(36.dp),
                     )
                 }
-            }
-        }
-        Column(
-            modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                text = title,
-                style = COUITheme.textStyles.headlineS,
-                color = COUITheme.colorScheme.labelPrimary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 16.dp).semantics { liveRegion = LiveRegionMode.Polite },
-            )
-            if (!subtitle.isNullOrBlank()) {
-                Text(
-                    text = subtitle,
-                    style = COUITheme.textStyles.bodyL,
-                    color = COUITheme.colorScheme.labelSecondary,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 16.dp),
-                )
             }
         }
     }

@@ -19,10 +19,12 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rosan.installer.R
 import com.rosan.installer.domain.engine.model.packageinfo.AppEntity
 import com.rosan.installer.ui.icons.AppCOUIIcons
+import com.rosan.installer.ui.page.coui.widgets.CouiSettingsCard
 import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.HorizontalDivider
 import io.github.suqi8.coui.kmp.basic.Icon
@@ -60,15 +62,20 @@ fun CouiFullScreenPrepareContent(
         },
     )
     Column(
-        modifier = modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 16.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(bottom = 20.dp),
     ) {
         if (details.isNotEmpty()) {
             SectionTitle(stringResource(R.string.installer_detail_title))
-            Card(Modifier.fillMaxWidth().padding(horizontal = FullScreenHorizontalPadding)) {
-                Column(Modifier.padding(horizontal = 16.dp)) {
-                    details.forEachIndexed { index, (label, value) ->
-                        DetailRow(label, value)
-                        if (index != details.lastIndex) HorizontalDivider()
+            CouiSettingsCard(Modifier.fillMaxWidth().padding(horizontal = FullScreenHorizontalPadding)) {
+                details.forEachIndexed { index, (label, value) ->
+                    DetailRow(label, value)
+                    if (index != details.lastIndex) {
+                        // Indented like COUI's own grouped rows: the rule starts where the text
+                        // does, not at the card edge.
+                        HorizontalDivider(Modifier.padding(start = 16.dp))
                     }
                 }
             }
@@ -80,21 +87,23 @@ fun CouiFullScreenPrepareContent(
                 onClick = if (actionsEnabled) onOpenPermissions else null,
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
                         imageVector = AppCOUIIcons.Info,
                         contentDescription = null,
                         tint = COUITheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(22.dp),
                     )
                     Column(Modifier.weight(1f)) {
                         Text(
                             text = stringResource(R.string.permission_list),
                             style = COUITheme.textStyles.bodyXL,
                             color = COUITheme.colorScheme.labelPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                         Text(
                             text = if (sensitivePermissionCount > 0) {
@@ -108,6 +117,9 @@ fun CouiFullScreenPrepareContent(
                             },
                             style = COUITheme.textStyles.bodyM,
                             color = COUITheme.colorScheme.labelSecondaryVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 2.dp),
                         )
                     }
                     Icon(
@@ -126,16 +138,21 @@ fun CouiFullScreenPrepareContent(
 private fun SectionTitle(text: String) {
     Text(
         text = text,
-        style = COUITheme.textStyles.bodyS,
+        style = COUITheme.textStyles.bodyM,
         color = COUITheme.colorScheme.labelSecondaryVariant,
-        modifier = Modifier.padding(horizontal = FullScreenHorizontalPadding, vertical = 8.dp),
+        modifier = Modifier.padding(
+            start = FullScreenHorizontalPadding,
+            end = FullScreenHorizontalPadding,
+            top = 4.dp,
+            bottom = 8.dp,
+        ),
     )
 }
 
 @Composable
 private fun DetailRow(label: String, value: String) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
@@ -143,6 +160,7 @@ private fun DetailRow(label: String, value: String) {
             text = label,
             style = COUITheme.textStyles.bodyXL,
             color = COUITheme.colorScheme.labelPrimary,
+            maxLines = 1,
             modifier = Modifier.weight(1f),
         )
         Text(
@@ -150,6 +168,8 @@ private fun DetailRow(label: String, value: String) {
             style = COUITheme.textStyles.bodyM,
             color = COUITheme.colorScheme.labelSecondaryVariant,
             textAlign = TextAlign.End,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
     }

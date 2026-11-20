@@ -7,14 +7,10 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -31,18 +27,11 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
-import com.rosan.installer.R
-import com.rosan.installer.ui.icons.AppCOUIIcons
 import com.rosan.installer.ui.page.main.installer.InstallerViewModel
 import com.rosan.installer.ui.theme.ProvideCouiMaterialBackdrop
-import com.rosan.installer.ui.theme.colorOsSpring
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
-import io.github.suqi8.coui.kmp.basic.Icon
-import io.github.suqi8.coui.kmp.basic.IconButton
-import io.github.suqi8.coui.kmp.basic.SmallTopAppBar
 import io.github.suqi8.coui.kmp.effect.LocalCOUIMaterialEffectEnabled
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import top.yukonga.miuix.kmp.blur.layerBackdrop
@@ -55,27 +44,31 @@ val FullScreenHorizontalPadding = 16.dp
 
 internal val LocalFullScreenActionsEnabled = staticCompositionLocalOf { true }
 
-// The ViewModel owns teardown; this opaque shell only follows its closing signal.
+/**
+ * The full-screen installer surface.
+ *
+ * This is deliberately only a surface: an opaque page colour, a static colour wash, the blur
+ * backdrop, the close fade and the safe-area inset. The bar, the app header, the stage body and
+ * the action row all live inside [content], so a page-to-page transition can move the whole page
+ * as one unit — a fixed bar over a sliding body reads as two unrelated animations.
+ *
+ * The ViewModel owns teardown; this shell only follows its closing signal.
+ */
 @Composable
 fun CouiPositionFullScreen(
-    title: String,
     isClosing: Boolean,
-    onBack: (() -> Unit)?,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    onMore: (() -> Unit)? = null,
     useBlur: Boolean = false,
-    header: (@Composable () -> Unit)? = null,
-    bottomBar: (@Composable () -> Unit)? = null,
-    content: @Composable ColumnScope.() -> Unit,
+    content: @Composable BoxScope.() -> Unit,
 ) {
     val inspectionMode = LocalInspectionMode.current
     val pageColor = COUITheme.colorScheme.backgroundWithCard.copy(alpha = 1f)
     // The only backdrop source on this page. Null when blur is disabled by the user or the
     // runtime cannot support it, which is what every material surface below degrades on.
     val backdrop = if (inspectionMode) null else rememberCouiBlurBackdrop(useBlur)
-    // The shell is opaque from its first frame. The previous version started at alpha 0 and faded
-    // in, which left the activity visible for the first frames — and the bottom sheet that the
-    // full-screen mode replaces was often still on screen then, so it flashed. Only the exit fades.
+    // Opaque from the first frame: the activity behind us may still be showing the sheet that the
+    // full-screen mode replaces, and a transparent first frame would flash it.
     val uiAlpha = remember { Animatable(1f) }
     LaunchedEffect(isClosing) {
         if (isClosing) {
@@ -86,23 +79,15 @@ fun CouiPositionFullScreen(
         }
     }
 
-    // Entry motion lives on the content, not on the shell: it can rise while the background is
-    // already opaque, so the transition reads as content arriving instead of a page popping in.
-    val enter = remember { Animatable(if (inspectionMode) 1f else 0f) }
-    LaunchedEffect(Unit) {
-        if (!inspectionMode) enter.animateTo(1f, colorOsSpring(responseSeconds = 0.34f))
-    }
-
     // Consume system back even when navigation is disabled during installation.
     BackHandler {
-        if (!isClosing) onBack?.invoke()
+        if (!isClosing) onBack()
     }
 
     CompositionLocalProvider(
         LocalFullScreenActionsEnabled provides !isClosing,
         // Material (edge light, inner shadow, touch spotlight) only when an internal source
-        // exists. COUI keeps its opaque fill on its own when the local switch is off. Kept on
-        // during the close fade so the buttons do not pop back to a solid fill mid-fade.
+        // exists. COUI keeps its opaque fill on its own when the local switch is off.
         LocalCOUIMaterialEffectEnabled provides (backdrop != null),
     ) {
         Box(
@@ -138,65 +123,12 @@ fun CouiPositionFullScreen(
             }
 
             ProvideCouiMaterialBackdrop(backdrop) {
-                Column(
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .windowInsetsPadding(WindowInsets.safeDrawing)
-                        .graphicsLayer {
-                            alpha = enter.value
-                            translationY = (1f - enter.value) * 28.dp.toPx()
-                        },
-                ) {
-                    SmallTopAppBar(
-                        title = title,
-                        centerTitle = true,
-                        color = if (backdrop != null) Color.Transparent else pageColor,
-                        defaultWindowInsetsPadding = false,
-                        showDivider = false,
-                        navigationIcon = {
-                            IconButton(
-                                onClick = { if (!isClosing) onBack?.invoke() },
-                                enabled = !isClosing && onBack != null,
-                            ) {
-                                Icon(
-                                    imageVector = AppCOUIIcons.Back,
-                                    contentDescription = stringResource(R.string.back),
-                                    tint = if (!isClosing && onBack != null) {
-                                        COUITheme.colorScheme.labelPrimary
-                                    } else {
-                                        COUITheme.colorScheme.disabledNeutral
-                                    },
-                                    modifier = Modifier.size(24.dp),
-                                )
-                            }
-                        },
-                        actions = {
-                            if (onMore != null) {
-                                IconButton(
-                                    onClick = { if (!isClosing) onMore() },
-                                    enabled = !isClosing,
-                                ) {
-                                    Icon(
-                                        imageVector = AppCOUIIcons.More,
-                                        contentDescription = stringResource(R.string.installer_settings),
-                                        tint = COUITheme.colorScheme.labelPrimary,
-                                        modifier = Modifier.size(24.dp),
-                                    )
-                                }
-                            }
-                        },
-                    )
-                    header?.invoke()
-                    Column(
-                        modifier = Modifier.fillMaxWidth().weight(1f),
-                        content = content,
-                    )
-                    if (bottomBar != null) {
-                        Box(Modifier.fillMaxWidth().height(FullScreenBottomBarHeight)) {
-                            bottomBar()
-                        }
-                    }
-                }
+                        .windowInsetsPadding(WindowInsets.safeDrawing),
+                    content = content,
+                )
             }
         }
     }
