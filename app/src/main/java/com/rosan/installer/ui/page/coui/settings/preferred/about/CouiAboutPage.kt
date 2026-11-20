@@ -125,7 +125,6 @@ import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.theme.LocalDismissState
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
-import io.github.suqi8.coui.kmp.window.OverlayListPopup
 import io.github.suqi8.coui.kmp.window.WindowBottomSheet
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.blur.BlendColorEntry
