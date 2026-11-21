@@ -1400,6 +1400,7 @@ private fun RowScope.PrimaryAction(
                 if (enabled && onLongClick != null) {
                     Modifier.pointerInput(onLongClick) {
                         val timeoutMs = viewConfiguration.longPressTimeoutMillis
+                        val pointerContext = currentCoroutineContext()
                         awaitEachGesture {
                             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                             hasLongPressed = false
@@ -1414,7 +1415,7 @@ private fun RowScope.PrimaryAction(
                                 @Suppress("UNREACHABLE_CODE")
                                 null
                             }
-                            if (up == null && currentCoroutineContext().isActive) {
+                            if (up == null && pointerContext.isActive) {
                                 hasLongPressed = true
                                 hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                                 onLongClick()
