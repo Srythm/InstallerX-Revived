@@ -149,6 +149,8 @@ class InstallerViewModel(
     private var loadingStateJob: Job? = null
     private val iconJobs = mutableMapOf<String, Job>()
     private var autoInstallJob: Job? = null
+    private var fullscreenCloseJob: Job? = null
+    private var isFullscreenPresentationActive = false
     private val settingsLoadingJob: Job
     private var collectRepoJob: Job? = null
     private var unknownSourcePermissionLabelPackageName: String? = null
@@ -191,35 +193,9 @@ class InstallerViewModel(
             is InstallerViewAction.PrepareClose -> session.prepareClose()
 
             is InstallerViewAction.Close -> {
-                // The install UI must fade out before the activity is torn
-                // down whenever the *current render* is the fullscreen
-                // layout — see the long KDoc on [requestFullscreenClose].
-                // That covers two cases today:
-                //   1. installMode == FullScreen (always fullscreen).
-                //   2. installMode is Notification / AutoNotification and
-                //      the current stage is InstallChoice. DialogPage routes
-                //      that combination through PositionFullScreen to dodge
-                //      the "stretch-from-notification-card" animation
-                //      flicker, so cancelling the choice must take the same
-                //      fade-out path or the user gets an instant snap.
-                // The user expects this fade for *every* close path in
-                // fullscreen mode, not just the system-back gesture: the
-                // back button, the "完成" button on success, the "取消"
-                // mid-install, the "关闭" button on failure, and the
-                // various "done" / "ok" buttons in the uninstall flow all
-                // dispatch Close and must look symmetric.
-                //
-                // In pure dialog InstallMode the surrounding Material 3
-                // [androidx.compose.material3.Dialog] runs its own dismiss
-                // animation, so we keep the synchronous [close] path —
-                // there is no PositionFullScreen layer to fade and the
-                // delay would just add a 220ms "stuck" frame before the
-                // dialog disappears.
-                val currentState = _localState.value
-                val currentInstallMode = currentState.config.installMode
-                val isFullscreenUI = currentInstallMode == InstallMode.FullScreen ||
-                    (currentState.stage is InstallerStage.InstallChoice && currentInstallMode.isNotification)
-                if (isFullscreenUI) {
+                // Only use the deferred fullscreen fade-out when a fullscreen shell
+                // is actually mounted and driving the exit transition.
+                if (isFullscreenPresentationActive) {
                     requestFullscreenClose()
                 } else {
                     close()
@@ -444,6 +420,9 @@ class InstallerViewModel(
 
     private fun collectRepo(session: InstallerSessionRepository) {
         if (this.session !== session) {
+            fullscreenCloseJob?.cancel()
+            fullscreenCloseJob = null
+            _isClosingFullscreen.value = false
             packageSelectionsBeforeClear.clear()
             moduleInstallStarted = false
         }
@@ -762,6 +741,8 @@ class InstallerViewModel(
     private fun toast(@StringRes resId: Int) = _uiEvents.tryEmit(InstallerViewEvent.ShowToastRes(resId))
 
     private fun close() {
+        fullscreenCloseJob?.cancel()
+        fullscreenCloseJob = null
         packageSelectionsBeforeClear.clear()
         autoInstallJob?.cancel()
         collectRepoJob?.cancel()
@@ -785,6 +766,10 @@ class InstallerViewModel(
                 mmzSelectionMode = MmzSelectionMode.INITIAL_CHOICE,
             )
         }
+    }
+
+    fun setFullscreenPresentation(active: Boolean) {
+        isFullscreenPresentationActive = active
     }
 
     // ---------------------------------------------------------------------
@@ -830,11 +815,17 @@ class InstallerViewModel(
      */
     fun requestFullscreenClose() {
         if (_isClosingFullscreen.value) return
-        session.prepareClose()
+        val closingSession = session
+        closingSession.prepareClose()
         _isClosingFullscreen.value = true
-        viewModelScope.launch {
+        fullscreenCloseJob?.cancel()
+        fullscreenCloseJob = viewModelScope.launch {
             delay(FullscreenCloseFadeOutMs)
-            close()
+            if (this@InstallerViewModel.session === closingSession) {
+                close()
+            } else {
+                _isClosingFullscreen.value = false
+            }
         }
     }
 

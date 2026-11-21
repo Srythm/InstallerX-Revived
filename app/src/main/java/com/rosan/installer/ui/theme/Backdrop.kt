@@ -45,6 +45,7 @@ import top.yukonga.miuix.kmp.material.isRuntimeShaderSupported
 @Composable
 fun rememberCouiBlurBackdrop(enableBlur: Boolean): LayerBackdrop? {
     if (!enableBlur || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return null
+    if (!isRuntimeShaderSupported()) return null
     val surfaceColor = COUITheme.colorScheme.backgroundWithCard
     return rememberLayerBackdrop {
         drawRect(surfaceColor)

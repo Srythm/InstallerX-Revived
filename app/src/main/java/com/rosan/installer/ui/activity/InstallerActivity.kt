@@ -40,6 +40,7 @@ import com.rosan.installer.domain.session.repository.InstallerSessionManager
 import com.rosan.installer.domain.session.repository.InstallerSessionRepository
 import com.rosan.installer.domain.settings.model.config.Authorizer
 import com.rosan.installer.domain.settings.model.config.ConfigModel
+import com.rosan.installer.domain.settings.model.config.InstallMode
 import com.rosan.installer.domain.settings.provider.ThemeStateProvider
 import com.rosan.installer.domain.settings.repository.AppSettingsRepository
 import com.rosan.installer.domain.settings.repository.BooleanSetting
@@ -435,9 +436,9 @@ class InstallerActivity :
                 if (isRunning) {
                     Timber.d("onStop: User left activity while running. Triggering background mode.")
                     session.background(true)
-                } else { // If the task has finished or errored
-                    if (disableNotificationOnDismiss) {
-                        Timber.d("onStop: Task finished and disableNotificationOnDismiss is true. Closing.")
+                } else { // If the task is idle, waiting, finished, or errored
+                    if (disableNotificationOnDismiss || session.config.installMode == InstallMode.FullScreen) {
+                        Timber.d("onStop: Task idle/finished and dismiss notification suppressed or fullscreen mode. Closing.")
                         session.close()
                     } else {
                         Timber.d("onStop: Task finished and disableNotificationOnDismiss is false. Triggering background mode.")
