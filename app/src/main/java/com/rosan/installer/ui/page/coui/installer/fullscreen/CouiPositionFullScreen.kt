@@ -3,14 +3,10 @@
 package com.rosan.installer.ui.page.coui.installer.fullscreen
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,6 +27,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -39,6 +37,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -73,6 +72,8 @@ val FullScreenHorizontalPadding = 16.dp
 val FullScreenTopBarHeight = 56.dp
 
 internal val LocalFullScreenActionsEnabled = staticCompositionLocalOf { true }
+
+internal val LocalFullScreenBottomBarPadding = staticCompositionLocalOf { 0.dp }
 
 /**
  * The full-screen installer surface.
@@ -124,7 +125,14 @@ fun CouiPositionFullScreen(
             Box(
                 modifier = modifier
                     .fillMaxSize()
-                    .graphicsLayer { alpha = uiAlpha.value }
+                    .graphicsLayer {
+                        alpha = uiAlpha.value
+                        compositingStrategy = if (uiAlpha.value < 1f) {
+                            CompositingStrategy.Offscreen
+                        } else {
+                            CompositingStrategy.Auto
+                        }
+                    }
                     .onPreviewKeyEvent { isClosing }
                     .then(
                         if (isClosing) {
@@ -171,30 +179,49 @@ fun CouiPositionFullScreen(
                             backEnabled = backEnabled && !isClosing,
                             endAction = endAction,
                         )
-                        Box(Modifier.fillMaxWidth().weight(1f)) { content() }
-                        // Only reserved when the page actually has actions. A page without them gets
-                        // the full height and lets its content reach the navigation bar.
+                        val bottomBarReservedPadding =
+                            FullScreenBottomBarHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                         val lastBottomBar = remember { mutableStateOf(bottomBar) }
                         if (bottomBar != null) {
                             lastBottomBar.value = bottomBar
                         }
-                        AnimatedVisibility(
-                            visible = bottomBar != null,
-                            enter = fadeIn(tween(durationMillis = 180)) + expandVertically(tween(durationMillis = 220)),
-                            exit = fadeOut(tween(durationMillis = 120)) + shrinkVertically(tween(durationMillis = 200)),
-                        ) {
+                        val bottomBarAlpha by animateFloatAsState(
+                            targetValue = if (bottomBar != null) 1f else 0f,
+                            animationSpec = tween(durationMillis = if (bottomBar != null) 180 else 120),
+                            label = "FullScreenBottomBarAlpha",
+                        )
+                        Box(Modifier.fillMaxWidth().weight(1f)) {
                             CompositionLocalProvider(
-                                LocalFullScreenActionsEnabled provides (bottomBar != null && !isClosing),
+                                LocalFullScreenBottomBarPadding provides bottomBarReservedPadding,
                             ) {
-                                Box(
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .windowInsetsPadding(
-                                            WindowInsets.navigationBars.only(WindowInsetsSides.Bottom),
-                                        )
-                                        .height(FullScreenBottomBarHeight),
+                                content()
+                            }
+                            // Overlaid rather than stacked in the Column so toggling sub-pages never
+                            // changes content height or shifts the page vertically mid-transition.
+                            if (bottomBarAlpha > 0.01f) {
+                                CompositionLocalProvider(
+                                    LocalFullScreenActionsEnabled provides (bottomBar != null && !isClosing),
                                 ) {
-                                    lastBottomBar.value?.invoke()
+                                    Box(
+                                        Modifier
+                                            .align(Alignment.BottomCenter)
+                                            .fillMaxWidth()
+                                            .graphicsLayer {
+                                                alpha = bottomBarAlpha
+                                                translationY = (1f - bottomBarAlpha) * 16.dp.toPx()
+                                                compositingStrategy = if (bottomBarAlpha < 1f) {
+                                                    CompositingStrategy.Offscreen
+                                                } else {
+                                                    CompositingStrategy.Auto
+                                                }
+                                            }
+                                            .windowInsetsPadding(
+                                                WindowInsets.navigationBars.only(WindowInsetsSides.Bottom),
+                                            )
+                                            .height(FullScreenBottomBarHeight),
+                                    ) {
+                                        lastBottomBar.value?.invoke()
+                                    }
                                 }
                             }
                         }
@@ -249,12 +276,26 @@ private fun FullScreenTopBar(
             if (endAction != null) {
                 lastEndAction.value = endAction
             }
-            AnimatedVisibility(
-                visible = endAction != null,
-                enter = fadeIn(tween(durationMillis = 180)),
-                exit = fadeOut(tween(durationMillis = 120)),
-            ) {
-                lastEndAction.value?.invoke()
+            val endActionAlpha by animateFloatAsState(
+                targetValue = if (endAction != null) 1f else 0f,
+                animationSpec = tween(durationMillis = if (endAction != null) 180 else 120),
+                label = "FullScreenEndActionAlpha",
+            )
+            if (endActionAlpha > 0.01f) {
+                Box(
+                    modifier = Modifier.graphicsLayer {
+                        alpha = endActionAlpha
+                        scaleX = 0.92f + 0.08f * endActionAlpha
+                        scaleY = 0.92f + 0.08f * endActionAlpha
+                        compositingStrategy = if (endActionAlpha < 1f) {
+                            CompositingStrategy.Offscreen
+                        } else {
+                            CompositingStrategy.Auto
+                        }
+                    },
+                ) {
+                    lastEndAction.value?.invoke()
+                }
             }
         }
         Crossfade(

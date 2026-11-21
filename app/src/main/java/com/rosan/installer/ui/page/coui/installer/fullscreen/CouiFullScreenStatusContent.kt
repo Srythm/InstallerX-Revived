@@ -2,13 +2,14 @@
 // Copyright (C) 2026 InstallerX Revived contributors
 package com.rosan.installer.ui.page.coui.installer.fullscreen
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -84,9 +87,12 @@ fun CouiFullScreenStatusContent(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Crossfade(
+            AnimatedContent(
                 targetState = title,
-                animationSpec = tween(durationMillis = 200),
+                transitionSpec = {
+                    fadeIn(tween(durationMillis = 180, delayMillis = 50)) togetherWith
+                        fadeOut(tween(durationMillis = 110))
+                },
                 label = "StatusTitle",
             ) { label ->
                 Text(
@@ -97,9 +103,12 @@ fun CouiFullScreenStatusContent(
                     modifier = Modifier.padding(top = 20.dp).semantics { liveRegion = LiveRegionMode.Polite },
                 )
             }
-            Crossfade(
+            AnimatedContent(
                 targetState = subtitle.orEmpty(),
-                animationSpec = tween(durationMillis = 200),
+                transitionSpec = {
+                    fadeIn(tween(durationMillis = 180, delayMillis = 50)) togetherWith
+                        fadeOut(tween(durationMillis = 110))
+                },
                 label = "StatusSubtitle",
             ) { line ->
                 if (line.isNotBlank()) {
@@ -112,15 +121,24 @@ fun CouiFullScreenStatusContent(
                     )
                 }
             }
-            // Render ticking progress directly so rapid percentage updates do not ghost/flicker.
+            val lastProgressText = remember { mutableStateOf(progressText) }
             if (!progressText.isNullOrBlank()) {
-                Text(
-                    text = progressText,
-                    style = COUITheme.textStyles.bodyL,
-                    color = COUITheme.colorScheme.labelSecondaryVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                )
+                lastProgressText.value = progressText
+            }
+            AnimatedVisibility(
+                visible = !progressText.isNullOrBlank(),
+                enter = fadeIn(tween(durationMillis = 150)),
+                exit = fadeOut(tween(durationMillis = 150)),
+            ) {
+                lastProgressText.value?.takeIf { it.isNotBlank() }?.let { pct ->
+                    Text(
+                        text = pct,
+                        style = COUITheme.textStyles.bodyL,
+                        color = COUITheme.colorScheme.labelSecondaryVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    )
+                }
             }
             if (extraContent != null) {
                 Box(

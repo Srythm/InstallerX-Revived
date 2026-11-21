@@ -10,6 +10,8 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -26,13 +28,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -52,8 +54,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
@@ -62,6 +66,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
@@ -667,9 +672,14 @@ internal fun CouiFullScreenInstallerContent(
             null
         },
     ) {
+        val bottomBarPadding = if (usesShellBottomBar) LocalFullScreenBottomBarPadding.current else 0.dp
         val renderSubPage: @Composable (FullScreenSubPage) -> Unit = { targetSubPage ->
             when (targetSubPage) {
-                FullScreenSubPage.Main -> Column(Modifier.fillMaxSize()) {
+                FullScreenSubPage.Main -> Column(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(bottom = bottomBarPadding),
+                ) {
                     AnimatedVisibility(
                         visible = headerData != null,
                         enter = fadeIn(tween(200)) + expandVertically(),
@@ -1015,9 +1025,9 @@ private fun FullScreenStageBody(
         contentKey = { it },
         transitionSpec = {
             (
-                fadeIn(tween(durationMillis = 240)) +
-                    slideInVertically(tween(durationMillis = 260)) { it / 40 }
-                ) togetherWith fadeOut(tween(durationMillis = 140))
+                fadeIn(tween(durationMillis = 220, delayMillis = 60)) +
+                    slideInVertically(tween(durationMillis = 240, delayMillis = 40)) { it / 48 }
+                ) togetherWith fadeOut(tween(durationMillis = 120))
         },
         label = "FullScreenStageBody",
     ) { slotBucket ->
@@ -1147,83 +1157,17 @@ private fun statusSpecOf(
 
 private fun Float.asPercent(): String = NumberFormat.getPercentInstance().format(toDouble())
 
-/** The action set key for a stage. */
-private enum class ActionSet {
-    Prepare,
-    Preparing,
-    Installing,
-    WaitingUnknownSource,
-    InstallConfirm,
-    InstallSuccess,
-    UninstallReady,
-    UnarchiveReady,
-    UnarchiveError,
-    Finish,
-    Close,
-    None,
-}
-
-private data class ActionBarKey(
-    val set: ActionSet,
-    val hasPrimary: Boolean = true,
-    val hasSecondary: Boolean = false,
+private data class ActionButtonSpec(
+    val text: String,
+    val enabled: Boolean,
+    val isDestructive: Boolean = false,
+    val onClick: () -> Unit,
 )
 
-private fun actionBarKeyOf(
-    stage: InstallerStage,
-    hasLaunchIntent: Boolean,
-    showUnknownSourceAction: Boolean,
-): ActionBarKey = when (stage) {
-    is InstallerStage.InstallPrepare -> ActionBarKey(ActionSet.Prepare, hasPrimary = true, hasSecondary = true)
-
-    is InstallerStage.Preparing -> ActionBarKey(ActionSet.Preparing, hasPrimary = true, hasSecondary = true)
-
-    is InstallerStage.Installing -> ActionBarKey(ActionSet.Installing, hasPrimary = true, hasSecondary = false)
-
-    is InstallerStage.InstallWaitingUnknownSource -> ActionBarKey(
-        ActionSet.WaitingUnknownSource,
-        hasPrimary = showUnknownSourceAction,
-        hasSecondary = true,
-    )
-
-    is InstallerStage.InstallConfirm -> ActionBarKey(ActionSet.InstallConfirm, hasPrimary = true, hasSecondary = true)
-
-    is InstallerStage.InstallSuccess -> ActionBarKey(
-        ActionSet.InstallSuccess,
-        hasPrimary = hasLaunchIntent,
-        hasSecondary = true,
-    )
-
-    is InstallerStage.UninstallReady -> ActionBarKey(ActionSet.UninstallReady, hasPrimary = true, hasSecondary = true)
-
-    is InstallerStage.UnarchiveReady -> ActionBarKey(ActionSet.UnarchiveReady, hasPrimary = true, hasSecondary = true)
-
-    is InstallerStage.UnarchiveError -> ActionBarKey(
-        ActionSet.UnarchiveError,
-        hasPrimary = stage.status.primaryAction != UnarchiveErrorAction.CLOSE,
-        hasSecondary = true,
-    )
-
-    is InstallerStage.InstallCompleted,
-    is InstallerStage.UninstallSuccess,
-    -> ActionBarKey(ActionSet.Finish, hasPrimary = true, hasSecondary = false)
-
-    is InstallerStage.InstallingModule -> if (stage.isFinished) {
-        ActionBarKey(ActionSet.Close, hasPrimary = true, hasSecondary = false)
-    } else {
-        ActionBarKey(ActionSet.None, hasPrimary = false, hasSecondary = false)
-    }
-
-    is InstallerStage.InstallFailed,
-    is InstallerStage.ResolveFailed,
-    is InstallerStage.AnalyseFailed,
-    is InstallerStage.UninstallFailed,
-    is InstallerStage.UninstallResolveFailed,
-    is InstallerStage.UnarchiveFailed,
-    -> ActionBarKey(ActionSet.Close, hasPrimary = true, hasSecondary = false)
-
-    else -> ActionBarKey(ActionSet.None, hasPrimary = false, hasSecondary = false)
-}
+private data class ActionBarSpec(
+    val secondary: ActionButtonSpec? = null,
+    val primary: ActionButtonSpec? = null,
+)
 
 @Composable
 private fun FullScreenActionRow(
@@ -1248,134 +1192,214 @@ private fun FullScreenActionRow(
     onOpenUnarchiveErrorAction: () -> Unit,
 ) {
     val enabled = LocalFullScreenActionsEnabled.current
-    val activeKey = actionBarKeyOf(stage, hasLaunchIntent, showUnknownSourceAction)
+    val spec = when (stage) {
+        is InstallerStage.InstallPrepare -> ActionBarSpec(
+            secondary = ActionButtonSpec(
+                text = stringResource(if (preparedFromTypeChoice) R.string.back else R.string.cancel),
+                enabled = enabled,
+                onClick = if (preparedFromTypeChoice) onBackToTypeChoice else onClose,
+            ),
+            primary = ActionButtonSpec(
+                text = stringResource(primaryButtonRes),
+                enabled = enabled && canInstall,
+                onClick = onInstall,
+            ),
+        )
 
-    val rowContent: @Composable () -> Unit = {
-        Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = FullScreenHorizontalPadding, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            when (activeKey.set) {
-                ActionSet.Prepare -> {
-                    SecondaryAction(
-                        text = stringResource(if (preparedFromTypeChoice) R.string.back else R.string.cancel),
-                        onClick = if (preparedFromTypeChoice) onBackToTypeChoice else onClose,
+        is InstallerStage.Preparing -> ActionBarSpec(
+            secondary = ActionButtonSpec(stringResource(R.string.cancel), enabled, onClick = onCancel),
+            primary = ActionButtonSpec(stringResource(R.string.installer_move_to_background), enabled, onClick = onBackground),
+        )
+
+        is InstallerStage.Installing -> ActionBarSpec(
+            secondary = ActionButtonSpec(stringResource(R.string.installer_move_to_background), enabled, onClick = onBackground),
+        )
+
+        is InstallerStage.InstallWaitingUnknownSource -> ActionBarSpec(
+            secondary = ActionButtonSpec(stringResource(R.string.cancel), enabled, onClick = onCancel),
+            primary = if (showUnknownSourceAction) {
+                ActionButtonSpec(stringResource(R.string.suggestion_allow_unknown_source), enabled, onClick = onRequestUnknownSourcePermission)
+            } else {
+                null
+            },
+        )
+
+        is InstallerStage.InstallConfirm -> {
+            val confirmText = when {
+                stage.isOwnershipConflict -> stringResource(R.string.install_anyway)
+                stage.requestType == ConfirmationRequestType.PRE_APPROVAL -> stringResource(R.string.pre_approve)
+                else -> stringResource(R.string.confirm)
+            }
+            val actionEnabled = enabled && !isConfirmationSubmitting
+            ActionBarSpec(
+                secondary = ActionButtonSpec(
+                    text = stringResource(R.string.cancel),
+                    enabled = actionEnabled,
+                    onClick = { onApproveSession(stage.sessionId, false) },
+                ),
+                primary = ActionButtonSpec(
+                    text = confirmText,
+                    enabled = actionEnabled,
+                    onClick = { onApproveSession(stage.sessionId, true) },
+                ),
+            )
+        }
+
+        is InstallerStage.InstallSuccess -> if (hasLaunchIntent) {
+            ActionBarSpec(
+                secondary = ActionButtonSpec(stringResource(R.string.finish), enabled, onClick = onClose),
+                primary = ActionButtonSpec(stringResource(R.string.open), enabled, onClick = onOpenApp),
+            )
+        } else {
+            ActionBarSpec(
+                primary = ActionButtonSpec(stringResource(R.string.finish), enabled, onClick = onClose),
+            )
+        }
+
+        is InstallerStage.UninstallReady -> ActionBarSpec(
+            secondary = ActionButtonSpec(stringResource(R.string.cancel), enabled, onClick = onClose),
+            primary = ActionButtonSpec(
+                text = stringResource(if (isArchivedUninstall) R.string.uninstall_archive else R.string.uninstall),
+                enabled = enabled,
+                isDestructive = true,
+                onClick = onUninstall,
+            ),
+        )
+
+        is InstallerStage.UnarchiveReady -> ActionBarSpec(
+            secondary = ActionButtonSpec(stringResource(R.string.cancel), enabled, onClick = onClose),
+            primary = ActionButtonSpec(stringResource(R.string.unarchive_restore), enabled, onClick = onStartUnarchive),
+        )
+
+        is InstallerStage.UnarchiveError -> {
+            val hasPrimary = stage.status.primaryAction != UnarchiveErrorAction.CLOSE
+            if (hasPrimary) {
+                ActionBarSpec(
+                    secondary = ActionButtonSpec(stringResource(R.string.close), enabled, onClick = onClose),
+                    primary = ActionButtonSpec(
+                        text = stringResource(stage.status.actionLabelResId),
                         enabled = enabled,
-                    )
-                    PrimaryAction(
-                        text = stringResource(primaryButtonRes),
-                        onClick = onInstall,
-                        enabled = enabled && canInstall,
-                    )
-                }
-
-                ActionSet.Preparing -> {
-                    SecondaryAction(stringResource(R.string.cancel), onCancel, enabled)
-                    PrimaryAction(stringResource(R.string.installer_move_to_background), onBackground, enabled = enabled)
-                }
-
-                ActionSet.Installing -> {
-                    SecondaryAction(stringResource(R.string.installer_move_to_background), onBackground, enabled)
-                }
-
-                ActionSet.WaitingUnknownSource -> {
-                    SecondaryAction(stringResource(R.string.cancel), onCancel, enabled)
-                    if (showUnknownSourceAction) {
-                        PrimaryAction(
-                            text = stringResource(R.string.suggestion_allow_unknown_source),
-                            onClick = onRequestUnknownSourcePermission,
-                            enabled = enabled,
-                        )
-                    }
-                }
-
-                ActionSet.InstallConfirm -> {
-                    val confirmStage = stage as? InstallerStage.InstallConfirm
-                    val confirmText = when {
-                        confirmStage?.isOwnershipConflict == true -> stringResource(R.string.install_anyway)
-                        confirmStage?.requestType == ConfirmationRequestType.PRE_APPROVAL -> stringResource(R.string.pre_approve)
-                        else -> stringResource(R.string.confirm)
-                    }
-                    val actionEnabled = enabled && !isConfirmationSubmitting
-                    SecondaryAction(
-                        text = stringResource(R.string.cancel),
-                        onClick = { confirmStage?.let { onApproveSession(it.sessionId, false) } },
-                        enabled = actionEnabled,
-                    )
-                    PrimaryAction(
-                        text = confirmText,
-                        onClick = { confirmStage?.let { onApproveSession(it.sessionId, true) } },
-                        enabled = actionEnabled,
-                    )
-                }
-
-                ActionSet.InstallSuccess -> {
-                    if (hasLaunchIntent) {
-                        SecondaryAction(stringResource(R.string.finish), onClose, enabled)
-                        PrimaryAction(stringResource(R.string.open), onOpenApp, enabled = enabled)
-                    } else {
-                        PrimaryAction(stringResource(R.string.finish), onClose, enabled = enabled)
-                    }
-                }
-
-                ActionSet.UninstallReady -> {
-                    SecondaryAction(stringResource(R.string.cancel), onClose, enabled)
-                    DestructiveAction(
-                        text = stringResource(if (isArchivedUninstall) R.string.uninstall_archive else R.string.uninstall),
-                        onClick = onUninstall,
-                        enabled = enabled,
-                    )
-                }
-
-                ActionSet.UnarchiveReady -> {
-                    SecondaryAction(stringResource(R.string.cancel), onClose, enabled)
-                    PrimaryAction(stringResource(R.string.unarchive_restore), onStartUnarchive, enabled = enabled)
-                }
-
-                ActionSet.UnarchiveError -> {
-                    val errStage = stage as? InstallerStage.UnarchiveError
-                    val hasPrimary = errStage != null && errStage.status.primaryAction != UnarchiveErrorAction.CLOSE
-                    if (hasPrimary) {
-                        SecondaryAction(stringResource(R.string.close), onClose, enabled)
-                        PrimaryAction(
-                            text = stringResource(errStage.status.actionLabelResId),
-                            onClick = onOpenUnarchiveErrorAction,
-                            enabled = enabled,
-                        )
-                    } else {
-                        PrimaryAction(stringResource(R.string.close), onClose, enabled = enabled)
-                    }
-                }
-
-                ActionSet.Finish -> PrimaryAction(stringResource(R.string.finish), onClose, enabled = enabled)
-
-                ActionSet.Close -> PrimaryAction(stringResource(R.string.close), onClose, enabled = enabled)
-
-                ActionSet.None -> Unit
+                        onClick = onOpenUnarchiveErrorAction,
+                    ),
+                )
+            } else {
+                ActionBarSpec(
+                    primary = ActionButtonSpec(stringResource(R.string.close), enabled, onClick = onClose),
+                )
             }
         }
+
+        is InstallerStage.InstallCompleted,
+        is InstallerStage.UninstallSuccess,
+        -> ActionBarSpec(
+            primary = ActionButtonSpec(stringResource(R.string.finish), enabled, onClick = onClose),
+        )
+
+        is InstallerStage.InstallingModule -> if (stage.isFinished) {
+            ActionBarSpec(
+                primary = ActionButtonSpec(stringResource(R.string.close), enabled, onClick = onClose),
+            )
+        } else {
+            ActionBarSpec()
+        }
+
+        is InstallerStage.InstallFailed,
+        is InstallerStage.ResolveFailed,
+        is InstallerStage.AnalyseFailed,
+        is InstallerStage.UninstallFailed,
+        is InstallerStage.UninstallResolveFailed,
+        is InstallerStage.UnarchiveFailed,
+        -> ActionBarSpec(
+            primary = ActionButtonSpec(stringResource(R.string.close), enabled, onClick = onClose),
+        )
+
+        else -> ActionBarSpec()
     }
 
-    AnimatedContent(
-        targetState = activeKey,
-        modifier = Modifier.fillMaxSize(),
-        contentKey = { it },
-        transitionSpec = {
-            fadeIn(tween(durationMillis = 180)) togetherWith fadeOut(tween(durationMillis = 120))
-        },
-        label = "FullScreenActions",
-    ) { slotKey ->
-        val frozen = remember { FullScreenSlotRef(rowContent) }
-        if (slotKey == activeKey) {
-            frozen.value = rowContent
+    val lastSecondary = remember { mutableStateOf(spec.secondary) }
+    if (spec.secondary != null) {
+        lastSecondary.value = spec.secondary
+    }
+    val lastPrimary = remember { mutableStateOf(spec.primary) }
+    if (spec.primary != null) {
+        lastPrimary.value = spec.primary
+    }
+
+    val secondaryFraction by animateFloatAsState(
+        targetValue = if (spec.secondary != null) 1f else 0f,
+        animationSpec = tween(durationMillis = 220),
+        label = "FullScreenSecondaryFraction",
+    )
+    val primaryFraction by animateFloatAsState(
+        targetValue = if (spec.primary != null) 1f else 0f,
+        animationSpec = tween(durationMillis = 220),
+        label = "FullScreenPrimaryFraction",
+    )
+
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = FullScreenHorizontalPadding, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (secondaryFraction > 0.01f) {
+            lastSecondary.value?.let { btn ->
+                Box(
+                    modifier = Modifier
+                        .weight(secondaryFraction.coerceAtLeast(0.01f))
+                        .clipToBounds()
+                        .graphicsLayer {
+                            alpha = secondaryFraction
+                            compositingStrategy = if (secondaryFraction < 1f) {
+                                CompositingStrategy.Offscreen
+                            } else {
+                                CompositingStrategy.Auto
+                            }
+                        },
+                ) {
+                    val slotEnabled = btn.enabled && spec.secondary != null
+                    if (btn.isDestructive) {
+                        DestructiveAction(btn.text, btn.onClick, slotEnabled)
+                    } else {
+                        SecondaryAction(btn.text, btn.onClick, slotEnabled)
+                    }
+                }
+            }
         }
-        frozen.value()
+
+        if (secondaryFraction > 0.01f && primaryFraction > 0.01f) {
+            Spacer(Modifier.width(12.dp * minOf(secondaryFraction, primaryFraction)))
+        }
+
+        if (primaryFraction > 0.01f) {
+            lastPrimary.value?.let { btn ->
+                Box(
+                    modifier = Modifier
+                        .weight(primaryFraction.coerceAtLeast(0.01f))
+                        .clipToBounds()
+                        .graphicsLayer {
+                            alpha = primaryFraction
+                            compositingStrategy = if (primaryFraction < 1f) {
+                                CompositingStrategy.Offscreen
+                            } else {
+                                CompositingStrategy.Auto
+                            }
+                        },
+                ) {
+                    val slotEnabled = btn.enabled && spec.primary != null
+                    if (btn.isDestructive) {
+                        DestructiveAction(btn.text, btn.onClick, slotEnabled)
+                    } else {
+                        PrimaryAction(btn.text, btn.onClick, slotEnabled)
+                    }
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun RowScope.PrimaryAction(
+private fun PrimaryAction(
     text: String,
     onClick: () -> Unit,
     enabled: Boolean,
@@ -1383,37 +1407,77 @@ private fun RowScope.PrimaryAction(
     Button(
         onClick = { if (enabled) onClick() },
         enabled = enabled,
-        modifier = Modifier.weight(1f),
+        modifier = Modifier.fillMaxWidth(),
         colors = ButtonDefaults.buttonColorsPrimary(),
         insideMargin = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
     ) {
-        Text(text = text, style = COUITheme.textStyles.buttonL, maxLines = 1)
+        Crossfade(
+            targetState = text,
+            animationSpec = tween(durationMillis = 160),
+            label = "PrimaryActionLabel",
+        ) { label ->
+            Text(
+                text = label,
+                style = COUITheme.textStyles.buttonL,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Clip,
+            )
+        }
     }
 }
 
 @Composable
-private fun RowScope.SecondaryAction(text: String, onClick: () -> Unit, enabled: Boolean) {
-    TextButton(
-        text = text,
+private fun SecondaryAction(text: String, onClick: () -> Unit, enabled: Boolean) {
+    Button(
         onClick = { if (enabled) onClick() },
         enabled = enabled,
-        modifier = Modifier.weight(1f),
-        colors = ButtonDefaults.textButtonColors(),
-    )
+        modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.buttonColors(),
+        insideMargin = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Crossfade(
+            targetState = text,
+            animationSpec = tween(durationMillis = 160),
+            label = "SecondaryActionLabel",
+        ) { label ->
+            Text(
+                text = label,
+                style = COUITheme.textStyles.buttonL,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Clip,
+            )
+        }
+    }
 }
 
 @Composable
-private fun RowScope.DestructiveAction(text: String, onClick: () -> Unit, enabled: Boolean) {
-    TextButton(
-        text = text,
+private fun DestructiveAction(text: String, onClick: () -> Unit, enabled: Boolean) {
+    Button(
         onClick = { if (enabled) onClick() },
         enabled = enabled,
-        modifier = Modifier.weight(1f),
-        colors = ButtonDefaults.textButtonColors(
+        modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.buttonColors(
             color = if (useCouiMonet) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
-            textColor = COUITheme.colorScheme.error,
         ),
-    )
+        insideMargin = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Crossfade(
+            targetState = text,
+            animationSpec = tween(durationMillis = 160),
+            label = "DestructiveActionLabel",
+        ) { label ->
+            Text(
+                text = label,
+                style = COUITheme.textStyles.buttonL,
+                color = COUITheme.colorScheme.error,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Clip,
+            )
+        }
+    }
 }
 
 @Composable
