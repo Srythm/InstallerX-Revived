@@ -113,7 +113,10 @@ private fun installPrepareTooManyDialog(viewModel: InstallerViewModel) = DialogP
 )
 
 @Composable
-fun installPrepareDialog(viewModel: InstallerViewModel): DialogParams {
+fun installPrepareDialog(
+    viewModel: InstallerViewModel,
+    isFullScreen: Boolean = false,
+): DialogParams {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val config = uiState.config
     val currentPackageName = uiState.currentPackageName
@@ -157,6 +160,7 @@ fun installPrepareDialog(viewModel: InstallerViewModel): DialogParams {
     // Call InstallInfoDialog for base structure
     val baseParams = installInfoDialog(
         viewModel = viewModel,
+        showTitleExtra = !isFullScreen,
         onTitleExtraClick = { showChips = !showChips },
     )
 

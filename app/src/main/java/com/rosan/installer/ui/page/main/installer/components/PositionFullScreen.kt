@@ -17,12 +17,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
@@ -41,10 +45,16 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+
+private class SlotRef<T>(var value: T)
 
 /**
  * A full-screen equivalent of [PositionDialog].
@@ -156,9 +166,14 @@ fun PositionFullScreen(
     // immediately remove this composable from the tree, cancelling
     // `animateTo` mid-flight and producing the "instant disappear" bug.
     LaunchedEffect(isClosing) {
-        if (isClosing && !isDismissing) {
-            isDismissing = true
-            uiAlpha.animateTo(0f, animationSpec = tween(durationMillis = EnterExitDurationMs))
+        if (isClosing) {
+            if (!isDismissing) {
+                isDismissing = true
+                uiAlpha.animateTo(0f, animationSpec = tween(durationMillis = EnterExitDurationMs))
+            }
+        } else if (isDismissing) {
+            isDismissing = false
+            uiAlpha.animateTo(1f, animationSpec = tween(durationMillis = EnterExitDurationMs))
         }
     }
 
@@ -192,7 +207,7 @@ fun PositionFullScreen(
     // app does not dismiss itself on arbitrary background taps — the
     // user should use explicit buttons or the system back gesture.
     val triggerBack: () -> Unit = {
-        if (!isDismissing) onBackRequest()
+        if (!isClosing && !isDismissing) onBackRequest()
     }
     BackHandler(enabled = true) {
         triggerBack()
@@ -201,7 +216,23 @@ fun PositionFullScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .alpha(uiAlpha.value),
+            .alpha(uiAlpha.value)
+            .onPreviewKeyEvent { isClosing }
+            .then(
+                if (isClosing) {
+                    Modifier
+                        .clearAndSetSemantics { }
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+                                }
+                            }
+                        }
+                } else {
+                    Modifier
+                },
+            ),
     ) {
         // Surface (and therefore the container color) extends edge-to-edge.
         // The shape defaults to RectangleShape so the blur is not exposed in
@@ -224,6 +255,7 @@ fun PositionFullScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                     .padding(top = headerTopPadding),
             ) {
                 // ---- Stable header (icon, title, subtitle) ----
@@ -289,7 +321,11 @@ fun PositionFullScreen(
                 val contentMode =
                     leftContent != null || centerContent != null || rightContent != null
 
+                val hasButtons = leftButton != null || centerButton != null || rightButton != null
                 var footerHeightPx by remember { mutableIntStateOf(0) }
+                LaunchedEffect(hasButtons) {
+                    if (!hasButtons) footerHeightPx = 0
+                }
                 val density = LocalDensity.current
                 val footerHeight: Dp =
                     (footerHeightPx / density.density).dp
@@ -357,8 +393,12 @@ fun PositionFullScreen(
                                 targetState = contentKey,
                                 transitionSpec = bodyTransitionSpec,
                                 label = "FullScreenBodyTransition",
-                            ) { _ ->
-                                bodyBody()
+                            ) { slotKey ->
+                                val frozen = remember { SlotRef(bodyBody) }
+                                if (slotKey == contentKey) {
+                                    frozen.value = bodyBody
+                                }
+                                frozen.value()
                             }
                         } else {
                             bodyBody()
@@ -368,52 +408,60 @@ fun PositionFullScreen(
                     // Footer — overlaid at the bottom edge, identical in
                     // shape to how the dialog's button row sits. Its height
                     // is reported back via onSizeChanged so the body can
-                    // reserve room for it.
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .fillMaxWidth()
-                            .padding(bottom = navInset + contentEdgePadding)
-                            .onSizeChanged { footerHeightPx = it.height },
-                    ) {
-                        val footerTransitionSpec:
-                            AnimatedContentTransitionScope<Any?>.() -> androidx.compose.animation.ContentTransform = {
-                                // Buttons row is small enough that a plain
-                                // cross-fade + matching SizeTransform is enough
-                                // — it never needs to "slide in" from anywhere.
-                                fadeIn(animationSpec = tween(durationMillis = 200)) togetherWith
-                                    fadeOut(animationSpec = tween(durationMillis = 160)) using
-                                    androidx.compose.animation.SizeTransform(
-                                        clip = false,
-                                    ) { _, _ -> tween(durationMillis = 200) }
-                            }
-                        // Same hoisting as the body above: the buttons row is
-                        // invariant, only its AnimatedContent wrapper differs.
-                        val footerBody: @Composable () -> Unit = {
-                            PositionChildWidget(
-                                leftButton,
-                                centerButton,
-                                rightButton,
-                            ) { button ->
-                                CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.primary) {
-                                    ProvideTextStyle(MaterialTheme.typography.labelLarge) {
-                                        Box(modifier = Modifier.padding(ButtonPadding)) {
-                                            button?.invoke()
+                    // reserve room for it. Omit when there are no buttons so
+                    // bodies like ModuleInstallFullScreenContent do not get
+                    // double navigation-bar spacing.
+                    if (hasButtons) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .padding(bottom = navInset + contentEdgePadding)
+                                .onSizeChanged { footerHeightPx = it.height },
+                        ) {
+                            val footerTransitionSpec:
+                                AnimatedContentTransitionScope<Any?>.() -> androidx.compose.animation.ContentTransform = {
+                                    // Buttons row is small enough that a plain
+                                    // cross-fade + matching SizeTransform is enough
+                                    // — it never needs to "slide in" from anywhere.
+                                    fadeIn(animationSpec = tween(durationMillis = 200)) togetherWith
+                                        fadeOut(animationSpec = tween(durationMillis = 160)) using
+                                        androidx.compose.animation.SizeTransform(
+                                            clip = false,
+                                        ) { _, _ -> tween(durationMillis = 200) }
+                                }
+                            // Same hoisting as the body above: the buttons row is
+                            // invariant, only its AnimatedContent wrapper differs.
+                            val footerBody: @Composable () -> Unit = {
+                                PositionChildWidget(
+                                    leftButton,
+                                    centerButton,
+                                    rightButton,
+                                ) { button ->
+                                    CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.primary) {
+                                        ProvideTextStyle(MaterialTheme.typography.labelLarge) {
+                                            Box(modifier = Modifier.padding(ButtonPadding)) {
+                                                button?.invoke()
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
-                        if (contentKey != null) {
-                            AnimatedContent(
-                                targetState = contentKey,
-                                transitionSpec = footerTransitionSpec,
-                                label = "FullScreenFooterTransition",
-                            ) { _ ->
+                            if (contentKey != null) {
+                                AnimatedContent(
+                                    targetState = contentKey,
+                                    transitionSpec = footerTransitionSpec,
+                                    label = "FullScreenFooterTransition",
+                                ) { slotKey ->
+                                    val frozen = remember { SlotRef(footerBody) }
+                                    if (slotKey == contentKey) {
+                                        frozen.value = footerBody
+                                    }
+                                    frozen.value()
+                                }
+                            } else {
                                 footerBody()
                             }
-                        } else {
-                            footerBody()
                         }
                     }
                 }

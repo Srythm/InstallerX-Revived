@@ -66,7 +66,6 @@ import com.rosan.installer.domain.engine.model.packageinfo.InstalledAppInfo
 import com.rosan.installer.domain.engine.model.packageinfo.InstalledModuleInfo
 import com.rosan.installer.domain.engine.model.packageinfo.sortedBest
 import com.rosan.installer.domain.engine.model.source.DataType
-import com.rosan.installer.domain.settings.model.config.InstallMode
 import com.rosan.installer.ui.icons.AppIcons
 import com.rosan.installer.ui.page.main.installer.InstallerStage
 import com.rosan.installer.ui.page.main.installer.InstallerViewAction
@@ -87,6 +86,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun installInfoDialog(
     viewModel: InstallerViewModel,
+    showTitleExtra: Boolean = true,
     onTitleExtraClick: () -> Unit = {},
 ): DialogParams {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -195,8 +195,7 @@ fun installInfoDialog(
                 // The button only toggles the prepare dialog's quick chips, so hide it
                 // wherever that row is absent: fullscreen presentation and any non-prepare stage.
                 AnimatedVisibility(
-                    visible = stage == InstallerStage.InstallPrepare &&
-                        uiState.config.installMode != InstallMode.FullScreen,
+                    visible = stage == InstallerStage.InstallPrepare && showTitleExtra,
                     enter = fadeIn() + slideInHorizontally { it }, // Slide in from the right
                     exit = fadeOut() + slideOutHorizontally { it }, // Slide out to the right
                 ) {

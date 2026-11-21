@@ -44,7 +44,10 @@ fun dialogInnerWidget(params: DialogInnerParams): @Composable (() -> Unit)? = if
 }
 
 @Composable
-fun dialogGenerateParams(viewModel: InstallerViewModel): DialogParams {
+fun dialogGenerateParams(
+    viewModel: InstallerViewModel,
+    isFullScreen: Boolean = false,
+): DialogParams {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     return when (val stage = uiState.stage) {
         is InstallerStage.Ready -> readyDialog(viewModel)
@@ -59,13 +62,13 @@ fun dialogGenerateParams(viewModel: InstallerViewModel): DialogParams {
 
         is InstallerStage.AnalyseFailed -> analyseFailedDialog(viewModel)
 
-        is InstallerStage.InstallChoice -> installChoiceDialog(viewModel)
+        is InstallerStage.InstallChoice -> installChoiceDialog(viewModel, isFullScreen)
 
-        is InstallerStage.InstallPrepare -> installPrepareDialog(viewModel)
+        is InstallerStage.InstallPrepare -> installPrepareDialog(viewModel, isFullScreen)
 
-        is InstallerStage.InstallExtendedMenu -> installExtendedMenuDialog(viewModel)
+        is InstallerStage.InstallExtendedMenu -> installExtendedMenuDialog(viewModel, isFullScreen)
 
-        is InstallerStage.InstallExtendedSubMenu -> installExtendedMenuSubMenuDialog(viewModel)
+        is InstallerStage.InstallExtendedSubMenu -> installExtendedMenuSubMenuDialog(viewModel, isFullScreen)
 
         is InstallerStage.Installing -> installingDialog(viewModel)
 

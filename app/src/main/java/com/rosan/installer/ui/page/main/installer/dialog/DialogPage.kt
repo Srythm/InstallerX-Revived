@@ -2,27 +2,18 @@
 // Copyright (C) 2023-2026 iamr0s, InstallerX Revived contributors
 package com.rosan.installer.ui.page.main.installer.dialog
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetValue
-import androidx.compose.material3.Text
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.rosan.installer.R
+import com.rosan.installer.domain.engine.model.install.MmzSelectionMode
 import com.rosan.installer.domain.session.repository.InstallerSessionRepository
 import com.rosan.installer.domain.settings.model.config.InstallMode
 import com.rosan.installer.ui.page.main.installer.InstallerStage
@@ -30,7 +21,6 @@ import com.rosan.installer.ui.page.main.installer.InstallerViewAction
 import com.rosan.installer.ui.page.main.installer.InstallerViewModel
 import com.rosan.installer.ui.page.main.installer.components.PositionDialog
 import com.rosan.installer.ui.page.main.installer.components.PositionFullScreen
-import com.rosan.installer.ui.page.main.installer.components.workingIcon
 import com.rosan.installer.ui.page.main.installer.dialog.inner.ModuleInstallFullScreenContent
 import com.rosan.installer.ui.page.main.installer.dialog.inner.ModuleInstallSheetContent
 import com.rosan.installer.ui.page.main.installer.dialog.inner.installInfoDialog
@@ -165,7 +155,17 @@ fun DialogPage(
             }
             // Handle other non-Ready states: Show standard PositionDialog, or full-screen UI when FullScreen mode
             else if (stage !is InstallerStage.Ready) {
-                val params = dialogGenerateParams(viewModel)
+                val isInstallChoice = stage is InstallerStage.InstallChoice
+                val useFullScreen = installMode == InstallMode.FullScreen ||
+                    (isInstallChoice && installMode.isNotification)
+                DisposableEffect(viewModel, useFullScreen) {
+                    viewModel.setFullscreenPresentation(useFullScreen)
+                    onDispose {
+                        viewModel.setFullscreenPresentation(false)
+                    }
+                }
+
+                val params = dialogGenerateParams(viewModel, isFullScreen = useFullScreen)
 
                 fun performDismiss() {
                     val currentUiState = viewModel.uiState.value
@@ -187,45 +187,15 @@ fun DialogPage(
                     }
                 }
 
-                // Fullscreen-only exit path. Back press / scrim tap in the
-                // fullscreen install flow always closes the activity — never
-                // backgrounds it with a "Install X?" notification. The
-                // fullscreen experience should feel like a real fullscreen
-                // app: the user backs out, the activity disappears, that's
-                // it. The InstallConfirm case is intentionally NOT handled
-                // here (it's routed through performBack) because the
-                // system install session needs an explicit approve/deny
-                // answer rather than a simple app close.
-                //
-                // Note: this does NOT synchronously close the session. It
-                // delegates to [InstallerViewModel.requestFullscreenClose],
-                // which (a) flips the [InstallerViewModel.isClosingFullscreen]
-                // state to drive the fade-out animation in
-                // [PositionFullScreen], and (b) waits 220ms on
-                // `viewModelScope` (whose lifetime is decoupled from the
-                // composition) before performing the actual `close()`.
-                // This sequencing is what makes the alpha fade-out visible:
-                // if `close()` ran synchronously, the composable would
-                // leave composition at t=0 and the fade would be cancelled
-                // before it played.
                 fun performFullscreenExit() {
                     if (viewModel.uiState.value.isDismissible) {
                         viewModel.requestFullscreenClose()
                     }
                 }
 
-                // Fullscreen-specific back navigation. Walks the install flow
-                // back to its parent stage instead of always closing the
-                // activity, so that submenus and intermediate screens can be
-                // exited with the system back gesture / scrim tap without
-                // aborting the whole install. When the user reaches the
-                // root of the flow, the activity is closed (via
-                // performFullscreenExit) so no "install?" notification
-                // appears.
                 fun performBack() {
-                    val currentStage = viewModel.uiState.value.stage
                     val currentState = viewModel.uiState.value
-                    when (currentStage) {
+                    when (val currentStage = currentState.stage) {
                         is InstallerStage.InstallExtendedSubMenu -> {
                             viewModel.dispatch(InstallerViewAction.InstallExtendedMenu)
                         }
@@ -235,17 +205,23 @@ fun DialogPage(
                         }
 
                         is InstallerStage.InstallChoice -> {
-                            if (currentState.navigatedFromPrepareToChoice) {
+                            if (currentState.mmzSelectionMode == MmzSelectionMode.APK_CHOICE) {
+                                viewModel.dispatch(InstallerViewAction.SetApkSelection(false))
+                                viewModel.dispatch(InstallerViewAction.SetMmzSelectionMode(MmzSelectionMode.INITIAL_CHOICE))
+                            } else if (currentState.navigatedFromPrepareToChoice) {
                                 viewModel.dispatch(InstallerViewAction.InstallPrepare)
                             } else {
                                 performFullscreenExit()
                             }
                         }
 
+                        is InstallerStage.Preparing,
+                        is InstallerStage.InstallWaitingUnknownSource,
+                        -> {
+                            viewModel.dispatch(InstallerViewAction.Cancel)
+                        }
+
                         is InstallerStage.InstallPrepare -> {
-                            // Prepare is the root of the install flow in fullscreen
-                            // mode; pressing back here closes the activity without
-                            // leaving a "install?" notification behind.
                             performFullscreenExit()
                         }
 
@@ -263,93 +239,36 @@ fun DialogPage(
                     }
                 }
 
-                // Determine whether the current stage should render in the
-                // fullscreen layout. The base rule is "user chose fullscreen",
-                // but we also force-fullscreen the InstallChoice stage when
-                // the user picked a notification-driven install mode:
-                //   * In Notification / AutoNotification mode the dialog is
-                //     only woken by tapping a notification, and on Android 12+
-                //     the system runs a "stretch-from-notification-card"
-                //     animation that briefly puts the inner dialog's blur at
-                //     a heavier intensity before snapping it back, which
-                //     reads as a flicker.
-                //   * Routing the choice stage through PositionFullScreen
-                //     sidesteps that animation entirely (the activity stays
-                //     laid out from the previous frame, the new content just
-                //     cross-fades in).
-                // Other stages (Ready, Resolving, Installing, etc.) keep the
-                // existing dialog layout in notification mode so the
-                // silent-install flow continues to work without a UI takeover.
-                val isInstallChoice = stage is InstallerStage.InstallChoice
-                // The user-selectable full-screen mode is parked; only the notification flow
-                // still takes over the screen for its install-choice step.
-                val useFullScreen = isInstallChoice && installMode.isNotification
                 if (useFullScreen) {
-                    // Fullscreen keeps the package header (icon, title, subtitle)
-                    // constant across the whole install flow, while the body
-                    // content and the bottom buttons animate when the stage
-                    // changes.
-                    //
-                    // The header source depends on the flow:
-                    //   - For install / pre-install stages, the header is built
-                    //     from the package being installed (installInfoDialog).
-                    //   - For uninstall stages, the header is built from the
-                    //     package being uninstalled (uninstallInfoDialog), so
-                    //     the user still sees icon / label / package name / version
-                    //     during UninstallReady / Uninstalling / UninstallSuccess /
-                    //     UninstallFailed.
-                    //   - For unarchive-only stages, neither info dialog has data,
-                    //     so the header is empty (the body still shows everything
-                    //     the user needs to know).
-                    val headerParams = when (stage) {
-                        is InstallerStage.UninstallReady,
-                        is InstallerStage.UninstallResolveFailed,
-                        is InstallerStage.Uninstalling,
-                        is InstallerStage.UninstallSuccess,
-                        is InstallerStage.UninstallFailed,
-                        ->
-                            uninstallInfoDialog(viewModel, showTitleExtra = false)
+                    val isSinglePackageInstallStage = stage is InstallerStage.InstallPrepare ||
+                        stage is InstallerStage.InstallExtendedMenu ||
+                        stage is InstallerStage.InstallExtendedSubMenu ||
+                        stage is InstallerStage.Installing ||
+                        stage is InstallerStage.InstallRetryDowngradeUsingUninstall ||
+                        stage is InstallerStage.InstallSuccess ||
+                        stage is InstallerStage.InstallFailed ||
+                        stage is InstallerStage.InstallingModule
+                    val isUninstallPackageStage = stage is InstallerStage.UninstallReady ||
+                        stage is InstallerStage.Uninstalling ||
+                        stage is InstallerStage.UninstallSuccess ||
+                        stage is InstallerStage.UninstallFailed
 
-                        else -> installInfoDialog(viewModel)
+                    val headerParams = when {
+                        isUninstallPackageStage -> uninstallInfoDialog(viewModel, showTitleExtra = false)
+                            .takeIf { it.title.content != null || it.icon.content != null }
+                            ?: params
+
+                        isSinglePackageInstallStage -> installInfoDialog(viewModel, showTitleExtra = false)
+                            .takeIf { it.title.content != null || it.icon.content != null }
+                            ?: params
+
+                        else -> params
                     }
-                    // The "Analysing" stage has no body text in its stage
-                    // dialog (the working icon sits in the header), but in
-                    // fullscreen mode the header is fixed to the package
-                    // info, so we synthesize a matching body here (working
-                    // spinner + "Analysing..." text) so the user gets the
-                    // same feedback as in dialog mode.
-                    val isAnalysing = stage is InstallerStage.Analysing
-                    // Module flashing gets its own terminal-style body. It is
-                    // rendered through this very [PositionFullScreen] instance
-                    // (not a sibling one) so that the pre-install -> installing
-                    // -> finished progression stays one continuous surface: the
-                    // body and footer cross-fade in place while the outer layer's
-                    // alpha is left untouched. Swapping to a different
-                    // [PositionFullScreen] call site here would restart the whole
-                    // layer's enter fade from 0 and read as a full-page
-                    // fade-in/out between stages.
                     val isModuleInstalling = stage is InstallerStage.InstallingModule
-                    val bodyText: (@Composable () -> Unit)? = when {
-                        // Module progress owns the whole body via bodyContent below.
-                        isModuleInstalling -> null
-
-                        isAnalysing -> {
-                            {
-                                Column(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                ) {
-                                    workingIcon()
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    Text(
-                                        text = stringResource(R.string.installer_analysing),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                    )
-                                }
-                            }
-                        }
-
-                        else -> dialogInnerWidget(params.text)
+                    val bodyText: (@Composable () -> Unit)? = if (isModuleInstalling) {
+                        null
+                    } else {
+                        dialogInnerWidget(params.text)
                     }
                     val bodyContent: (@Composable () -> Unit)? = when (stage) {
                         is InstallerStage.InstallingModule -> {
@@ -364,23 +283,14 @@ fun DialogPage(
                             }
                         }
 
-                        else -> if (isAnalysing) null else dialogInnerWidget(params.content)
+                        else -> dialogInnerWidget(params.content)
                     }
+                    val footerButton = if (isModuleInstalling) null else dialogInnerWidget(params.buttons)
                     PositionFullScreen(
                         onBackRequest = { performBack() },
                         isClosing = isClosingFullscreen,
-                        // Progress-bearing stages are data classes, so using the complete stage
-                        // as the AnimatedContent key restarted the body cross-fade for every file
-                        // read/write progress emission. Keep the key structural instead: progress
-                        // still recomposes its indicator, while the full-screen body only switches
-                        // snapshots when the stage or dialog section actually changes.
                         contentKey = FullScreenContentKey(
                             stageType = stage::class,
-                            // Module flashing owns the body/footer for the whole
-                            // progress stage; keep its section ids constant so the
-                            // body does not re-cross-fade on every log line, and so
-                            // the finished flag (which only swaps the progress
-                            // indicator and reveals the buttons) does not restart it.
                             textId = if (isModuleInstalling) "module" else params.text.id,
                             contentId = if (isModuleInstalling) "module_log" else params.content.id,
                             buttonsId = if (isModuleInstalling) "module" else params.buttons.id,
@@ -390,7 +300,7 @@ fun DialogPage(
                         centerSubtitle = dialogInnerWidget(headerParams.subtitle),
                         centerContent = bodyContent,
                         centerText = bodyText,
-                        centerButton = dialogInnerWidget(params.buttons),
+                        centerButton = footerButton,
                     )
                 } else {
                     PositionDialog(

@@ -73,6 +73,7 @@ import com.rosan.installer.ui.util.getSupportTitle
 @Composable
 fun installChoiceDialog(
     viewModel: InstallerViewModel,
+    isFullScreen: Boolean = false,
 ): DialogParams {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val config = uiState.config
@@ -153,6 +154,7 @@ fun installChoiceDialog(
                 onSetSelectionMode = { viewModel.dispatch(InstallerViewAction.SetMmzSelectionMode(it)) },
                 errorMessage = errorMessage,
                 totalModuleCount = totalModuleCount,
+                isFullScreen = isFullScreen,
             )
         },
         buttons = dialogButtons(DialogParamsType.InstallChoice.id) {
@@ -184,6 +186,7 @@ private fun ChoiceContent(
     onSetSelectionMode: (MmzSelectionMode) -> Unit,
     errorMessage: String?,
     totalModuleCount: Int,
+    isFullScreen: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -292,7 +295,7 @@ private fun ChoiceContent(
             if (listSize == 0) return
 
             LazyColumn(
-                modifier = Modifier.heightIn(max = 325.dp),
+                modifier = if (isFullScreen) Modifier.weight(1f, fill = false) else Modifier.heightIn(max = 325.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             ) {
@@ -335,7 +338,7 @@ private fun ChoiceContent(
             }
 
             LazyColumn(
-                modifier = Modifier.heightIn(max = 325.dp),
+                modifier = if (isFullScreen) Modifier.weight(1f, fill = false) else Modifier.heightIn(max = 325.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             ) {

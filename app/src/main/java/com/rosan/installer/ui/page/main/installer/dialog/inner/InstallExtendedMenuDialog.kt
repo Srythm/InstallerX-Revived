@@ -77,6 +77,7 @@ import com.rosan.installer.util.pm.getBestPermissionLabel
 @Composable
 fun installExtendedMenuDialog(
     viewModel: InstallerViewModel,
+    isFullScreen: Boolean = false,
 ): DialogParams {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val currentPackageName = uiState.currentPackageName
@@ -252,6 +253,7 @@ fun installExtendedMenuDialog(
                 defaultInstallerFromSettings = uiState.defaultInstallerFromSettings,
                 config = config,
                 settings = settings,
+                isFullScreen = isFullScreen,
             )
         },
         buttons = dialogButtons(
@@ -286,6 +288,7 @@ fun MenuItemWidget(
     defaultInstallerFromSettings: String?,
     config: ConfigModel,
     settings: InstallerViewSettings,
+    isFullScreen: Boolean = false,
 ) {
     val haptic = LocalHapticFeedback.current
 
@@ -312,7 +315,7 @@ fun MenuItemWidget(
         verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .heightIn(max = 325.dp)
+            .then(if (isFullScreen) Modifier else Modifier.heightIn(max = 325.dp))
             .clip(
                 // Clip the whole column to ensure content stays within the rounded bounds.
                 if (entities.size == 1) singleShape else RoundedCornerShape(cornerRadius),
@@ -656,6 +659,7 @@ fun MenuItemWidget(
 @Composable
 fun installExtendedMenuSubMenuDialog(
     viewModel: InstallerViewModel,
+    isFullScreen: Boolean = false,
 ): DialogParams {
     // Observe the single source of truth
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -686,7 +690,7 @@ fun installExtendedMenuSubMenuDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
                     .padding(horizontal = 16.dp, vertical = 0.dp)
-                    .heightIn(max = 400.dp),
+                    .then(if (isFullScreen) Modifier else Modifier.heightIn(max = 400.dp)),
             ) {
                 itemsIndexed(permissionList) { _, permission ->
                     PermissionCard(
