@@ -11,7 +11,6 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -50,10 +49,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
@@ -719,6 +716,7 @@ internal fun CouiFullScreenInstallerContent(
                         modifier = Modifier
                             .fillMaxSize()
                             .clipToBounds(),
+                        contentAlignment = Alignment.Center,
                         contentKey = { it },
                         transitionSpec = {
                             fadeIn(tween(durationMillis = 220)) togetherWith
@@ -1054,6 +1052,7 @@ private fun FullScreenStageBody(
     AnimatedContent(
         targetState = activeBucket,
         modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
         contentKey = { it },
         transitionSpec = {
             (
@@ -1353,24 +1352,17 @@ private fun FullScreenActionRow(
         spec.primary != null,
         spec.primary?.isDestructive == true,
     )
-    val actionsTransition = updateTransition(targetState = layoutKey, label = "FullScreenActions")
-    val isTransitioning = actionsTransition.currentState != actionsTransition.targetState
 
-    actionsTransition.AnimatedContent(
-        modifier = Modifier
-            .fillMaxSize()
-            .graphicsLayer {
-                compositingStrategy = if (isTransitioning) {
-                    CompositingStrategy.Offscreen
-                } else {
-                    CompositingStrategy.Auto
-                }
-            },
+    AnimatedContent(
+        targetState = layoutKey,
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
         contentKey = { it },
         transitionSpec = {
             fadeIn(tween(durationMillis = 200)) togetherWith
                 fadeOut(tween(durationMillis = 160))
         },
+        label = "FullScreenActions",
     ) { slotLayout ->
         val slotContent: @Composable () -> Unit = {
             Row(
@@ -1429,9 +1421,11 @@ private fun PrimaryAction(
             Text(
                 text = label,
                 style = COUITheme.textStyles.buttonL,
+                textAlign = TextAlign.Center,
                 maxLines = 1,
                 softWrap = false,
                 overflow = TextOverflow.Clip,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
@@ -1454,9 +1448,11 @@ private fun SecondaryAction(text: String, onClick: () -> Unit, enabled: Boolean)
             Text(
                 text = label,
                 style = COUITheme.textStyles.buttonL,
+                textAlign = TextAlign.Center,
                 maxLines = 1,
                 softWrap = false,
                 overflow = TextOverflow.Clip,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
@@ -1482,9 +1478,11 @@ private fun DestructiveAction(text: String, onClick: () -> Unit, enabled: Boolea
                 text = label,
                 style = COUITheme.textStyles.buttonL,
                 color = COUITheme.colorScheme.error,
+                textAlign = TextAlign.Center,
                 maxLines = 1,
                 softWrap = false,
                 overflow = TextOverflow.Clip,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }

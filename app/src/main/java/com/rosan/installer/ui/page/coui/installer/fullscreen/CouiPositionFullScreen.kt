@@ -306,6 +306,7 @@ private fun FullScreenTopBar(
         }
         AnimatedContent(
             targetState = title,
+            contentAlignment = Alignment.Center,
             transitionSpec = {
                 (
                     fadeIn(tween(durationMillis = 220, delayMillis = 60)) +
@@ -325,7 +326,7 @@ private fun FullScreenTopBar(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 72.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 72.dp),
             )
         }
     }

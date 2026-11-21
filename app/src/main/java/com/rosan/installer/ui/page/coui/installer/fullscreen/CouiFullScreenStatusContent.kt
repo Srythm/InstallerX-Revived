@@ -90,6 +90,7 @@ fun CouiFullScreenStatusContent(
         ) {
             AnimatedContent(
                 targetState = title,
+                contentAlignment = Alignment.Center,
                 transitionSpec = {
                     fadeIn(tween(durationMillis = 200)) togetherWith
                         fadeOut(tween(durationMillis = 160))
@@ -101,11 +102,12 @@ fun CouiFullScreenStatusContent(
                     style = COUITheme.textStyles.headlineS,
                     color = COUITheme.colorScheme.labelPrimary,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 20.dp).semantics { liveRegion = LiveRegionMode.Polite },
+                    modifier = Modifier.fillMaxWidth().padding(top = 20.dp).semantics { liveRegion = LiveRegionMode.Polite },
                 )
             }
             AnimatedContent(
                 targetState = subtitle.orEmpty(),
+                contentAlignment = Alignment.Center,
                 transitionSpec = {
                     fadeIn(tween(durationMillis = 200)) togetherWith
                         fadeOut(tween(durationMillis = 160))
@@ -177,16 +179,22 @@ private fun StatusMark(
         ) {
             Crossfade(
                 targetState = progress == null,
+                modifier = Modifier.fillMaxSize(),
                 animationSpec = tween(durationMillis = 180),
                 label = "StatusRingMode",
             ) { indeterminate ->
-                CircularProgressIndicator(
-                    progress = if (indeterminate) null else progress,
-                    colors = ProgressIndicatorDefaults.loadingViewColors(),
-                    // The determinate variant subtracts 8dp from its visible ring diameter.
-                    size = if (indeterminate) RingDiameter else RingDiameter + 8.dp,
-                    strokeWidth = RingStroke,
-                )
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(
+                        progress = if (indeterminate) null else progress,
+                        colors = ProgressIndicatorDefaults.loadingViewColors(),
+                        // The determinate variant subtracts 8dp from its visible ring diameter.
+                        size = if (indeterminate) RingDiameter else RingDiameter + 8.dp,
+                        strokeWidth = RingStroke,
+                    )
+                }
             }
         }
         AnimatedVisibility(
