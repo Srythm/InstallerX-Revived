@@ -91,8 +91,8 @@ fun CouiFullScreenStatusContent(
             AnimatedContent(
                 targetState = title,
                 transitionSpec = {
-                    fadeIn(tween(durationMillis = 180, delayMillis = 50)) togetherWith
-                        fadeOut(tween(durationMillis = 110))
+                    fadeIn(tween(durationMillis = 200)) togetherWith
+                        fadeOut(tween(durationMillis = 160))
                 },
                 label = "StatusTitle",
             ) { label ->
@@ -107,8 +107,8 @@ fun CouiFullScreenStatusContent(
             AnimatedContent(
                 targetState = subtitle.orEmpty(),
                 transitionSpec = {
-                    fadeIn(tween(durationMillis = 180, delayMillis = 50)) togetherWith
-                        fadeOut(tween(durationMillis = 110))
+                    fadeIn(tween(durationMillis = 200)) togetherWith
+                        fadeOut(tween(durationMillis = 160))
                 },
                 label = "StatusSubtitle",
             ) { line ->
@@ -191,7 +191,7 @@ private fun StatusMark(
         }
         AnimatedVisibility(
             visible = icon != null,
-            enter = fadeIn(tween(durationMillis = 220, delayMillis = 70)) +
+            enter = fadeIn(tween(durationMillis = 220)) +
                 scaleIn(colorOsSpring(responseSeconds = 0.36f), initialScale = 0.7f),
             exit = fadeOut(tween(durationMillis = 120)),
             modifier = Modifier.align(Alignment.Center),

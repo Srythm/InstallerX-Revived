@@ -413,7 +413,11 @@ class InstallerViewModel(
 
         ProgressEntity.UnarchiveFailed -> InstallerStage.UnarchiveFailed
 
-        ProgressEntity.InstallResolving, ProgressEntity.InstallAnalysing, is ProgressEntity.InstallPreparing -> _localState.value.stage
+        ProgressEntity.InstallResolving,
+        ProgressEntity.InstallResolveSuccess,
+        ProgressEntity.InstallAnalysing,
+        is ProgressEntity.InstallPreparing,
+        -> _localState.value.stage
 
         else -> InstallerStage.Ready
     }
@@ -466,6 +470,10 @@ class InstallerViewModel(
 
                 // Latch the terminal flow before anything else looks at the stage.
                 if (progress is ProgressEntity.InstallingModule) moduleInstallStarted = true
+
+                if (progress is ProgressEntity.InstallResolveSuccess) {
+                    return@collect
+                }
 
                 if (progress is ProgressEntity.InstallResolving || progress is ProgressEntity.InstallPreparing || progress is ProgressEntity.InstallAnalysing) {
                     if (isInstallingModule) {

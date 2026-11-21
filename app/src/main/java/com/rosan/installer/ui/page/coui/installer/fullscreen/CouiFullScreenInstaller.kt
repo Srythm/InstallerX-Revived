@@ -11,6 +11,7 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -204,7 +205,13 @@ fun CouiFullScreenInstaller(
     }
     val progress = when (stage) {
         is InstallerStage.Preparing -> fullScreenProgress(stage.progress)
-        is InstallerStage.Installing -> if (stage.phase == InstallPhase.WRITING) rawInstall?.overallProgress() else null
+
+        is InstallerStage.Installing -> if (stage.phase == InstallPhase.WRITING) {
+            fullScreenProgress(rawInstall?.overallProgress() ?: stage.progress)
+        } else {
+            null
+        }
+
         else -> null
     }
     val currentPage = FullScreenPage(stage, title, subPage, progress, uiState.error)
@@ -714,8 +721,8 @@ internal fun CouiFullScreenInstallerContent(
                             .clipToBounds(),
                         contentKey = { it },
                         transitionSpec = {
-                            fadeIn(tween(durationMillis = 220, delayMillis = 70)) togetherWith
-                                fadeOut(tween(durationMillis = 120))
+                            fadeIn(tween(durationMillis = 220)) togetherWith
+                                fadeOut(tween(durationMillis = 180))
                         },
                         label = "FullScreenHeaderMode",
                     ) { slotHasHeader ->
@@ -1050,9 +1057,9 @@ private fun FullScreenStageBody(
         contentKey = { it },
         transitionSpec = {
             (
-                fadeIn(tween(durationMillis = 220, delayMillis = 60)) +
-                    slideInVertically(tween(durationMillis = 240, delayMillis = 40)) { it / 48 }
-                ) togetherWith fadeOut(tween(durationMillis = 120))
+                fadeIn(tween(durationMillis = 220)) +
+                    slideInVertically(tween(durationMillis = 240)) { it / 48 }
+                ) togetherWith fadeOut(tween(durationMillis = 180))
         },
         label = "FullScreenStageBody",
     ) { slotBucket ->
@@ -1346,18 +1353,24 @@ private fun FullScreenActionRow(
         spec.primary != null,
         spec.primary?.isDestructive == true,
     )
+    val actionsTransition = updateTransition(targetState = layoutKey, label = "FullScreenActions")
+    val isTransitioning = actionsTransition.currentState != actionsTransition.targetState
 
-    AnimatedContent(
-        targetState = layoutKey,
+    actionsTransition.AnimatedContent(
         modifier = Modifier
             .fillMaxSize()
-            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen },
+            .graphicsLayer {
+                compositingStrategy = if (isTransitioning) {
+                    CompositingStrategy.Offscreen
+                } else {
+                    CompositingStrategy.Auto
+                }
+            },
         contentKey = { it },
         transitionSpec = {
-            fadeIn(tween(durationMillis = 180, delayMillis = 70)) togetherWith
-                fadeOut(tween(durationMillis = 110))
+            fadeIn(tween(durationMillis = 200)) togetherWith
+                fadeOut(tween(durationMillis = 160))
         },
-        label = "FullScreenActions",
     ) { slotLayout ->
         val slotContent: @Composable () -> Unit = {
             Row(
