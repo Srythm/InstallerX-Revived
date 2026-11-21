@@ -4,6 +4,7 @@ package com.rosan.installer.ui.page.coui.installer.fullscreen
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -174,17 +175,24 @@ private fun StatusMark(
             exit = fadeOut(tween(durationMillis = 140)) + scaleOut(tween(durationMillis = 160), targetScale = 0.9f),
             modifier = Modifier.align(Alignment.Center),
         ) {
-            CircularProgressIndicator(
-                progress = progress,
-                colors = ProgressIndicatorDefaults.loadingViewColors(),
-                // The determinate variant subtracts 8dp from its visible ring diameter.
-                size = if (progress == null) RingDiameter else RingDiameter + 8.dp,
-                strokeWidth = RingStroke,
-            )
+            Crossfade(
+                targetState = progress == null,
+                animationSpec = tween(durationMillis = 180),
+                label = "StatusRingMode",
+            ) { indeterminate ->
+                CircularProgressIndicator(
+                    progress = if (indeterminate) null else progress,
+                    colors = ProgressIndicatorDefaults.loadingViewColors(),
+                    // The determinate variant subtracts 8dp from its visible ring diameter.
+                    size = if (indeterminate) RingDiameter else RingDiameter + 8.dp,
+                    strokeWidth = RingStroke,
+                )
+            }
         }
         AnimatedVisibility(
             visible = icon != null,
-            enter = fadeIn(tween(durationMillis = 240)) + scaleIn(colorOsSpring(responseSeconds = 0.36f), initialScale = 0.7f),
+            enter = fadeIn(tween(durationMillis = 220, delayMillis = 70)) +
+                scaleIn(colorOsSpring(responseSeconds = 0.36f), initialScale = 0.7f),
             exit = fadeOut(tween(durationMillis = 120)),
             modifier = Modifier.align(Alignment.Center),
         ) {

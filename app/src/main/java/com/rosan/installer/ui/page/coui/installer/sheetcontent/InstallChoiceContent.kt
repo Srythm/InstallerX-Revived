@@ -2,11 +2,16 @@
 // Copyright (C) 2025-2026 InstallerX Revived contributors
 package com.rosan.installer.ui.page.coui.installer.sheetcontent
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -44,6 +50,7 @@ import com.rosan.installer.ui.page.main.installer.InstallerViewAction
 import com.rosan.installer.ui.page.main.installer.InstallerViewModel
 import com.rosan.installer.ui.theme.InstallerTheme
 import com.rosan.installer.ui.theme.InstallerTheme.useCouiMonet
+import com.rosan.installer.ui.theme.colorOsSpring
 import com.rosan.installer.ui.theme.couiSheetCardColors
 import com.rosan.installer.ui.util.getSupportSubtitle
 import com.rosan.installer.ui.util.isGestureNavigation
@@ -131,32 +138,56 @@ fun InstallChoiceContent(
             WarningCard(isDark = isDarkMode, message = errorMessage ?: "")
         }
 
-        if (isMixedModuleZip && selectionMode == MmzSelectionMode.INITIAL_CHOICE && totalModuleCount == 1) {
-            Box(modifier = Modifier.weight(1f, fill = false)) {
+        val showInitialChoice = isMixedModuleZip && selectionMode == MmzSelectionMode.INITIAL_CHOICE && totalModuleCount == 1
+        AnimatedContent(
+            targetState = showInitialChoice,
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .clipToBounds(),
+            transitionSpec = {
+                if (targetState) {
+                    (
+                        fadeIn(tween(durationMillis = 220, delayMillis = 60)) +
+                            slideInHorizontally(colorOsSpring(responseSeconds = 0.32f)) { -it / 6 }
+                        ) togetherWith (
+                        fadeOut(tween(durationMillis = 120)) +
+                            slideOutHorizontally(tween(durationMillis = 180)) { it / 4 }
+                        )
+                } else {
+                    (
+                        fadeIn(tween(durationMillis = 220, delayMillis = 60)) +
+                            slideInHorizontally(colorOsSpring(responseSeconds = 0.32f)) { it / 4 }
+                        ) togetherWith (
+                        fadeOut(tween(durationMillis = 120)) +
+                            slideOutHorizontally(tween(durationMillis = 180)) { -it / 6 }
+                        )
+                }
+            },
+            label = "InstallChoiceMode",
+        ) { initialChoice ->
+            if (initialChoice) {
                 MixedModuleZip_InitialChoice(
                     analysisResults = analysisResults,
                     viewModel = viewModel,
                     apkChooseAll = uiState.config.apkChooseAll,
                     onSelectMixedModuleType = onSelectMixedModuleType,
                 ) { onSelectionModeChange(MmzSelectionMode.APK_CHOICE) }
-            }
-        } else {
-            val resultsForList = if (isMixedModuleZip && selectionMode == MmzSelectionMode.APK_CHOICE) {
-                analysisResults.mapNotNull { pkgResult ->
-                    val apkEntities = pkgResult.appEntities.filter {
-                        it.app is AppEntity.BaseEntity || it.app is AppEntity.SplitEntity || it.app is AppEntity.DexMetadataEntity
-                    }
-                    if (apkEntities.isEmpty()) {
-                        null
-                    } else {
-                        pkgResult.copy(appEntities = apkEntities)
-                    }
-                }
             } else {
-                analysisResults
-            }
+                val resultsForList = if (isMixedModuleZip && selectionMode == MmzSelectionMode.APK_CHOICE) {
+                    analysisResults.mapNotNull { pkgResult ->
+                        val apkEntities = pkgResult.appEntities.filter {
+                            it.app is AppEntity.BaseEntity || it.app is AppEntity.SplitEntity || it.app is AppEntity.DexMetadataEntity
+                        }
+                        if (apkEntities.isEmpty()) {
+                            null
+                        } else {
+                            pkgResult.copy(appEntities = apkEntities)
+                        }
+                    }
+                } else {
+                    analysisResults
+                }
 
-            Box(modifier = Modifier.weight(1f, fill = false)) {
                 ChoiceLazyList(
                     analysisResults = resultsForList,
                     viewModel = viewModel,
@@ -168,7 +199,11 @@ fun InstallChoiceContent(
             }
         }
 
-        if (!isInstallTypeChoice) {
+        AnimatedVisibility(
+            visible = !isInstallTypeChoice,
+            enter = fadeIn(tween(durationMillis = 180, delayMillis = 60)) + expandVertically(tween(durationMillis = 220)),
+            exit = fadeOut(tween(durationMillis = 120)) + shrinkVertically(tween(durationMillis = 180)),
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

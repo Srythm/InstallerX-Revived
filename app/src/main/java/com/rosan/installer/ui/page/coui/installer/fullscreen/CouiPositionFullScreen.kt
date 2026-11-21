@@ -3,10 +3,15 @@
 package com.rosan.installer.ui.page.coui.installer.fullscreen
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -278,15 +284,15 @@ private fun FullScreenTopBar(
             }
             val endActionAlpha by animateFloatAsState(
                 targetValue = if (endAction != null) 1f else 0f,
-                animationSpec = tween(durationMillis = if (endAction != null) 180 else 120),
+                animationSpec = tween(durationMillis = if (endAction != null) 240 else 200),
                 label = "FullScreenEndActionAlpha",
             )
             if (endActionAlpha > 0.01f) {
                 Box(
                     modifier = Modifier.graphicsLayer {
                         alpha = endActionAlpha
-                        scaleX = 0.92f + 0.08f * endActionAlpha
-                        scaleY = 0.92f + 0.08f * endActionAlpha
+                        scaleX = 0.78f + 0.22f * endActionAlpha
+                        scaleY = 0.78f + 0.22f * endActionAlpha
                         compositingStrategy = if (endActionAlpha < 1f) {
                             CompositingStrategy.Offscreen
                         } else {
@@ -298,10 +304,18 @@ private fun FullScreenTopBar(
                 }
             }
         }
-        Crossfade(
+        AnimatedContent(
             targetState = title,
-            animationSpec = tween(durationMillis = 180),
-            modifier = Modifier.align(Alignment.Center),
+            transitionSpec = {
+                (
+                    fadeIn(tween(durationMillis = 220, delayMillis = 60)) +
+                        slideInVertically(tween(durationMillis = 240, delayMillis = 40)) { it / 3 }
+                    ) togetherWith (
+                    fadeOut(tween(durationMillis = 120)) +
+                        slideOutVertically(tween(durationMillis = 160)) { -it / 3 }
+                    )
+            },
+            modifier = Modifier.align(Alignment.Center).clipToBounds(),
             label = "FullScreenTitle",
         ) { label ->
             Text(
