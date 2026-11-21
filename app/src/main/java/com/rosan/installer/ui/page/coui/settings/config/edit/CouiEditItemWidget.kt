@@ -180,13 +180,12 @@ fun CouiDataCustomizeAuthorizerWidget(state: EditViewState, dispatch: (EditViewA
 @Composable
 fun CouiDataInstallModeWidget(state: EditViewState, dispatch: (EditViewAction) -> Unit) {
     val stateInstallMode = state.data.installMode
-    // The full-screen shell is parked for now: it is not offered here, and a configuration
-    // that still stores it is read back as a dialog instead (see InstallModeSelectable).
     val data = mapOf(
         InstallMode.Dialog to stringResource(R.string.config_install_mode_dialog),
         InstallMode.AutoDialog to stringResource(R.string.config_install_mode_auto_dialog),
         InstallMode.Notification to stringResource(R.string.config_install_mode_notification),
         InstallMode.AutoNotification to stringResource(R.string.config_install_mode_auto_notification),
+        InstallMode.FullScreen to stringResource(R.string.config_install_mode_full_screen),
         InstallMode.Ignore to stringResource(R.string.config_install_mode_ignore),
     )
 
@@ -197,7 +196,6 @@ fun CouiDataInstallModeWidget(state: EditViewState, dispatch: (EditViewAction) -
     }
 
     val selectedIndex = remember(stateInstallMode, data) {
-        // A stored full-screen mode is no longer listed; show the dialog it now behaves as.
         data.keys.toList().indexOf(stateInstallMode.selectable).coerceAtLeast(0)
     }
 

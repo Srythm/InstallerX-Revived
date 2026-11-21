@@ -32,12 +32,9 @@ enum class InstallMode(val value: String) {
 
     /**
      * The mode the UI offers and the runtime runs.
-     *
-     * The full-screen shell is parked: it stays in the enum so stored configurations keep
-     * parsing, but it is no longer selectable and behaves as a dialog.
      */
     val selectable: InstallMode
-        get() = if (this == FullScreen) Dialog else this
+        get() = this
 
     /**
      * True for install modes that drive a background install and surface

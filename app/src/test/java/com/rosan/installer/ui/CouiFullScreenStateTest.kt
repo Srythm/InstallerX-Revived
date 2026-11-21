@@ -2,6 +2,7 @@
 // Copyright (C) 2026 InstallerX Revived contributors
 package com.rosan.installer.ui
 
+import com.rosan.installer.domain.settings.model.config.InstallMode
 import com.rosan.installer.ui.page.coui.installer.fullscreen.FullScreenPage
 import com.rosan.installer.ui.page.coui.installer.fullscreen.FullScreenSubPage
 import com.rosan.installer.ui.page.coui.installer.fullscreen.fullScreenProgress
@@ -46,5 +47,10 @@ class CouiFullScreenStateTest {
         assertNotEquals(main.key, settings.key)
         assertNotEquals(settings.key, permissions.key)
         assertNotEquals(main.key, success.key)
+    }
+
+    @Test
+    fun fullScreenInstallModeRemainsSelectable() {
+        assertEquals(InstallMode.FullScreen, InstallMode.FullScreen.selectable)
     }
 }
