@@ -58,10 +58,12 @@ fun CouiFullScreenStatusContent(
     title: String,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
+    progressText: String? = null,
     icon: ImageVector? = null,
     iconTint: Color = COUITheme.colorScheme.success,
     haloColor: Color = COUITheme.colorScheme.success.copy(alpha = 0.12f),
     progress: Float? = null,
+    extraContent: (@Composable () -> Unit)? = null,
 ) {
     val value = fullScreenProgress(progress)
     Column(
@@ -106,9 +108,31 @@ fun CouiFullScreenStatusContent(
                         style = COUITheme.textStyles.bodyL,
                         color = COUITheme.colorScheme.labelSecondary,
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp),
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
                 }
+            }
+            // Render ticking progress directly so rapid percentage updates do not ghost/flicker.
+            if (!progressText.isNullOrBlank()) {
+                Text(
+                    text = progressText,
+                    style = COUITheme.textStyles.bodyL,
+                    color = COUITheme.colorScheme.labelSecondaryVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                )
+            }
+            if (extraContent != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp, bottom = 16.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    extraContent()
+                }
+            } else {
+                Spacer(Modifier.size(16.dp))
             }
         }
     }

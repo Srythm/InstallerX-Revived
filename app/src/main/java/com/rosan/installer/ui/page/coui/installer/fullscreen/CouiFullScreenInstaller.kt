@@ -2,22 +2,34 @@
 // Copyright (C) 2026 InstallerX Revived contributors
 package com.rosan.installer.ui.page.coui.installer.fullscreen
 
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,34 +38,80 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
+import com.rosan.installer.core.bitmask.hasFlag
+import com.rosan.installer.domain.archive.model.UnarchiveErrorAction
+import com.rosan.installer.domain.archive.model.UnarchiveStatus
+import com.rosan.installer.domain.device.provider.DeviceCapabilityProvider
+import com.rosan.installer.domain.engine.exception.ModuleInstallException
 import com.rosan.installer.domain.engine.model.install.InstallPhase
+import com.rosan.installer.domain.engine.model.install.MmzSelectionMode
+import com.rosan.installer.domain.engine.model.install.UninstallFlags
 import com.rosan.installer.domain.engine.model.packageinfo.AppEntity
+import com.rosan.installer.domain.engine.model.packageinfo.InstalledAppInfo
+import com.rosan.installer.domain.engine.model.packageinfo.InstalledModuleInfo
+import com.rosan.installer.domain.privileged.usecase.OpenAppUseCase
+import com.rosan.installer.domain.privileged.usecase.OpenAppUseCase.Companion.PRIVILEGED_START_TIMEOUT_MS
+import com.rosan.installer.domain.privileged.usecase.OpenLSPosedUseCase
+import com.rosan.installer.domain.session.model.ConfirmationRequestType
 import com.rosan.installer.domain.session.model.InstallResult
 import com.rosan.installer.domain.session.model.ProgressEntity
+import com.rosan.installer.domain.session.model.UninstallInfo
 import com.rosan.installer.domain.session.repository.InstallerSessionRepository
+import com.rosan.installer.domain.settings.model.config.Authorizer
+import com.rosan.installer.domain.settings.model.config.isPrivileged
 import com.rosan.installer.ui.icons.AppCOUIIcons
+import com.rosan.installer.ui.page.coui.installer.RebootListPopup
 import com.rosan.installer.ui.page.coui.installer.components.AppInfoState
+import com.rosan.installer.ui.page.coui.installer.components.rememberCouiPreparedPackageState
+import com.rosan.installer.ui.page.coui.installer.sheetcontent.CouiErrorSuggestions
+import com.rosan.installer.ui.page.coui.installer.sheetcontent.InstallChoiceContent
+import com.rosan.installer.ui.page.coui.installer.sheetcontent.InstallExtendedMenuContent
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.PrepareSettingsContent
+import com.rosan.installer.ui.page.coui.installer.sheetcontent.unarchiveErrorTitle
+import com.rosan.installer.ui.page.coui.widgets.CouiCheckboxWidget
+import com.rosan.installer.ui.page.coui.widgets.CouiErrorTextBlock
+import com.rosan.installer.ui.page.coui.widgets.CouiInstallerTipCard
+import com.rosan.installer.ui.page.coui.widgets.CouiSettingsCard
 import com.rosan.installer.ui.page.main.installer.InstallerStage
 import com.rosan.installer.ui.page.main.installer.InstallerViewAction
 import com.rosan.installer.ui.page.main.installer.InstallerViewModel
+import com.rosan.installer.ui.page.main.installer.rememberUnknownSourcePermissionActionVisible
+import com.rosan.installer.ui.page.main.widget.chip.NoticeModel
+import com.rosan.installer.ui.theme.InstallerTheme.useCouiMonet
 import com.rosan.installer.ui.theme.colorOsSpring
 import com.rosan.installer.ui.util.KeyEventBlocker
 import com.rosan.installer.util.help
@@ -62,10 +120,20 @@ import io.github.suqi8.coui.kmp.basic.ButtonDefaults
 import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.CircularProgressIndicator
 import io.github.suqi8.coui.kmp.basic.Icon
+import io.github.suqi8.coui.kmp.basic.IconButton
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import java.text.NumberFormat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.koin.compose.koinInject
+
+private class FullScreenSlotRef<T>(var value: T)
 
 internal enum class FullScreenSubPage { Main, Permissions, Settings }
 
@@ -80,25 +148,59 @@ internal data class FullScreenPage(
     val key: Any get() = if (subPage == FullScreenSubPage.Main) stage.javaClass else subPage
 }
 
+private data class FullScreenLiveSnapshot(
+    val page: FullScreenPage,
+    val appInfo: AppInfoState,
+    val entity: AppEntity?,
+    val versionLine: String?,
+    val sourceLabel: String?,
+    val permissions: List<String>,
+    val notices: List<NoticeModel>,
+    val installedAppInfo: InstalledAppInfo?,
+    val installedModuleInfo: InstalledModuleInfo?,
+    val totalSelectedSize: Long,
+    val selectedEntityCount: Int,
+    val isSplitUpdateMode: Boolean,
+    val isInvalidSplitInstall: Boolean,
+    val canInstall: Boolean,
+    @param:StringRes val primaryButtonRes: Int,
+    val canOpenInstallOptions: Boolean,
+    val canOpenSplitChoice: Boolean,
+    val uninstallInfo: UninstallInfo?,
+    val uninstallIcon: ImageBitmap?,
+)
+
 // InstallerStage folds unknown progress into zero; the session retains the nullable byte progress.
 @Composable
 fun CouiFullScreenInstaller(
     stage: InstallerStage,
     title: String,
     appInfo: AppInfoState,
-    entity: AppEntity.BaseEntity?,
-    versionName: String?,
-    sourceLabel: String?,
-    permissions: List<String>,
-    showPermissions: Boolean,
-    showSettings: Boolean,
+    selectionMode: MmzSelectionMode,
+    onSelectionModeChange: (MmzSelectionMode) -> Unit,
+    onSelectMixedModuleType: (Boolean) -> Unit,
+    onBackToTypeChoice: () -> Unit,
+    isApkChoice: Boolean,
+    preparedFromTypeChoice: Boolean,
+    returnedToTypeChoice: Boolean,
     isClosing: Boolean,
     viewModel: InstallerViewModel,
     session: InstallerSessionRepository,
     onClose: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val capabilityProvider: DeviceCapabilityProvider = koinInject()
+    val openAppUseCase: OpenAppUseCase = koinInject()
+    val openLSPosedUseCase: OpenLSPosedUseCase = koinInject()
+
     val sessionProgress by session.progress.collectAsStateWithLifecycle(initialValue = ProgressEntity.Ready)
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val settings = uiState.viewSettings
+    val config = uiState.config
+    val showSettings = uiState.showCouiSheetRightActionSettings
+    val showPermissions = uiState.showCouiPermissionList
+
     val subPage = when {
         stage is InstallerStage.InstallPrepare && showSettings -> FullScreenSubPage.Settings
         stage is InstallerStage.InstallPrepare && showPermissions -> FullScreenSubPage.Permissions
@@ -114,23 +216,264 @@ fun CouiFullScreenInstaller(
         else -> null
     }
     val currentPage = FullScreenPage(stage, title, subPage, progress, uiState.error)
-    // Keep the visible page through teardown, rather than showing Ready mid-fade.
-    val lastOpenPage = remember { mutableStateOf(currentPage) }
-    SideEffect { if (!isClosing) lastOpenPage.value = currentPage }
+
+    val prepared = if (stage is InstallerStage.InstallPrepare) rememberCouiPreparedPackageState(uiState) else null
+    val primaryEntity = prepared?.primaryEntity ?: appInfo.primaryEntity
+    val versionLine = when (primaryEntity) {
+        is AppEntity.BaseEntity -> "${primaryEntity.versionName} (${primaryEntity.versionCode})"
+        is AppEntity.ModuleEntity -> "${primaryEntity.version} (${primaryEntity.versionCode})"
+        is AppEntity.SplitEntity -> primaryEntity.splitName
+        else -> null
+    }
+    val permissions = (prepared?.rawBaseEntity ?: primaryEntity as? AppEntity.BaseEntity)?.permissions.orEmpty()
+    val canOpenInstallOptions = prepared?.rawBaseEntity != null &&
+        config.authorizer != Authorizer.Dhizuku &&
+        config.authorizer != Authorizer.None
+    val canOpenSplitChoice = prepared?.rawBaseEntity != null &&
+        prepared.currentPackage.appEntities.size > 1
+
+    val liveSnapshot = FullScreenLiveSnapshot(
+        page = currentPage,
+        appInfo = appInfo,
+        entity = primaryEntity,
+        versionLine = versionLine,
+        sourceLabel = uiState.initiatorAppLabel,
+        permissions = permissions,
+        notices = prepared?.installStateResult?.notices.orEmpty(),
+        installedAppInfo = prepared?.currentPackage?.installedAppInfo,
+        installedModuleInfo = prepared?.currentPackage?.installedModuleInfo,
+        totalSelectedSize = prepared?.totalSelectedSize ?: (primaryEntity?.size ?: 0L),
+        selectedEntityCount = prepared?.selectedEntities?.size ?: 1,
+        isSplitUpdateMode = prepared?.isSplitUpdateMode ?: false,
+        isInvalidSplitInstall = prepared?.isInvalidSplitInstall ?: false,
+        canInstall = prepared?.canInstall ?: false,
+        primaryButtonRes = prepared?.installStateResult?.buttonTextId ?: R.string.install,
+        canOpenInstallOptions = canOpenInstallOptions,
+        canOpenSplitChoice = canOpenSplitChoice,
+        uninstallInfo = uiState.uiUninstallInfo,
+        uninstallIcon = uiState.uiUninstallInfo?.let { uiState.displayIcons[it.packageName] },
+    )
+
+    // Keep the visible page and metadata through teardown, rather than snapping to Ready/Unknown mid-fade.
+    val lastOpenSnapshot = remember { mutableStateOf(liveSnapshot) }
+    SideEffect { if (!isClosing) lastOpenSnapshot.value = liveSnapshot }
+    val activeSnapshot = if (isClosing) lastOpenSnapshot.value else liveSnapshot
+
+    val activePackageName = uiState.currentPackageName
+        ?: uiState.analysisResults.firstOrNull()?.packageName
+        ?: activeSnapshot.appInfo.packageName
+    val launchIntent = remember(activePackageName) {
+        if (activePackageName.isNotEmpty()) {
+            context.packageManager.getLaunchIntentForPackage(activePackageName)
+        } else {
+            null
+        }
+    }
+    val hasPrivilege = config.isPrivileged(capabilityProvider)
+    val isXposedModule = settings.detectXposedModule &&
+        (activeSnapshot.appInfo.primaryEntity as? AppEntity.BaseEntity)?.isXposedModule == true
+
+    val showUnknownSourceAction = rememberUnknownSourcePermissionActionVisible(
+        isWaitingUnknownSource = activeSnapshot.page.stage is InstallerStage.InstallWaitingUnknownSource,
+    )
+    val unknownSourceAppLabel = uiState.unknownSourcePermissionAppLabel
+        ?: uiState.initiatorAppLabel
+        ?: stringResource(R.string.installer_label_unknown)
+
+    val safeClose: () -> Unit = { if (!viewModel.isClosingFullscreen.value) onClose() }
+    val safeDispatch: (InstallerViewAction) -> Unit = {
+        if (!viewModel.isClosingFullscreen.value) viewModel.dispatch(it)
+    }
+
+    val topEndAction: (@Composable () -> Unit)? = when {
+        isClosing || activeSnapshot.page.subPage != FullScreenSubPage.Main -> null
+
+        activeSnapshot.page.stage is InstallerStage.InstallPrepare -> {
+            {
+                IconButton(onClick = { safeDispatch(InstallerViewAction.ShowCouiSheetRightActionSettings) }) {
+                    Icon(
+                        imageVector = AppCOUIIcons.More,
+                        contentDescription = stringResource(R.string.installer_settings),
+                        tint = COUITheme.colorScheme.labelPrimary,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
+        }
+
+        activeSnapshot.page.stage is InstallerStage.InstallSuccess && activePackageName.isNotEmpty() -> {
+            {
+                IconButton(onClick = {
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                        .setData(Uri.fromParts("package", activePackageName, null))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    runCatching { context.startActivity(intent) }
+                    safeClose()
+                }) {
+                    Icon(
+                        imageVector = AppCOUIIcons.Info,
+                        contentDescription = stringResource(R.string.installer_settings),
+                        tint = COUITheme.colorScheme.labelPrimary,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
+        }
+
+        activeSnapshot.page.stage is InstallerStage.InstallingModule &&
+            activeSnapshot.page.stage.isFinished -> {
+            {
+                RebootListPopup(
+                    rootMode = uiState.rootMode,
+                    onReboot = { reason -> safeDispatch(InstallerViewAction.Reboot(reason)) },
+                )
+            }
+        }
+
+        else -> null
+    }
 
     CouiFullScreenInstallerContent(
-        page = if (isClosing) lastOpenPage.value else currentPage,
-        appInfo = appInfo,
-        useBlur = uiState.viewSettings.useBlur,
+        page = activeSnapshot.page,
+        appInfo = activeSnapshot.appInfo,
+        useBlur = settings.useBlur,
         isModule = viewModel.isInstallingModule,
-        entity = entity,
-        versionName = versionName,
-        sourceLabel = sourceLabel,
-        permissions = permissions,
+        entity = activeSnapshot.entity,
+        versionLine = activeSnapshot.versionLine,
+        sourceLabel = activeSnapshot.sourceLabel,
+        permissions = activeSnapshot.permissions,
+        notices = activeSnapshot.notices,
+        installedAppInfo = activeSnapshot.installedAppInfo,
+        installedModuleInfo = activeSnapshot.installedModuleInfo,
+        totalSelectedSize = activeSnapshot.totalSelectedSize,
+        selectedEntityCount = activeSnapshot.selectedEntityCount,
+        displaySdk = config.displaySdk,
+        displaySize = config.displaySize,
+        hideIdenticalComparisons = settings.hideIdenticalComparisons,
+        showOppoSpecial = settings.showOPPOSpecial,
+        labShowFilePath = settings.labShowFilePath,
+        labShowInstallInitiator = settings.labShowInstallInitiator,
+        isSplitUpdateMode = activeSnapshot.isSplitUpdateMode,
+        isInvalidSplitInstall = activeSnapshot.isInvalidSplitInstall,
+        canInstall = activeSnapshot.canInstall,
+        primaryButtonRes = activeSnapshot.primaryButtonRes,
+        hasLaunchIntent = launchIntent != null,
+        showOpenLsposed = isXposedModule && settings.quickOpenLSPosed && hasPrivilege,
+        showUnknownSourceAction = showUnknownSourceAction,
+        unknownSourceAppLabel = unknownSourceAppLabel,
+        uninstallInfo = activeSnapshot.uninstallInfo,
+        uninstallIcon = activeSnapshot.uninstallIcon,
+        uninstallFlags = config.uninstallFlags,
+        isConfirmationSubmitting = uiState.isConfirmationSubmitting,
+        isApkChoice = isApkChoice,
+        navigatedFromPrepareToChoice = uiState.navigatedFromPrepareToChoice,
+        preparedFromTypeChoice = preparedFromTypeChoice,
+        returnedToTypeChoice = returnedToTypeChoice,
+        canOpenInstallOptions = activeSnapshot.canOpenInstallOptions,
+        canOpenSplitChoice = activeSnapshot.canOpenSplitChoice,
         isClosing = isClosing,
-        onClose = { if (!viewModel.isClosingFullscreen.value) onClose() },
-        onAction = { if (!viewModel.isClosingFullscreen.value) viewModel.dispatch(it) },
-        settingsContent = { PrepareSettingsContent(viewModel = viewModel) },
+        onClose = safeClose,
+        onCancel = { safeDispatch(InstallerViewAction.Cancel) },
+        onBackground = { safeDispatch(InstallerViewAction.Background) },
+        onBackToTypeChoice = { if (!viewModel.isClosingFullscreen.value) onBackToTypeChoice() },
+        onInstall = {
+            if (!viewModel.isClosingFullscreen.value) {
+                viewModel.dispatch(InstallerViewAction.Install(true))
+                if (settings.autoSilentInstall && !viewModel.isInstallingModule) {
+                    viewModel.dispatch(InstallerViewAction.Background)
+                }
+            }
+        },
+        onLongInstall = if (settings.longClickBackgroundInstall) {
+            {
+                if (!viewModel.isClosingFullscreen.value) {
+                    viewModel.dispatch(InstallerViewAction.Install(true))
+                    if (!viewModel.isInstallingModule) {
+                        viewModel.dispatch(InstallerViewAction.Background)
+                    }
+                }
+            }
+        } else {
+            null
+        },
+        onOpenApp = {
+            if (launchIntent != null && !viewModel.isClosingFullscreen.value) {
+                viewModel.dispatch(InstallerViewAction.PrepareClose)
+                coroutineScope.launch(Dispatchers.IO) {
+                    val result = openAppUseCase(config = config, launchIntent = launchIntent)
+                    when (result) {
+                        is OpenAppUseCase.Result.SuccessPrivileged -> {
+                            withContext(Dispatchers.Main) {
+                                viewModel.dispatch(InstallerViewAction.Close)
+                            }
+                        }
+
+                        is OpenAppUseCase.Result.FallbackRequired -> {
+                            withContext(Dispatchers.Main) {
+                                context.startActivity(launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                                delay(if (!hasPrivilege) settings.closeSessionCountDown * 1000L else PRIVILEGED_START_TIMEOUT_MS)
+                                viewModel.dispatch(InstallerViewAction.Close)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        onOpenLsposed = {
+            if (!viewModel.isClosingFullscreen.value) {
+                viewModel.dispatch(InstallerViewAction.PrepareClose)
+                coroutineScope.launch(Dispatchers.IO) {
+                    val success = openLSPosedUseCase(config)
+                    if (success) {
+                        withContext(Dispatchers.Main) {
+                            viewModel.dispatch(InstallerViewAction.Close)
+                        }
+                    }
+                }
+            }
+        },
+        onOpenInstallOptions = { safeDispatch(InstallerViewAction.InstallExtendedMenu) },
+        onOpenSplitChoice = { safeDispatch(InstallerViewAction.InstallChoice) },
+        onRequestUnknownSourcePermission = { safeDispatch(InstallerViewAction.RequestUnknownSourcePermission) },
+        onApproveSession = { id, granted -> safeDispatch(InstallerViewAction.ApproveSession(id, granted)) },
+        onUninstall = { safeDispatch(InstallerViewAction.Uninstall) },
+        onToggleUninstallFlag = { flag, enable -> safeDispatch(InstallerViewAction.ToggleUninstallFlag(flag, enable)) },
+        onStartUnarchive = { safeDispatch(InstallerViewAction.StartUnarchive) },
+        onOpenUnarchiveErrorAction = { safeDispatch(InstallerViewAction.OpenUnarchiveErrorAction) },
+        onIconClick = if (settings.labTapIconToShare && activeSnapshot.entity != null) {
+            { safeDispatch(InstallerViewAction.ShareApp(activeSnapshot.entity)) }
+        } else {
+            null
+        },
+        onAction = safeDispatch,
+        topEndAction = topEndAction,
+        choiceContent = {
+            InstallChoiceContent(
+                viewModel = viewModel,
+                selectionMode = selectionMode,
+                onSelectionModeChange = onSelectionModeChange,
+                onSelectMixedModuleType = onSelectMixedModuleType,
+                onBackToTypeChoice = onBackToTypeChoice,
+                onCancel = safeClose,
+            )
+        },
+        extendedMenuContent = {
+            InstallExtendedMenuContent(
+                viewModel = viewModel,
+                backHandlerEnabled = false,
+            )
+        },
+        settingsContent = {
+            PrepareSettingsContent(
+                viewModel = viewModel,
+                backHandlerEnabled = false,
+            )
+        },
+        errorSuggestionsContent = { err ->
+            if (settings.showSmartSuggestion) {
+                CouiErrorSuggestions(error = err, viewModel = viewModel)
+            }
+        },
     )
 }
 
@@ -140,61 +483,209 @@ internal fun CouiFullScreenInstallerContent(
     appInfo: AppInfoState,
     useBlur: Boolean = false,
     isModule: Boolean = false,
-    entity: AppEntity.BaseEntity? = null,
-    versionName: String? = null,
+    entity: AppEntity? = null,
+    versionLine: String? = null,
     sourceLabel: String? = null,
     permissions: List<String> = emptyList(),
+    notices: List<NoticeModel> = emptyList(),
+    installedAppInfo: InstalledAppInfo? = null,
+    installedModuleInfo: InstalledModuleInfo? = null,
+    totalSelectedSize: Long = entity?.size ?: 0L,
+    selectedEntityCount: Int = 1,
+    displaySdk: Boolean = true,
+    displaySize: Boolean = true,
+    hideIdenticalComparisons: Boolean = true,
+    showOppoSpecial: Boolean = false,
+    labShowFilePath: Boolean = false,
+    labShowInstallInitiator: Boolean = true,
+    isSplitUpdateMode: Boolean = false,
+    isInvalidSplitInstall: Boolean = false,
+    canInstall: Boolean = true,
+    @StringRes primaryButtonRes: Int = R.string.install,
+    hasLaunchIntent: Boolean = false,
+    showOpenLsposed: Boolean = false,
+    showUnknownSourceAction: Boolean = false,
+    unknownSourceAppLabel: String = "",
+    uninstallInfo: UninstallInfo? = null,
+    uninstallIcon: ImageBitmap? = null,
+    uninstallFlags: Int = 0,
+    isConfirmationSubmitting: Boolean = false,
+    isApkChoice: Boolean = false,
+    navigatedFromPrepareToChoice: Boolean = false,
+    preparedFromTypeChoice: Boolean = false,
+    returnedToTypeChoice: Boolean = false,
+    canOpenInstallOptions: Boolean = false,
+    canOpenSplitChoice: Boolean = false,
     isClosing: Boolean = false,
     onClose: () -> Unit = {},
+    onCancel: () -> Unit = onClose,
+    onBackground: () -> Unit = {},
+    onBackToTypeChoice: () -> Unit = {},
+    onInstall: () -> Unit = {},
+    onLongInstall: (() -> Unit)? = null,
+    onOpenApp: () -> Unit = {},
+    onOpenLsposed: () -> Unit = {},
+    onOpenInstallOptions: () -> Unit = {},
+    onOpenSplitChoice: () -> Unit = {},
+    onRequestUnknownSourcePermission: () -> Unit = {},
+    onApproveSession: (Int, Boolean) -> Unit = { _, _ -> },
+    onUninstall: () -> Unit = {},
+    onToggleUninstallFlag: (Int, Boolean) -> Unit = { _, _ -> },
+    onStartUnarchive: () -> Unit = {},
+    onOpenUnarchiveErrorAction: () -> Unit = {},
+    onIconClick: (() -> Unit)? = null,
     onAction: (InstallerViewAction) -> Unit = {},
+    topEndAction: (@Composable () -> Unit)? = null,
+    choiceContent: @Composable () -> Unit = {},
+    extendedMenuContent: @Composable () -> Unit = {},
     settingsContent: @Composable () -> Unit = {},
+    errorSuggestionsContent: @Composable (Throwable) -> Unit = {},
 ) {
     val stage = page.stage
-    val installing = stage.isBusy()
     val isMain = page.subPage == FullScreenSubPage.Main
-    // A task name, not a status line: keeping it constant is what stops the bar from flickering
-    // every time the stage advances. The state itself is told by the body.
+
     val title = when (page.subPage) {
         FullScreenSubPage.Permissions -> stringResource(R.string.permission_list)
 
         FullScreenSubPage.Settings -> stringResource(R.string.installer_settings)
 
-        FullScreenSubPage.Main -> stringResource(
-            if (isModule) R.string.installer_install_module else R.string.installer_install_app,
-        )
+        FullScreenSubPage.Main -> when (stage) {
+            is InstallerStage.InstallChoice -> page.title
+
+            is InstallerStage.InstallExtendedMenu -> stringResource(R.string.config_label_install_options)
+
+            is InstallerStage.InstallConfirm -> stringResource(
+                when (stage.requestType) {
+                    ConfirmationRequestType.PRE_APPROVAL -> R.string.installer_install_pre_approval
+                    ConfirmationRequestType.PERMISSIONS -> R.string.installer_permissions_confirm
+                    ConfirmationRequestType.INSTALL -> R.string.installer_install_confirm
+                },
+            )
+
+            is InstallerStage.UninstallReady,
+            is InstallerStage.Uninstalling,
+            is InstallerStage.UninstallSuccess,
+            is InstallerStage.UninstallFailed,
+            is InstallerStage.UninstallResolveFailed,
+            -> stringResource(
+                if (uninstallInfo?.isArchived == true) R.string.uninstall_archive else R.string.installer_uninstall_app,
+            )
+
+            is InstallerStage.UnarchiveReady,
+            is InstallerStage.Unarchiving,
+            is InstallerStage.UnarchiveError,
+            is InstallerStage.UnarchiveFailed,
+            -> stringResource(R.string.unarchive_restore)
+
+            else -> stringResource(
+                if (isModule) R.string.installer_install_module else R.string.installer_install_app,
+            )
+        }
     }
+
+    val backEnabled = when {
+        isClosing -> false
+
+        page.subPage != FullScreenSubPage.Main -> true
+
+        stage is InstallerStage.Resolving ||
+            stage is InstallerStage.Analysing ||
+            stage is InstallerStage.Installing ||
+            stage is InstallerStage.InstallRetryDowngradeUsingUninstall ||
+            stage is InstallerStage.Uninstalling ||
+            stage is InstallerStage.Unarchiving -> false
+
+        stage is InstallerStage.InstallingModule -> stage.isFinished
+
+        stage is InstallerStage.InstallConfirm -> !isConfirmationSubmitting
+
+        else -> true
+    }
+
     val backAction: () -> Unit = when {
-        installing || isClosing -> ({})
+        !backEnabled -> ({})
+
         page.subPage == FullScreenSubPage.Permissions -> ({ onAction(InstallerViewAction.HideCouiPermissionList) })
+
         page.subPage == FullScreenSubPage.Settings -> ({ onAction(InstallerViewAction.HideCouiSheetRightActionSettings) })
+
+        stage is InstallerStage.Preparing ||
+            stage is InstallerStage.InstallWaitingUnknownSource -> onCancel
+
+        stage is InstallerStage.InstallChoice -> {
+            if (isApkChoice) {
+                onBackToTypeChoice
+            } else if (navigatedFromPrepareToChoice && !returnedToTypeChoice) {
+                ({ onAction(InstallerViewAction.InstallPrepare) })
+            } else {
+                onClose
+            }
+        }
+
+        stage is InstallerStage.InstallExtendedMenu -> ({ onAction(InstallerViewAction.InstallPrepare) })
+
+        stage is InstallerStage.InstallPrepare && preparedFromTypeChoice -> onBackToTypeChoice
+
+        stage is InstallerStage.InstallConfirm -> ({ onApproveSession(stage.sessionId, false) })
+
         else -> onClose
     }
-    val moreAction: (() -> Unit)? = if (isMain && stage is InstallerStage.InstallPrepare && !isClosing) {
-        { onAction(InstallerViewAction.ShowCouiSheetRightActionSettings) }
-    } else {
-        null
+
+    val usesShellBottomBar = isMain &&
+        stage !is InstallerStage.InstallChoice &&
+        stage !is InstallerStage.InstallExtendedMenu
+
+    val sensitivePermissionCount = rememberSensitivePermissionCount(permissions)
+
+    val headerData = rememberHeaderDisplay(
+        stage = stage,
+        appInfo = appInfo,
+        versionLine = versionLine,
+        onIconClick = onIconClick,
+        uninstallInfo = uninstallInfo,
+        uninstallIcon = uninstallIcon,
+    )
+    val lastHeaderData = remember { mutableStateOf(headerData) }
+    if (headerData != null) {
+        lastHeaderData.value = headerData
     }
 
     CouiPositionFullScreen(
         title = title,
         isClosing = isClosing,
         onBack = backAction,
-        onMore = moreAction,
+        backEnabled = backEnabled,
+        endAction = topEndAction,
         useBlur = useBlur,
-        bottomBar = if (isMain) {
+        bottomBar = if (usesShellBottomBar) {
             {
                 FullScreenActionRow(
                     stage = stage,
+                    canInstall = canInstall,
+                    primaryButtonRes = primaryButtonRes,
+                    hasLaunchIntent = hasLaunchIntent,
+                    showUnknownSourceAction = showUnknownSourceAction,
+                    preparedFromTypeChoice = preparedFromTypeChoice,
+                    isConfirmationSubmitting = isConfirmationSubmitting,
+                    isArchivedUninstall = uninstallInfo?.isArchived == true,
                     onClose = onClose,
-                    onInstall = { onAction(InstallerViewAction.Install(true)) },
+                    onCancel = onCancel,
+                    onBackground = onBackground,
+                    onBackToTypeChoice = onBackToTypeChoice,
+                    onInstall = onInstall,
+                    onLongInstall = onLongInstall,
+                    onOpenApp = onOpenApp,
+                    onRequestUnknownSourcePermission = onRequestUnknownSourcePermission,
+                    onApproveSession = onApproveSession,
+                    onUninstall = onUninstall,
+                    onStartUnarchive = onStartUnarchive,
+                    onOpenUnarchiveErrorAction = onOpenUnarchiveErrorAction,
                 )
             }
         } else {
             null
         },
     ) {
-        // Pages are pushed, not faded in, and they travel as whole pages including the app header,
-        // while the bar and the action row stay put.
         AnimatedContent(
             targetState = page.subPage,
             modifier = Modifier.fillMaxSize(),
@@ -204,9 +695,19 @@ internal fun CouiFullScreenInstallerContent(
         ) { subPage ->
             when (subPage) {
                 FullScreenSubPage.Main -> Column(Modifier.fillMaxSize()) {
-                    // Fixed for the whole install: the identity block is the anchor the body
-                    // changes under.
-                    CouiFullScreenAppHeader(appInfo, versionName)
+                    AnimatedVisibility(
+                        visible = headerData != null,
+                        enter = fadeIn(tween(200)) + expandVertically(),
+                        exit = fadeOut(tween(150)) + shrinkVertically(),
+                    ) {
+                        lastHeaderData.value?.let { header ->
+                            CouiFullScreenAppHeader(
+                                appInfo = header.appInfo,
+                                versionLine = header.versionLine,
+                                onIconClick = header.onIconClick,
+                            )
+                        }
+                    }
                     Box(Modifier.fillMaxWidth().weight(1f)) {
                         FullScreenStageBody(
                             page = page,
@@ -214,7 +715,34 @@ internal fun CouiFullScreenInstallerContent(
                             entity = entity,
                             sourceLabel = sourceLabel,
                             permissions = permissions,
-                            onAction = onAction,
+                            sensitivePermissionCount = sensitivePermissionCount,
+                            notices = notices,
+                            installedAppInfo = installedAppInfo,
+                            installedModuleInfo = installedModuleInfo,
+                            totalSelectedSize = totalSelectedSize,
+                            selectedEntityCount = selectedEntityCount,
+                            displaySdk = displaySdk,
+                            displaySize = displaySize,
+                            hideIdenticalComparisons = hideIdenticalComparisons,
+                            showOppoSpecial = showOppoSpecial,
+                            labShowFilePath = labShowFilePath,
+                            labShowInstallInitiator = labShowInstallInitiator,
+                            isSplitUpdateMode = isSplitUpdateMode,
+                            isInvalidSplitInstall = isInvalidSplitInstall,
+                            canOpenInstallOptions = canOpenInstallOptions,
+                            canOpenSplitChoice = canOpenSplitChoice,
+                            showOpenLsposed = showOpenLsposed,
+                            unknownSourceAppLabel = unknownSourceAppLabel,
+                            uninstallInfo = uninstallInfo,
+                            uninstallFlags = uninstallFlags,
+                            onOpenPermissions = { onAction(InstallerViewAction.ShowCouiPermissionList) },
+                            onOpenInstallOptions = onOpenInstallOptions,
+                            onOpenSplitChoice = onOpenSplitChoice,
+                            onOpenLsposed = onOpenLsposed,
+                            onToggleUninstallFlag = onToggleUninstallFlag,
+                            choiceContent = choiceContent,
+                            extendedMenuContent = extendedMenuContent,
+                            errorSuggestionsContent = errorSuggestionsContent,
                         )
                     }
                 }
@@ -231,94 +759,320 @@ internal fun CouiFullScreenInstallerContent(
     }
 }
 
-private fun AnimatedContentTransitionScope<FullScreenSubPage>.subPageTransition(): ContentTransform {
-    // A real push: the incoming page enters from the screen edge at full width and the outgoing
-    // one yields a third of the way back. Neither one fades, so the two surfaces stay in contact
-    // for the whole gesture instead of leaving a band of page colour between them.
-    return if (targetState != FullScreenSubPage.Main) {
-        slideInHorizontally(colorOsSpring(responseSeconds = 0.32f)) { it } togetherWith
-            slideOutHorizontally(tween(durationMillis = 320)) { -it / 3 }
-    } else {
-        slideInHorizontally(colorOsSpring(responseSeconds = 0.32f)) { -it / 3 } togetherWith
-            slideOutHorizontally(tween(durationMillis = 320)) { it }
+private data class HeaderDisplayData(
+    val appInfo: AppInfoState,
+    val versionLine: String?,
+    val onIconClick: (() -> Unit)?,
+)
+
+private fun rememberHeaderDisplay(
+    stage: InstallerStage,
+    appInfo: AppInfoState,
+    versionLine: String?,
+    onIconClick: (() -> Unit)?,
+    uninstallInfo: UninstallInfo?,
+    uninstallIcon: ImageBitmap?,
+): HeaderDisplayData? = when {
+    (
+        stage is InstallerStage.InstallPrepare ||
+            stage is InstallerStage.Installing ||
+            stage is InstallerStage.InstallRetryDowngradeUsingUninstall ||
+            stage is InstallerStage.InstallSuccess ||
+            stage is InstallerStage.InstallFailed ||
+            stage is InstallerStage.InstallingModule
+        ) && appInfo.primaryEntity != null -> HeaderDisplayData(
+        appInfo = appInfo,
+        versionLine = versionLine,
+        onIconClick = if (stage is InstallerStage.InstallPrepare) onIconClick else null,
+    )
+
+    (
+        stage is InstallerStage.UninstallReady ||
+            stage is InstallerStage.Uninstalling ||
+            stage is InstallerStage.UninstallSuccess ||
+            stage is InstallerStage.UninstallFailed
+        ) && uninstallInfo != null -> {
+        val uninstallVersion = when {
+            !uninstallInfo.versionName.isNullOrBlank() && uninstallInfo.versionCode != null ->
+                "${uninstallInfo.versionName} (${uninstallInfo.versionCode})"
+
+            !uninstallInfo.versionName.isNullOrBlank() -> uninstallInfo.versionName
+
+            uninstallInfo.versionCode != null -> uninstallInfo.versionCode.toString()
+
+            else -> null
+        }
+        HeaderDisplayData(
+            appInfo = AppInfoState(
+                icon = uninstallIcon,
+                label = uninstallInfo.appLabel ?: uninstallInfo.packageName,
+                packageName = uninstallInfo.packageName,
+            ),
+            versionLine = uninstallVersion,
+            onIconClick = null,
+        )
     }
+
+    else -> null
 }
 
-/** What the body currently shows. Stages inside one bucket never rebuild the body. */
-private enum class StageBucket { Prepare, Status }
+private fun AnimatedContentTransitionScope<FullScreenSubPage>.subPageTransition(): ContentTransform = if (targetState != FullScreenSubPage.Main) {
+    slideInHorizontally(colorOsSpring(responseSeconds = 0.32f)) { it } togetherWith
+        slideOutHorizontally(tween(durationMillis = 320)) { -it / 3 }
+} else {
+    slideInHorizontally(colorOsSpring(responseSeconds = 0.32f)) { -it / 3 } togetherWith
+        slideOutHorizontally(tween(durationMillis = 320)) { it }
+}
+
+private enum class StageBucket {
+    Prepare,
+    Choice,
+    ExtendedMenu,
+    Confirm,
+    Module,
+    Completed,
+    Error,
+    UninstallPrepare,
+    UnarchiveReady,
+    UnarchiveError,
+    StatusRing,
+}
+
+private fun stageBucketOf(stage: InstallerStage): StageBucket = when (stage) {
+    is InstallerStage.InstallPrepare -> StageBucket.Prepare
+
+    is InstallerStage.InstallChoice -> StageBucket.Choice
+
+    is InstallerStage.InstallExtendedMenu -> StageBucket.ExtendedMenu
+
+    is InstallerStage.InstallConfirm -> StageBucket.Confirm
+
+    is InstallerStage.InstallingModule -> StageBucket.Module
+
+    is InstallerStage.InstallCompleted -> StageBucket.Completed
+
+    is InstallerStage.InstallFailed,
+    is InstallerStage.ResolveFailed,
+    is InstallerStage.AnalyseFailed,
+    is InstallerStage.UninstallFailed,
+    is InstallerStage.UninstallResolveFailed,
+    is InstallerStage.UnarchiveFailed,
+    -> StageBucket.Error
+
+    is InstallerStage.UninstallReady -> StageBucket.UninstallPrepare
+
+    is InstallerStage.UnarchiveReady -> StageBucket.UnarchiveReady
+
+    is InstallerStage.UnarchiveError -> StageBucket.UnarchiveError
+
+    else -> StageBucket.StatusRing
+}
 
 @Composable
 private fun FullScreenStageBody(
     page: FullScreenPage,
     appInfo: AppInfoState,
-    entity: AppEntity.BaseEntity?,
+    entity: AppEntity?,
     sourceLabel: String?,
     permissions: List<String>,
-    onAction: (InstallerViewAction) -> Unit,
+    sensitivePermissionCount: Int,
+    notices: List<NoticeModel>,
+    installedAppInfo: InstalledAppInfo?,
+    installedModuleInfo: InstalledModuleInfo?,
+    totalSelectedSize: Long,
+    selectedEntityCount: Int,
+    displaySdk: Boolean,
+    displaySize: Boolean,
+    hideIdenticalComparisons: Boolean,
+    showOppoSpecial: Boolean,
+    labShowFilePath: Boolean,
+    labShowInstallInitiator: Boolean,
+    isSplitUpdateMode: Boolean,
+    isInvalidSplitInstall: Boolean,
+    canOpenInstallOptions: Boolean,
+    canOpenSplitChoice: Boolean,
+    showOpenLsposed: Boolean,
+    unknownSourceAppLabel: String,
+    uninstallInfo: UninstallInfo?,
+    uninstallFlags: Int,
+    onOpenPermissions: () -> Unit,
+    onOpenInstallOptions: () -> Unit,
+    onOpenSplitChoice: () -> Unit,
+    onOpenLsposed: () -> Unit,
+    onToggleUninstallFlag: (Int, Boolean) -> Unit,
+    choiceContent: @Composable () -> Unit,
+    extendedMenuContent: @Composable () -> Unit,
+    errorSuggestionsContent: @Composable (Throwable) -> Unit,
 ) {
-    val bucket = if (page.stage is InstallerStage.InstallPrepare) StageBucket.Prepare else StageBucket.Status
+    val activeBucket = stageBucketOf(page.stage)
+    val renderBody: @Composable () -> Unit = {
+        when (val stage = page.stage) {
+            is InstallerStage.InstallPrepare -> CouiFullScreenPrepareContent(
+                entity = entity,
+                sourceLabel = sourceLabel,
+                permissionCount = permissions.size,
+                sensitivePermissionCount = sensitivePermissionCount,
+                onOpenPermissions = onOpenPermissions,
+                notices = notices,
+                installedAppInfo = installedAppInfo,
+                installedModuleInfo = installedModuleInfo,
+                totalSelectedSize = totalSelectedSize,
+                selectedEntityCount = selectedEntityCount,
+                displaySdk = displaySdk,
+                displaySize = displaySize,
+                hideIdenticalComparisons = hideIdenticalComparisons,
+                showOppoSpecial = showOppoSpecial,
+                labShowFilePath = labShowFilePath,
+                labShowInstallInitiator = labShowInstallInitiator,
+                isSplitUpdateMode = isSplitUpdateMode,
+                isInvalidSplitInstall = isInvalidSplitInstall,
+                onOpenInstallOptions = if (canOpenInstallOptions) onOpenInstallOptions else null,
+                onOpenSplitChoice = if (canOpenSplitChoice) onOpenSplitChoice else null,
+            )
+
+            is InstallerStage.InstallChoice -> Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = FullScreenHorizontalPadding),
+                contentAlignment = Alignment.Center,
+            ) {
+                choiceContent()
+            }
+
+            is InstallerStage.InstallExtendedMenu -> Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = FullScreenHorizontalPadding),
+            ) {
+                extendedMenuContent()
+            }
+
+            is InstallerStage.InstallConfirm -> FullScreenConfirmBody(stage = stage)
+
+            is InstallerStage.InstallingModule -> FullScreenModuleContent(stage)
+
+            is InstallerStage.InstallCompleted -> FullScreenResultsContent(stage.results)
+
+            is InstallerStage.InstallFailed -> {
+                val errorTitle = stringResource(R.string.installer_install_failed)
+                FullScreenErrorBody(
+                    title = errorTitle,
+                    error = page.error ?: Throwable(),
+                    suggestions = {
+                        if (page.error != null && page.error !is ModuleInstallException) {
+                            errorSuggestionsContent(page.error)
+                        }
+                    },
+                )
+            }
+
+            is InstallerStage.ResolveFailed -> FullScreenErrorBody(
+                title = stringResource(R.string.installer_resolve_failed),
+                error = page.error ?: Throwable(),
+            )
+
+            is InstallerStage.AnalyseFailed -> FullScreenErrorBody(
+                title = stringResource(R.string.installer_analyse_failed),
+                error = page.error ?: Throwable(),
+            )
+
+            is InstallerStage.UninstallFailed,
+            is InstallerStage.UninstallResolveFailed,
+            -> FullScreenErrorBody(
+                title = stringResource(R.string.uninstall_failed_message),
+                error = page.error ?: Throwable(),
+            )
+
+            is InstallerStage.UnarchiveFailed -> FullScreenErrorBody(
+                title = stringResource(R.string.unarchive_failed),
+                error = page.error ?: Throwable(),
+            )
+
+            is InstallerStage.UninstallReady -> FullScreenUninstallPrepareBody(
+                isArchived = uninstallInfo?.isArchived == true,
+                uninstallFlags = uninstallFlags,
+                onToggleUninstallFlag = onToggleUninstallFlag,
+            )
+
+            is InstallerStage.UnarchiveReady -> FullScreenUnarchiveReadyBody(
+                appLabel = stage.appLabel,
+                installerLabel = stage.installerLabel,
+            )
+
+            is InstallerStage.UnarchiveError -> FullScreenUnarchiveErrorBody(
+                status = stage.status,
+                requiredBytes = stage.requiredBytes,
+                installerLabel = stage.installerLabel,
+            )
+
+            else -> FullScreenStatusBody(
+                page = page,
+                appInfo = appInfo,
+                unknownSourceAppLabel = unknownSourceAppLabel,
+                showOpenLsposed = showOpenLsposed,
+                onOpenLsposed = onOpenLsposed,
+            )
+        }
+    }
+
     AnimatedContent(
-        targetState = bucket,
+        targetState = activeBucket,
         modifier = Modifier.fillMaxSize(),
         contentKey = { it },
         transitionSpec = {
-            // Cross-fade with a 1/40 (a few dp) lift. Between prepare and progress there is no
-            // shared element to morph, so fading is the honest transition — but nothing else on
-            // the page may move while it happens.
             (
                 fadeIn(tween(durationMillis = 240)) +
                     slideInVertically(tween(durationMillis = 260)) { it / 40 }
                 ) togetherWith fadeOut(tween(durationMillis = 140))
         },
         label = "FullScreenStageBody",
-    ) { bucket ->
-        when (bucket) {
-            StageBucket.Prepare -> CouiFullScreenPrepareContent(
-                entity = entity,
-                sourceLabel = sourceLabel,
-                permissionCount = permissions.size,
-                sensitivePermissionCount = permissions.sensitiveCount(),
-                onOpenPermissions = { onAction(InstallerViewAction.ShowCouiPermissionList) },
-            )
-
-            StageBucket.Status -> FullScreenStatusBody(page = page, appInfo = appInfo)
+    ) { slotBucket ->
+        val frozen = remember { FullScreenSlotRef(renderBody) }
+        if (slotBucket == activeBucket) {
+            frozen.value = renderBody
         }
+        frozen.value()
     }
 }
 
-/**
- * One persistent host for every progress and result stage.
- *
- * Because the bucket above does not change between "installing" and "success", this composable
- * survives the change: the ring fades out while the check mark fades in at the same coordinates,
- * and the labels cross-fade instead of the whole block being rebuilt.
- */
 @Composable
-private fun FullScreenStatusBody(page: FullScreenPage, appInfo: AppInfoState) {
-    val stage = page.stage
-    if (stage is InstallerStage.InstallingModule) {
-        FullScreenModuleContent(stage)
-        return
+private fun FullScreenStatusBody(
+    page: FullScreenPage,
+    appInfo: AppInfoState,
+    unknownSourceAppLabel: String,
+    showOpenLsposed: Boolean,
+    onOpenLsposed: () -> Unit,
+) {
+    val spec = statusSpecOf(page, appInfo, unknownSourceAppLabel)
+    val actionsEnabled = LocalFullScreenActionsEnabled.current
+    val extraContent: (@Composable () -> Unit)? = if (page.stage is InstallerStage.InstallSuccess && showOpenLsposed) {
+        {
+            TextButton(
+                text = stringResource(R.string.open_lsposed),
+                onClick = { if (actionsEnabled) onOpenLsposed() },
+                enabled = actionsEnabled,
+                colors = ButtonDefaults.textButtonColors(),
+            )
+        }
+    } else {
+        null
     }
-    if (stage is InstallerStage.InstallCompleted) {
-        FullScreenResultsContent(stage.results)
-        return
-    }
-
-    val spec = statusSpecOf(page, appInfo)
     CouiFullScreenStatusContent(
         title = spec.title,
         subtitle = spec.subtitle,
+        progressText = spec.progressText,
         progress = spec.progress,
         icon = spec.icon,
         iconTint = spec.iconTint,
         haloColor = spec.halo,
+        extraContent = extraContent,
     )
 }
 
 private data class StatusSpec(
     val title: String,
     val subtitle: String? = null,
+    val progressText: String? = null,
     val progress: Float? = null,
     val icon: ImageVector? = null,
     val iconTint: Color = Color.Unspecified,
@@ -326,16 +1080,17 @@ private data class StatusSpec(
 )
 
 @Composable
-private fun statusSpecOf(page: FullScreenPage, appInfo: AppInfoState): StatusSpec {
+private fun statusSpecOf(
+    page: FullScreenPage,
+    appInfo: AppInfoState,
+    unknownSourceAppLabel: String,
+): StatusSpec {
     val successTint = COUITheme.colorScheme.success
-    val errorTint = COUITheme.colorScheme.error
     return when (val stage = page.stage) {
         is InstallerStage.Preparing -> StatusSpec(
             title = stringResource(R.string.installer_preparing),
-            subtitle = listOfNotNull(
-                stringResource(R.string.installer_preparing_desc),
-                page.progress?.asPercent(),
-            ).joinToString("\n"),
+            subtitle = stringResource(R.string.installer_preparing_desc),
+            progressText = page.progress?.asPercent(),
             progress = page.progress,
         )
 
@@ -343,24 +1098,31 @@ private fun statusSpecOf(page: FullScreenPage, appInfo: AppInfoState): StatusSpe
 
         is InstallerStage.Analysing -> StatusSpec(title = stringResource(R.string.installer_analysing))
 
+        is InstallerStage.InstallWaitingUnknownSource -> StatusSpec(
+            title = stringResource(R.string.installer_waiting_unknown_source),
+            subtitle = stringResource(R.string.installer_waiting_unknown_source_desc, unknownSourceAppLabel),
+        )
+
         is InstallerStage.Installing -> StatusSpec(
             title = stringResource(
                 if (stage.phase == InstallPhase.WRITING) R.string.installer_writing else R.string.installer_installing,
             ),
-            subtitle = listOfNotNull(
-                if (stage.total > 1) {
-                    stringResource(
-                        R.string.installing_progress_text,
-                        stage.appLabel ?: appInfo.label,
-                        stage.current,
-                        stage.total,
-                    )
-                } else {
-                    null
-                },
-                page.progress?.asPercent(),
-            ).joinToString("\n"),
+            subtitle = if (stage.total > 1) {
+                stringResource(
+                    R.string.installing_progress_text,
+                    stage.appLabel ?: appInfo.label,
+                    stage.current,
+                    stage.total,
+                )
+            } else {
+                null
+            },
+            progressText = page.progress?.asPercent(),
             progress = page.progress,
+        )
+
+        is InstallerStage.InstallRetryDowngradeUsingUninstall -> StatusSpec(
+            title = stringResource(R.string.installer_installing),
         )
 
         is InstallerStage.InstallSuccess -> StatusSpec(
@@ -370,12 +1132,19 @@ private fun statusSpecOf(page: FullScreenPage, appInfo: AppInfoState): StatusSpe
             halo = successTint.copy(alpha = 0.12f),
         )
 
-        is InstallerStage.InstallFailed -> StatusSpec(
-            title = stringResource(R.string.installer_install_failed),
-            subtitle = page.error?.help(),
-            icon = AppCOUIIcons.Close,
-            iconTint = errorTint,
-            halo = errorTint.copy(alpha = 0.12f),
+        is InstallerStage.Uninstalling -> StatusSpec(
+            title = stringResource(R.string.installer_uninstalling),
+        )
+
+        is InstallerStage.UninstallSuccess -> StatusSpec(
+            title = stringResource(R.string.uninstall_success_message),
+            icon = AppCOUIIcons.Ok,
+            iconTint = successTint,
+            halo = successTint.copy(alpha = 0.12f),
+        )
+
+        is InstallerStage.Unarchiving -> StatusSpec(
+            title = stringResource(R.string.unarchive_restoring),
         )
 
         else -> StatusSpec(title = stringResource(R.string.loading))
@@ -384,71 +1153,291 @@ private fun statusSpecOf(page: FullScreenPage, appInfo: AppInfoState): StatusSpe
 
 private fun Float.asPercent(): String = NumberFormat.getPercentInstance().format(toDouble())
 
-private fun InstallerStage.isBusy(): Boolean = when (this) {
-    is InstallerStage.Installing -> true
-    is InstallerStage.InstallingModule -> !isFinished
-    is InstallerStage.Preparing, is InstallerStage.Resolving, is InstallerStage.Analysing -> true
-    else -> false
+/** The action set key for a stage. */
+private enum class ActionSet {
+    Prepare,
+    Preparing,
+    Installing,
+    WaitingUnknownSource,
+    InstallConfirm,
+    InstallSuccess,
+    UninstallReady,
+    UnarchiveReady,
+    UnarchiveError,
+    Finish,
+    Close,
+    None,
 }
 
-/** The action set for a stage. Keyed so the row only re-renders when the buttons really change. */
-private enum class ActionSet { CancelInstall, CancelOnly, None, Finish, Close }
+private data class ActionBarKey(
+    val set: ActionSet,
+    val hasPrimary: Boolean = true,
+    val hasSecondary: Boolean = false,
+)
 
-private fun actionSetOf(stage: InstallerStage): ActionSet = when (stage) {
-    is InstallerStage.Installing -> ActionSet.None
-    is InstallerStage.InstallingModule -> if (stage.isFinished) ActionSet.Close else ActionSet.None
-    is InstallerStage.InstallPrepare -> ActionSet.CancelInstall
-    is InstallerStage.Preparing, is InstallerStage.Resolving, is InstallerStage.Analysing -> ActionSet.CancelOnly
-    else -> ActionSet.Finish
+private fun actionBarKeyOf(
+    stage: InstallerStage,
+    hasLaunchIntent: Boolean,
+    showUnknownSourceAction: Boolean,
+): ActionBarKey = when (stage) {
+    is InstallerStage.InstallPrepare -> ActionBarKey(ActionSet.Prepare, hasPrimary = true, hasSecondary = true)
+
+    is InstallerStage.Preparing -> ActionBarKey(ActionSet.Preparing, hasPrimary = true, hasSecondary = true)
+
+    is InstallerStage.Installing -> ActionBarKey(ActionSet.Installing, hasPrimary = true, hasSecondary = false)
+
+    is InstallerStage.InstallWaitingUnknownSource -> ActionBarKey(
+        ActionSet.WaitingUnknownSource,
+        hasPrimary = showUnknownSourceAction,
+        hasSecondary = true,
+    )
+
+    is InstallerStage.InstallConfirm -> ActionBarKey(ActionSet.InstallConfirm, hasPrimary = true, hasSecondary = true)
+
+    is InstallerStage.InstallSuccess -> ActionBarKey(
+        ActionSet.InstallSuccess,
+        hasPrimary = hasLaunchIntent,
+        hasSecondary = true,
+    )
+
+    is InstallerStage.UninstallReady -> ActionBarKey(ActionSet.UninstallReady, hasPrimary = true, hasSecondary = true)
+
+    is InstallerStage.UnarchiveReady -> ActionBarKey(ActionSet.UnarchiveReady, hasPrimary = true, hasSecondary = true)
+
+    is InstallerStage.UnarchiveError -> ActionBarKey(
+        ActionSet.UnarchiveError,
+        hasPrimary = stage.status.primaryAction != UnarchiveErrorAction.CLOSE,
+        hasSecondary = true,
+    )
+
+    is InstallerStage.InstallCompleted,
+    is InstallerStage.UninstallSuccess,
+    -> ActionBarKey(ActionSet.Finish, hasPrimary = true, hasSecondary = false)
+
+    is InstallerStage.InstallingModule -> if (stage.isFinished) {
+        ActionBarKey(ActionSet.Close, hasPrimary = true, hasSecondary = false)
+    } else {
+        ActionBarKey(ActionSet.None, hasPrimary = false, hasSecondary = false)
+    }
+
+    is InstallerStage.InstallFailed,
+    is InstallerStage.ResolveFailed,
+    is InstallerStage.AnalyseFailed,
+    is InstallerStage.UninstallFailed,
+    is InstallerStage.UninstallResolveFailed,
+    is InstallerStage.UnarchiveFailed,
+    -> ActionBarKey(ActionSet.Close, hasPrimary = true, hasSecondary = false)
+
+    else -> ActionBarKey(ActionSet.None, hasPrimary = false, hasSecondary = false)
 }
 
 @Composable
-private fun FullScreenActionRow(stage: InstallerStage, onClose: () -> Unit, onInstall: () -> Unit) {
+private fun FullScreenActionRow(
+    stage: InstallerStage,
+    canInstall: Boolean,
+    @StringRes primaryButtonRes: Int,
+    hasLaunchIntent: Boolean,
+    showUnknownSourceAction: Boolean,
+    preparedFromTypeChoice: Boolean,
+    isConfirmationSubmitting: Boolean,
+    isArchivedUninstall: Boolean,
+    onClose: () -> Unit,
+    onCancel: () -> Unit,
+    onBackground: () -> Unit,
+    onBackToTypeChoice: () -> Unit,
+    onInstall: () -> Unit,
+    onLongInstall: (() -> Unit)?,
+    onOpenApp: () -> Unit,
+    onRequestUnknownSourcePermission: () -> Unit,
+    onApproveSession: (Int, Boolean) -> Unit,
+    onUninstall: () -> Unit,
+    onStartUnarchive: () -> Unit,
+    onOpenUnarchiveErrorAction: () -> Unit,
+) {
     val enabled = LocalFullScreenActionsEnabled.current
-    AnimatedContent(
-        targetState = actionSetOf(stage),
-        modifier = Modifier.fillMaxSize(),
-        contentKey = { it },
-        // Buttons swap by fading in place: the row keeps its height and its slots, so the page
-        // never reflows when the primary action changes meaning.
-        transitionSpec = {
-            fadeIn(tween(durationMillis = 180)) togetherWith fadeOut(tween(durationMillis = 120))
-        },
-        label = "FullScreenActions",
-    ) { actions ->
+    val activeKey = actionBarKeyOf(stage, hasLaunchIntent, showUnknownSourceAction)
+
+    val rowContent: @Composable () -> Unit = {
         Row(
             modifier = Modifier.fillMaxSize().padding(horizontal = FullScreenHorizontalPadding, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            when (actions) {
-                ActionSet.CancelInstall -> {
-                    SecondaryAction(stringResource(R.string.cancel), onClose, enabled)
-                    PrimaryAction(stringResource(R.string.install), onInstall, enabled)
+            when (activeKey.set) {
+                ActionSet.Prepare -> {
+                    SecondaryAction(
+                        text = stringResource(if (preparedFromTypeChoice) R.string.back else R.string.cancel),
+                        onClick = if (preparedFromTypeChoice) onBackToTypeChoice else onClose,
+                        enabled = enabled,
+                    )
+                    PrimaryAction(
+                        text = stringResource(primaryButtonRes),
+                        onClick = onInstall,
+                        onLongClick = onLongInstall,
+                        enabled = enabled && canInstall,
+                    )
                 }
 
-                ActionSet.CancelOnly -> SecondaryAction(stringResource(R.string.cancel), onClose, enabled)
+                ActionSet.Preparing -> {
+                    SecondaryAction(stringResource(R.string.cancel), onCancel, enabled)
+                    PrimaryAction(stringResource(R.string.installer_move_to_background), onBackground, enabled = enabled)
+                }
 
-                ActionSet.Finish -> PrimaryAction(stringResource(R.string.finish), onClose, enabled)
+                ActionSet.Installing -> {
+                    SecondaryAction(stringResource(R.string.installer_move_to_background), onBackground, enabled)
+                }
 
-                ActionSet.Close -> PrimaryAction(stringResource(R.string.close), onClose, enabled)
+                ActionSet.WaitingUnknownSource -> {
+                    SecondaryAction(stringResource(R.string.cancel), onCancel, enabled)
+                    if (showUnknownSourceAction) {
+                        PrimaryAction(
+                            text = stringResource(R.string.suggestion_allow_unknown_source),
+                            onClick = onRequestUnknownSourcePermission,
+                            enabled = enabled,
+                        )
+                    }
+                }
+
+                ActionSet.InstallConfirm -> {
+                    val confirmStage = stage as? InstallerStage.InstallConfirm
+                    val confirmText = when {
+                        confirmStage?.isOwnershipConflict == true -> stringResource(R.string.install_anyway)
+                        confirmStage?.requestType == ConfirmationRequestType.PRE_APPROVAL -> stringResource(R.string.pre_approve)
+                        else -> stringResource(R.string.confirm)
+                    }
+                    val actionEnabled = enabled && !isConfirmationSubmitting
+                    SecondaryAction(
+                        text = stringResource(R.string.cancel),
+                        onClick = { confirmStage?.let { onApproveSession(it.sessionId, false) } },
+                        enabled = actionEnabled,
+                    )
+                    PrimaryAction(
+                        text = confirmText,
+                        onClick = { confirmStage?.let { onApproveSession(it.sessionId, true) } },
+                        enabled = actionEnabled,
+                    )
+                }
+
+                ActionSet.InstallSuccess -> {
+                    if (hasLaunchIntent) {
+                        SecondaryAction(stringResource(R.string.finish), onClose, enabled)
+                        PrimaryAction(stringResource(R.string.open), onOpenApp, enabled = enabled)
+                    } else {
+                        PrimaryAction(stringResource(R.string.finish), onClose, enabled = enabled)
+                    }
+                }
+
+                ActionSet.UninstallReady -> {
+                    SecondaryAction(stringResource(R.string.cancel), onClose, enabled)
+                    DestructiveAction(
+                        text = stringResource(if (isArchivedUninstall) R.string.uninstall_archive else R.string.uninstall),
+                        onClick = onUninstall,
+                        enabled = enabled,
+                    )
+                }
+
+                ActionSet.UnarchiveReady -> {
+                    SecondaryAction(stringResource(R.string.cancel), onClose, enabled)
+                    PrimaryAction(stringResource(R.string.unarchive_restore), onStartUnarchive, enabled = enabled)
+                }
+
+                ActionSet.UnarchiveError -> {
+                    val errStage = stage as? InstallerStage.UnarchiveError
+                    val hasPrimary = errStage != null && errStage.status.primaryAction != UnarchiveErrorAction.CLOSE
+                    if (hasPrimary) {
+                        SecondaryAction(stringResource(R.string.close), onClose, enabled)
+                        PrimaryAction(
+                            text = stringResource(errStage.status.actionLabelResId),
+                            onClick = onOpenUnarchiveErrorAction,
+                            enabled = enabled,
+                        )
+                    } else {
+                        PrimaryAction(stringResource(R.string.close), onClose, enabled = enabled)
+                    }
+                }
+
+                ActionSet.Finish -> PrimaryAction(stringResource(R.string.finish), onClose, enabled = enabled)
+
+                ActionSet.Close -> PrimaryAction(stringResource(R.string.close), onClose, enabled = enabled)
 
                 ActionSet.None -> Unit
             }
         }
     }
+
+    AnimatedContent(
+        targetState = activeKey,
+        modifier = Modifier.fillMaxSize(),
+        contentKey = { it },
+        transitionSpec = {
+            fadeIn(tween(durationMillis = 180)) togetherWith fadeOut(tween(durationMillis = 120))
+        },
+        label = "FullScreenActions",
+    ) { slotKey ->
+        val frozen = remember { FullScreenSlotRef(rowContent) }
+        if (slotKey == activeKey) {
+            frozen.value = rowContent
+        }
+        frozen.value()
+    }
 }
 
 @Composable
-private fun RowScope.PrimaryAction(text: String, onClick: () -> Unit, enabled: Boolean) {
-    Button(
-        onClick = { if (enabled) onClick() },
-        enabled = enabled,
-        modifier = Modifier.weight(1f),
-        colors = ButtonDefaults.buttonColorsPrimary(),
-        insideMargin = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+private fun RowScope.PrimaryAction(
+    text: String,
+    onClick: () -> Unit,
+    enabled: Boolean,
+    onLongClick: (() -> Unit)? = null,
+) {
+    val viewConfiguration = LocalViewConfiguration.current
+    val hapticFeedback = LocalHapticFeedback.current
+    var hasLongPressed by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .then(
+                if (enabled && onLongClick != null) {
+                    Modifier.pointerInput(onLongClick) {
+                        val timeoutMs = viewConfiguration.longPressTimeoutMillis
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                            hasLongPressed = false
+                            val up = withTimeoutOrNull(timeoutMs) {
+                                while (true) {
+                                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                                    val change = event.changes.firstOrNull { it.id == down.id }
+                                    if (change == null || !change.pressed) {
+                                        return@withTimeoutOrNull change
+                                    }
+                                }
+                                @Suppress("UNREACHABLE_CODE")
+                                null
+                            }
+                            if (up == null && currentCoroutineContext().isActive) {
+                                hasLongPressed = true
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onLongClick()
+                            }
+                        }
+                    }
+                } else {
+                    Modifier
+                },
+            ),
     ) {
-        Text(text = text, style = COUITheme.textStyles.buttonL, maxLines = 1)
+        Button(
+            onClick = {
+                if (enabled && !hasLongPressed) onClick()
+                hasLongPressed = false
+            },
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColorsPrimary(),
+            insideMargin = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+        ) {
+            Text(text = text, style = COUITheme.textStyles.buttonL, maxLines = 1)
+        }
     }
 }
 
@@ -461,6 +1450,249 @@ private fun RowScope.SecondaryAction(text: String, onClick: () -> Unit, enabled:
         modifier = Modifier.weight(1f),
         colors = ButtonDefaults.textButtonColors(),
     )
+}
+
+@Composable
+private fun RowScope.DestructiveAction(text: String, onClick: () -> Unit, enabled: Boolean) {
+    TextButton(
+        text = text,
+        onClick = { if (enabled) onClick() },
+        enabled = enabled,
+        modifier = Modifier.weight(1f),
+        colors = ButtonDefaults.textButtonColors(
+            color = if (useCouiMonet) COUITheme.colorScheme.secondaryContainer else COUITheme.colorScheme.secondaryVariant,
+            textColor = COUITheme.colorScheme.error,
+        ),
+    )
+}
+
+@Composable
+private fun FullScreenConfirmBody(stage: InstallerStage.InstallConfirm) {
+    val tipMessage = when {
+        stage.requestType == ConfirmationRequestType.PRE_APPROVAL -> {
+            val initiator = stage.sourceAppLabel ?: stringResource(R.string.installer_label_unknown)
+            stringResource(R.string.install_confirm_pre_approval_tip, initiator)
+        }
+
+        stage.requestType == ConfirmationRequestType.PERMISSIONS -> {
+            val initiator = stage.sourceAppLabel ?: stringResource(R.string.installer_label_unknown)
+            stringResource(R.string.install_confirm_permissions_tip, initiator)
+        }
+
+        stage.isOwnershipConflict -> {
+            val owner = stage.sourceAppLabel ?: stringResource(R.string.installer_label_unknown)
+            stringResource(R.string.install_confirm_question_update_owner_reminder, owner)
+        }
+
+        !stage.isSelfSession -> {
+            val initiator = stage.sourceAppLabel ?: stringResource(R.string.installer_label_unknown)
+            stringResource(R.string.install_confirm_external_request_tip, initiator)
+        }
+
+        else -> stringResource(R.string.installer_prepare_type_unknown_confirm)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = FullScreenHorizontalPadding, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        if (stage.appIcon != null) {
+            Image(
+                bitmap = stage.appIcon.asImageBitmap(),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(86.dp)
+                    .clip(RoundedCornerShape(20.dp)),
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+        Text(
+            text = stage.appLabel.toString(),
+            style = COUITheme.textStyles.headlineM,
+            color = COUITheme.colorScheme.labelPrimary,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 24.dp),
+        )
+        Spacer(modifier = Modifier.height(20.dp))
+        CouiInstallerTipCard(tipMessage)
+    }
+}
+
+@Composable
+private fun FullScreenErrorBody(
+    title: String,
+    error: Throwable,
+    suggestions: @Composable () -> Unit = {},
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = FullScreenHorizontalPadding),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(COUITheme.colorScheme.error.copy(alpha = 0.12f), CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = AppCOUIIcons.Close,
+                    contentDescription = null,
+                    tint = COUITheme.colorScheme.error,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Text(
+                text = title,
+                style = COUITheme.textStyles.headlineXS,
+                color = COUITheme.colorScheme.labelPrimary,
+            )
+        }
+        Spacer(Modifier.size(8.dp))
+        // Bounded height via weight ensures CouiErrorTextBlock's inner verticalScroll never sees infinity.
+        CouiErrorTextBlock(
+            error = error,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f, fill = false),
+        )
+        Spacer(Modifier.size(12.dp))
+        suggestions()
+    }
+}
+
+@Composable
+private fun FullScreenUninstallPrepareBody(
+    isArchived: Boolean,
+    uninstallFlags: Int,
+    onToggleUninstallFlag: (Int, Boolean) -> Unit,
+) {
+    val deleteKeepData = uninstallFlags.hasFlag(UninstallFlags.DELETE_KEEP_DATA)
+    val deleteAllUsers = uninstallFlags.hasFlag(UninstallFlags.DELETE_ALL_USERS)
+    val deleteSystemApp = uninstallFlags.hasFlag(UninstallFlags.DELETE_SYSTEM_APP)
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = FullScreenHorizontalPadding, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        if (isArchived) {
+            CouiInstallerTipCard(stringResource(R.string.uninstall_archive_message))
+        } else {
+            CouiSettingsCard(Modifier.fillMaxWidth()) {
+                CouiCheckboxWidget(
+                    title = stringResource(id = R.string.uninstall_keep_data),
+                    description = stringResource(id = R.string.uninstall_keep_data_desc),
+                    checked = deleteKeepData,
+                    onCheckedChange = { onToggleUninstallFlag(UninstallFlags.DELETE_KEEP_DATA, it) },
+                )
+                CouiCheckboxWidget(
+                    title = stringResource(id = R.string.uninstall_all_users),
+                    description = stringResource(id = R.string.uninstall_all_users_desc),
+                    checked = deleteAllUsers,
+                    onCheckedChange = { onToggleUninstallFlag(UninstallFlags.DELETE_ALL_USERS, it) },
+                )
+                CouiCheckboxWidget(
+                    title = stringResource(id = R.string.uninstall_delete_system_app),
+                    description = stringResource(id = R.string.uninstall_delete_system_app_desc),
+                    checked = deleteSystemApp,
+                    onCheckedChange = { onToggleUninstallFlag(UninstallFlags.DELETE_SYSTEM_APP, it) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FullScreenUnarchiveReadyBody(
+    appLabel: CharSequence,
+    installerLabel: CharSequence,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = FullScreenHorizontalPadding, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = stringResource(R.string.unarchive_title, appLabel),
+            style = COUITheme.textStyles.headlineM,
+            color = COUITheme.colorScheme.labelPrimary,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        )
+        Text(
+            text = stringResource(R.string.unarchive_message, installerLabel),
+            style = COUITheme.textStyles.bodyXL,
+            color = COUITheme.colorScheme.labelSecondaryVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 16.dp),
+        )
+    }
+}
+
+@Composable
+private fun FullScreenUnarchiveErrorBody(
+    status: UnarchiveStatus,
+    requiredBytes: Long,
+    installerLabel: CharSequence?,
+) {
+    val context = LocalContext.current
+    val message = when (status) {
+        UnarchiveStatus.InsufficientStorage -> stringResource(
+            status.messageResId,
+            android.text.format.Formatter.formatShortFileSize(context, requiredBytes),
+        )
+
+        UnarchiveStatus.InstallerDisabled,
+        UnarchiveStatus.InstallerUninstalled,
+        -> stringResource(
+            status.messageResId,
+            installerLabel ?: stringResource(R.string.installer_label_unknown),
+        )
+
+        else -> stringResource(status.messageResId)
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = FullScreenHorizontalPadding, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = unarchiveErrorTitle(status, installerLabel),
+            style = COUITheme.textStyles.headlineM,
+            color = COUITheme.colorScheme.labelPrimary,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        )
+        Text(
+            text = message,
+            style = COUITheme.textStyles.bodyXL,
+            color = COUITheme.colorScheme.labelSecondaryVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 16.dp),
+        )
+    }
 }
 
 @Composable
@@ -524,7 +1756,16 @@ private fun FullScreenModuleContent(stage: InstallerStage.InstallingModule) {
 
 @Composable
 private fun FullScreenResultsContent(results: List<InstallResult>) {
-    val successes = results.count { it.success }
+    val groupedResults = remember(results) {
+        results
+            .groupBy { it.entity.app.packageName }
+            .flatMap { (_, groupResults) ->
+                val failedResult = groupResults.firstOrNull { !it.success }
+                val baseResult = groupResults.find { it.entity.app is AppEntity.BaseEntity }
+                listOfNotNull(failedResult ?: baseResult ?: groupResults.firstOrNull())
+            }
+    }
+    val successes = groupedResults.count { it.success }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = FullScreenHorizontalPadding, vertical = 8.dp),
@@ -532,13 +1773,13 @@ private fun FullScreenResultsContent(results: List<InstallResult>) {
     ) {
         item {
             Text(
-                text = stringResource(R.string.installer_completed_subtitle, successes, results.size - successes),
+                text = stringResource(R.string.installer_completed_subtitle, successes, groupedResults.size - successes),
                 style = COUITheme.textStyles.headlineS,
                 color = COUITheme.colorScheme.labelPrimary,
             )
         }
         // Mixed batches must retain individual failures rather than show a generic success.
-        items(results) { result ->
+        items(groupedResults, key = { it.entity.app.packageName + it.entity.app.name }) { result ->
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     val app = result.entity.app

@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -28,20 +30,24 @@ import com.rosan.installer.ui.util.isGestureNavigation
 import io.github.suqi8.coui.kmp.basic.Card
 
 @Composable
-fun PrepareSettingsContent(viewModel: InstallerViewModel) {
+fun PrepareSettingsContent(
+    viewModel: InstallerViewModel,
+    backHandlerEnabled: Boolean = true,
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val settings = uiState.viewSettings
 
     // Read directly from the reactive Single Source of Truth
     val config = uiState.config
 
-    BackHandler {
+    BackHandler(enabled = backHandlerEnabled) {
         viewModel.dispatch(InstallerViewAction.HideCouiSheetRightActionSettings)
     }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
             .padding(bottom = if (isGestureNavigation()) 24.dp else 0.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

@@ -45,6 +45,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rosan.installer.R
 import com.rosan.installer.ui.icons.AppCOUIIcons
+import com.rosan.installer.ui.page.coui.widgets.CouiSheetPopupHost
+import com.rosan.installer.ui.page.coui.widgets.CouiSheetPopupProvider
 import com.rosan.installer.ui.page.main.installer.InstallerViewModel
 import com.rosan.installer.ui.theme.ProvideCouiMaterialBackdrop
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
@@ -81,7 +83,8 @@ fun CouiPositionFullScreen(
     isClosing: Boolean,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    onMore: (() -> Unit)? = null,
+    backEnabled: Boolean = true,
+    endAction: (@Composable () -> Unit)? = null,
     useBlur: Boolean = false,
     bottomBar: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
@@ -91,21 +94,18 @@ fun CouiPositionFullScreen(
     // The only backdrop source on this page. Null when blur is disabled by the user or the
     // runtime cannot support it, which is what every material surface below degrades on.
     val backdrop = if (inspectionMode) null else rememberCouiBlurBackdrop(useBlur)
-    // Opaque from the first frame: the activity behind us may still be showing the sheet that the
-    // full-screen mode replaces, and a transparent first frame would flash it.
-    val uiAlpha = remember { Animatable(1f) }
+    // Start transparent at runtime for symmetric enter fade; previews start opaque.
+    val uiAlpha = remember { Animatable(if (inspectionMode) 1f else 0f) }
     LaunchedEffect(isClosing) {
-        if (isClosing) {
-            uiAlpha.animateTo(
-                targetValue = 0f,
-                animationSpec = tween(InstallerViewModel.FullscreenCloseFadeOutMs.toInt()),
-            )
-        }
+        uiAlpha.animateTo(
+            targetValue = if (isClosing) 0f else 1f,
+            animationSpec = tween(InstallerViewModel.FullscreenCloseFadeOutMs.toInt()),
+        )
     }
 
-    // Consume system back even when navigation is disabled during installation.
+    // Always consume system back while fullscreen is mounted; invoke onBack only when allowed.
     BackHandler {
-        if (!isClosing) onBack()
+        if (!isClosing && backEnabled) onBack()
     }
 
     CompositionLocalProvider(
@@ -114,77 +114,83 @@ fun CouiPositionFullScreen(
         // exists. COUI keeps its opaque fill on its own when the local switch is off.
         LocalCOUIMaterialEffectEnabled provides (backdrop != null),
     ) {
-        Box(
-            modifier = modifier
-                .fillMaxSize()
-                .graphicsLayer { alpha = uiAlpha.value }
-                .onPreviewKeyEvent { isClosing }
-                .then(
-                    if (isClosing) {
-                        Modifier
-                            .clearAndSetSemantics { }
-                            .pointerInput(Unit) {
-                                awaitPointerEventScope {
-                                    while (true) {
-                                        awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+        CouiSheetPopupProvider(backdrop) {
+            Box(
+                modifier = modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = uiAlpha.value }
+                    .onPreviewKeyEvent { isClosing }
+                    .then(
+                        if (isClosing) {
+                            Modifier
+                                .clearAndSetSemantics { }
+                                .pointerInput(Unit) {
+                                    awaitPointerEventScope {
+                                        while (true) {
+                                            awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+                                        }
                                     }
                                 }
-                            }
-                    } else {
-                        Modifier
-                    },
-                ),
-        ) {
-            // Backing sibling: the opaque page colour plus a static colour wash, and the only
-            // thing recorded into the backdrop. The foreground never samples itself, and the
-            // module log or progress text can update without re-recording the source.
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .then(backdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier),
+                        } else {
+                            Modifier
+                        },
+                    ),
             ) {
-                FullScreenBackgroundWash(base = pageColor)
-            }
-
-            ProvideCouiMaterialBackdrop(backdrop) {
-                Column(
+                // Backing sibling: the opaque page colour plus a static colour wash, and the only
+                // thing recorded into the backdrop. The foreground never samples itself, and the
+                // module log or progress text can update without re-recording the source.
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        // Only the top and the sides are inset here. The bottom is left to the
-                        // page: scrolling content must be able to run under the navigation bar
-                        // (that is what makes it feel immersive) and only the action row needs to
-                        // be lifted above it.
-                        .windowInsetsPadding(
-                            WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
-                        ),
+                        .then(backdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier),
                 ) {
-                    FullScreenTopBar(
-                        title = title,
-                        onBack = onBack,
-                        onMore = onMore,
-                        backEnabled = !isClosing,
-                    )
-                    Box(Modifier.fillMaxWidth().weight(1f)) { content() }
-                    // Only reserved when the page actually has actions. A page without them gets
-                    // the full height and lets its content reach the navigation bar.
-                    Crossfade(
-                        targetState = bottomBar != null,
-                        animationSpec = tween(durationMillis = 180),
-                        label = "FullScreenBottomBar",
-                    ) { visible ->
-                        if (visible) {
-                            Box(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .windowInsetsPadding(
-                                        WindowInsets.navigationBars.only(WindowInsetsSides.Bottom),
-                                    )
-                                    .height(FullScreenBottomBarHeight),
-                            ) {
-                                bottomBar?.invoke()
+                    FullScreenBackgroundWash(base = pageColor)
+                }
+
+                ProvideCouiMaterialBackdrop(backdrop) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            // Only the top and the sides are inset here. The bottom is left to the
+                            // page: scrolling content must be able to run under the navigation bar
+                            // (that is what makes it feel immersive) and only the action row needs to
+                            // be lifted above it.
+                            .windowInsetsPadding(
+                                WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+                            ),
+                    ) {
+                        FullScreenTopBar(
+                            title = title,
+                            onBack = onBack,
+                            backEnabled = backEnabled && !isClosing,
+                            endAction = endAction,
+                        )
+                        Box(Modifier.fillMaxWidth().weight(1f)) { content() }
+                        // Only reserved when the page actually has actions. A page without them gets
+                        // the full height and lets its content reach the navigation bar.
+                        Crossfade(
+                            targetState = bottomBar != null,
+                            animationSpec = tween(durationMillis = 180),
+                            label = "FullScreenBottomBar",
+                        ) { visible ->
+                            if (visible) {
+                                Box(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .windowInsetsPadding(
+                                            WindowInsets.navigationBars.only(WindowInsetsSides.Bottom),
+                                        )
+                                        .height(FullScreenBottomBarHeight),
+                                ) {
+                                    bottomBar?.invoke()
+                                }
                             }
                         }
                     }
+                }
+
+                if (!inspectionMode) {
+                    CouiSheetPopupHost()
                 }
             }
         }
@@ -201,8 +207,8 @@ fun CouiPositionFullScreen(
 private fun FullScreenTopBar(
     title: String,
     onBack: () -> Unit,
-    onMore: (() -> Unit)?,
     backEnabled: Boolean,
+    endAction: (@Composable () -> Unit)?,
 ) {
     Box(Modifier.fillMaxWidth().height(FullScreenTopBarHeight)) {
         Row(
@@ -225,15 +231,8 @@ private fun FullScreenTopBar(
                 )
             }
             Spacer(Modifier.weight(1f))
-            if (onMore != null) {
-                IconButton(onClick = { if (backEnabled) onMore() }, enabled = backEnabled) {
-                    Icon(
-                        imageVector = AppCOUIIcons.More,
-                        contentDescription = stringResource(R.string.installer_settings),
-                        tint = COUITheme.colorScheme.labelPrimary,
-                        modifier = Modifier.size(24.dp),
-                    )
-                }
+            if (endAction != null) {
+                endAction()
             }
         }
         Crossfade(

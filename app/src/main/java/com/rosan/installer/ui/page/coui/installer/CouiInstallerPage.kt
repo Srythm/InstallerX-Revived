@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -51,6 +52,7 @@ import com.rosan.installer.domain.settings.model.preferences.RootMode
 import com.rosan.installer.ui.icons.AppCOUIIcons
 import com.rosan.installer.ui.page.coui.installer.components.AppInfoState
 import com.rosan.installer.ui.page.coui.installer.components.rememberAppInfoState
+import com.rosan.installer.ui.page.coui.installer.fullscreen.CouiFullScreenInstaller
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.InstallChoiceContent
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.InstallCompletedContent
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.InstallConfirmContent
@@ -125,6 +127,7 @@ fun CouiInstallerPage(
     // Owned by the ViewModel, not by this composition: it flips before the
     // session is torn down so the full-screen layer gets a full fade-out window
     // even though the teardown would otherwise remove it from the tree.
+    val isClosingFullscreen by viewModel.isClosingFullscreen.collectAsStateWithLifecycle()
 
     val globalSeedColor = InstallerTheme.seedColor
     val themeMode = InstallerTheme.themeMode
@@ -280,8 +283,41 @@ fun CouiInstallerPage(
             compatStatusBarColor = false,
             useAmoled = useAmoled,
         ) {
-            // The full-screen shell is parked for this release. It stays in the tree so it can be
-            // continued later, but no mode reaches it: the dialog below is the only shell.
+            if (stage is InstallerStage.Ready && !isClosingFullscreen) {
+                return@InstallerCOUITheme
+            }
+
+            val isFullScreenMode = uiState.config.installMode == InstallMode.FullScreen
+            DisposableEffect(viewModel, isFullScreenMode) {
+                viewModel.setFullscreenPresentation(isFullScreenMode)
+                onDispose {
+                    viewModel.setFullscreenPresentation(false)
+                }
+            }
+
+            if (isFullScreenMode) {
+                CouiFullScreenInstaller(
+                    stage = stage,
+                    title = sheetTitle,
+                    appInfo = appInfoState,
+                    selectionMode = selectionMode,
+                    onSelectionModeChange = { selectionMode = it },
+                    onSelectMixedModuleType = { installAsModule ->
+                        preparedFromTypeChoice = true
+                        returnedToTypeChoice = false
+                        viewModel.dispatch(InstallerViewAction.SelectMixedModuleType(installAsModule))
+                    },
+                    onBackToTypeChoice = backToTypeChoice,
+                    isApkChoice = isApkChoice,
+                    preparedFromTypeChoice = preparedFromTypeChoice,
+                    returnedToTypeChoice = returnedToTypeChoice,
+                    isClosing = isClosingFullscreen,
+                    viewModel = viewModel,
+                    session = session,
+                    onClose = { viewModel.dispatch(InstallerViewAction.Close) },
+                )
+                return@InstallerCOUITheme
+            }
 
             // The provider wraps the whole sheet: the title bar builds its actions outside the
             // content slot, and the reboot menu is opened from there.
@@ -803,7 +839,7 @@ fun CouiInstallerPage(
 }
 
 @Composable
-private fun RebootListPopup(
+internal fun RebootListPopup(
     modifier: Modifier = Modifier,
     alignment: PopupPositionProvider.Align = PopupPositionProvider.Align.TopEnd,
     rootMode: RootMode,

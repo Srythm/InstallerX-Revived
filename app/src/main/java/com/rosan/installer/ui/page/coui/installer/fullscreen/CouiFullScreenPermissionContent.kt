@@ -2,6 +2,8 @@
 // Copyright (C) 2026 InstallerX Revived contributors
 package com.rosan.installer.ui.page.coui.installer.fullscreen
 
+import android.content.Context
+import android.content.pm.PermissionInfo
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,9 +15,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.rosan.installer.R
@@ -53,13 +57,36 @@ val SensitivePermissions: Set<String> = setOf(
 
 fun List<String>.sensitiveCount(): Int = count { it in SensitivePermissions }
 
+internal fun isSensitivePermission(context: Context, permission: String, inspectionMode: Boolean): Boolean {
+    if (inspectionMode) return permission in SensitivePermissions
+    return runCatching {
+        val info = context.packageManager.getPermissionInfo(permission, 0)
+        @Suppress("DEPRECATION")
+        (info.protectionLevel and PermissionInfo.PROTECTION_MASK_BASE) == PermissionInfo.PROTECTION_DANGEROUS
+    }.getOrElse {
+        permission in SensitivePermissions
+    }
+}
+
+@Composable
+internal fun rememberSensitivePermissionCount(permissions: List<String>): Int {
+    val context = LocalContext.current
+    val inspectionMode = LocalInspectionMode.current
+    return remember(permissions, inspectionMode) {
+        permissions.count { isSensitivePermission(context, it, inspectionMode) }
+    }
+}
+
 @Composable
 fun CouiFullScreenPermissionContent(
     permissions: List<String>,
     modifier: Modifier = Modifier,
 ) {
-    val sensitive = permissions.filter { it in SensitivePermissions }
-    val normal = permissions.filter { it !in SensitivePermissions }
+    val context = LocalContext.current
+    val inspectionMode = LocalInspectionMode.current
+    val (sensitive, normal) = remember(permissions, inspectionMode) {
+        permissions.partition { isSensitivePermission(context, it, inspectionMode) }
+    }
 
     // The shell leaves the bottom edge alone so the list can run under the navigation bar while
     // scrolling; the tail padding keeps the last row readable once it settles.
@@ -126,12 +153,21 @@ private fun PermissionCard(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = context.getBestPermissionLabel(permission),
-                        style = COUITheme.textStyles.bodyXL,
-                        color = COUITheme.colorScheme.labelPrimary,
+                    Column(
                         modifier = Modifier.weight(1f),
-                    )
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            text = context.getBestPermissionLabel(permission),
+                            style = COUITheme.textStyles.bodyXL,
+                            color = COUITheme.colorScheme.labelPrimary,
+                        )
+                        Text(
+                            text = permission,
+                            style = COUITheme.textStyles.bodyS,
+                            color = COUITheme.colorScheme.labelSecondaryVariant,
+                        )
+                    }
                     if (isSensitive) {
                         Text(
                             text = stringResource(R.string.installer_permission_requires_grant),

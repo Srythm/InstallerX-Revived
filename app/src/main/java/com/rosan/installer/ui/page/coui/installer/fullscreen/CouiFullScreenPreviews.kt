@@ -123,7 +123,7 @@ private fun FullScreenPreview(case: FullScreenPreviewCase) {
             ),
             appInfo = AppInfoState(null, entity.label.orEmpty(), entity.packageName, entity),
             entity = entity,
-            versionName = entity.versionName,
+            versionLine = "${entity.versionName} (${entity.versionCode})",
             sourceLabel = "Files",
             permissions = listOf("android.permission.CAMERA", "android.permission.ACCESS_NETWORK_STATE"),
         )

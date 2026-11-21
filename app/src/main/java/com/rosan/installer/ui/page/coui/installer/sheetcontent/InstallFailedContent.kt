@@ -85,7 +85,7 @@ fun InstallFailedContent(
 }
 
 @Composable
-private fun CouiErrorSuggestions(
+internal fun CouiErrorSuggestions(
     error: Throwable,
     viewModel: InstallerViewModel,
 ) {

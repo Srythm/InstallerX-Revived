@@ -49,7 +49,10 @@ import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
 
 @Composable
-fun InstallExtendedMenuContent(viewModel: InstallerViewModel) {
+fun InstallExtendedMenuContent(
+    viewModel: InstallerViewModel,
+    backHandlerEnabled: Boolean = true,
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     // Read state from aggregated config model
@@ -128,7 +131,7 @@ fun InstallExtendedMenuContent(viewModel: InstallerViewModel) {
             }.toMutableStateList()
         }
 
-    BackHandler {
+    BackHandler(enabled = backHandlerEnabled) {
         viewModel.dispatch(InstallerViewAction.InstallPrepare)
     }
 
