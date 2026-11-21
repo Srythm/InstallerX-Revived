@@ -52,6 +52,7 @@ import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
 fun InstallExtendedMenuContent(
     viewModel: InstallerViewModel,
     backHandlerEnabled: Boolean = true,
+    showBackButton: Boolean = true,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -139,7 +140,16 @@ fun InstallExtendedMenuContent(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(modifier = Modifier.weight(1f, fill = false)) {
+        Box(
+            modifier = if (showBackButton) {
+                Modifier.weight(1f, fill = false)
+            } else {
+                Modifier
+                    .weight(1f, fill = false)
+                    .navigationBarsPadding()
+                    .padding(bottom = 16.dp)
+            },
+        ) {
             ExtendedMenuLazyList(
                 entities = menuEntities,
                 viewModel = viewModel,
@@ -153,20 +163,22 @@ fun InstallExtendedMenuContent(
             )
         }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(top = 24.dp, bottom = if (isGestureNavigation()) 24.dp else 0.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(
-                onClick = { viewModel.dispatch(InstallerViewAction.InstallPrepare) },
-                text = stringResource(R.string.back),
-                colors = ButtonDefaults.textButtonColorsPrimary(),
-                modifier = Modifier.weight(1f),
-            )
+        if (showBackButton) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(top = 24.dp, bottom = if (isGestureNavigation()) 24.dp else 0.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(
+                    onClick = { viewModel.dispatch(InstallerViewAction.InstallPrepare) },
+                    text = stringResource(R.string.back),
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
 }

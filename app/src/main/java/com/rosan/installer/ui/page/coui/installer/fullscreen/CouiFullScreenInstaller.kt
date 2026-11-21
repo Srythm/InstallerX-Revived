@@ -21,8 +21,6 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,22 +47,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -126,16 +119,14 @@ import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import java.text.NumberFormat
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 
 private class FullScreenSlotRef<T>(var value: T)
 
-internal enum class FullScreenSubPage { Main, Permissions, Settings }
+internal enum class FullScreenSubPage { Main, Permissions, Settings, ExtendedMenu }
 
 internal data class FullScreenPage(
     val stage: InstallerStage,
@@ -202,6 +193,7 @@ fun CouiFullScreenInstaller(
     val showPermissions = uiState.showCouiPermissionList
 
     val subPage = when {
+        stage is InstallerStage.InstallExtendedMenu -> FullScreenSubPage.ExtendedMenu
         stage is InstallerStage.InstallPrepare && showSettings -> FullScreenSubPage.Settings
         stage is InstallerStage.InstallPrepare && showPermissions -> FullScreenSubPage.Permissions
         else -> FullScreenSubPage.Main
@@ -384,18 +376,6 @@ fun CouiFullScreenInstaller(
                 }
             }
         },
-        onLongInstall = if (settings.longClickBackgroundInstall) {
-            {
-                if (!viewModel.isClosingFullscreen.value) {
-                    viewModel.dispatch(InstallerViewAction.Install(true))
-                    if (!viewModel.isInstallingModule) {
-                        viewModel.dispatch(InstallerViewAction.Background)
-                    }
-                }
-            }
-        } else {
-            null
-        },
         onOpenApp = {
             if (launchIntent != null && !viewModel.isClosingFullscreen.value) {
                 viewModel.dispatch(InstallerViewAction.PrepareClose)
@@ -461,6 +441,7 @@ fun CouiFullScreenInstaller(
             InstallExtendedMenuContent(
                 viewModel = viewModel,
                 backHandlerEnabled = false,
+                showBackButton = false,
             )
         },
         settingsContent = {
@@ -522,7 +503,6 @@ internal fun CouiFullScreenInstallerContent(
     onBackground: () -> Unit = {},
     onBackToTypeChoice: () -> Unit = {},
     onInstall: () -> Unit = {},
-    onLongInstall: (() -> Unit)? = null,
     onOpenApp: () -> Unit = {},
     onOpenLsposed: () -> Unit = {},
     onOpenInstallOptions: () -> Unit = {},
@@ -548,6 +528,8 @@ internal fun CouiFullScreenInstallerContent(
         FullScreenSubPage.Permissions -> stringResource(R.string.permission_list)
 
         FullScreenSubPage.Settings -> stringResource(R.string.installer_settings)
+
+        FullScreenSubPage.ExtendedMenu -> stringResource(R.string.config_label_install_options)
 
         FullScreenSubPage.Main -> when (stage) {
             is InstallerStage.InstallChoice -> page.title
@@ -609,6 +591,8 @@ internal fun CouiFullScreenInstallerContent(
 
         page.subPage == FullScreenSubPage.Settings -> ({ onAction(InstallerViewAction.HideCouiSheetRightActionSettings) })
 
+        page.subPage == FullScreenSubPage.ExtendedMenu -> ({ onAction(InstallerViewAction.InstallPrepare) })
+
         stage is InstallerStage.Preparing ||
             stage is InstallerStage.InstallWaitingUnknownSource -> onCancel
 
@@ -631,9 +615,7 @@ internal fun CouiFullScreenInstallerContent(
         else -> onClose
     }
 
-    val usesShellBottomBar = isMain &&
-        stage !is InstallerStage.InstallChoice &&
-        stage !is InstallerStage.InstallExtendedMenu
+    val usesShellBottomBar = isMain && stage !is InstallerStage.InstallChoice
 
     val sensitivePermissionCount = rememberSensitivePermissionCount(permissions)
 
@@ -673,7 +655,6 @@ internal fun CouiFullScreenInstallerContent(
                     onBackground = onBackground,
                     onBackToTypeChoice = onBackToTypeChoice,
                     onInstall = onInstall,
-                    onLongInstall = onLongInstall,
                     onOpenApp = onOpenApp,
                     onRequestUnknownSourcePermission = onRequestUnknownSourcePermission,
                     onApproveSession = onApproveSession,
@@ -686,14 +667,8 @@ internal fun CouiFullScreenInstallerContent(
             null
         },
     ) {
-        AnimatedContent(
-            targetState = page.subPage,
-            modifier = Modifier.fillMaxSize(),
-            contentKey = { it },
-            transitionSpec = { subPageTransition() },
-            label = "FullScreenSubPage",
-        ) { subPage ->
-            when (subPage) {
+        val renderSubPage: @Composable (FullScreenSubPage) -> Unit = { targetSubPage ->
+            when (targetSubPage) {
                 FullScreenSubPage.Main -> Column(Modifier.fillMaxSize()) {
                     AnimatedVisibility(
                         visible = headerData != null,
@@ -741,7 +716,6 @@ internal fun CouiFullScreenInstallerContent(
                             onOpenLsposed = onOpenLsposed,
                             onToggleUninstallFlag = onToggleUninstallFlag,
                             choiceContent = choiceContent,
-                            extendedMenuContent = extendedMenuContent,
                             errorSuggestionsContent = errorSuggestionsContent,
                         )
                     }
@@ -754,7 +728,29 @@ internal fun CouiFullScreenInstallerContent(
                 ) {
                     settingsContent()
                 }
+
+                FullScreenSubPage.ExtendedMenu -> Box(
+                    Modifier.fillMaxSize().padding(horizontal = FullScreenHorizontalPadding),
+                ) {
+                    extendedMenuContent()
+                }
             }
+        }
+
+        AnimatedContent(
+            targetState = page.subPage,
+            modifier = Modifier.fillMaxSize().clipToBounds(),
+            contentKey = { it },
+            transitionSpec = { subPageTransition() },
+            label = "FullScreenSubPage",
+        ) { subPage ->
+            val frozen = remember {
+                FullScreenSlotRef<@Composable () -> Unit>({ renderSubPage(subPage) })
+            }
+            if (subPage == page.subPage) {
+                frozen.value = { renderSubPage(subPage) }
+            }
+            frozen.value()
         }
     }
 }
@@ -817,17 +813,26 @@ private fun rememberHeaderDisplay(
 }
 
 private fun AnimatedContentTransitionScope<FullScreenSubPage>.subPageTransition(): ContentTransform = if (targetState != FullScreenSubPage.Main) {
-    slideInHorizontally(colorOsSpring(responseSeconds = 0.32f)) { it } togetherWith
-        slideOutHorizontally(tween(durationMillis = 320)) { -it / 3 }
+    (
+        fadeIn(tween(durationMillis = 220, delayMillis = 60)) +
+            slideInHorizontally(colorOsSpring(responseSeconds = 0.32f)) { it / 4 }
+        ) togetherWith (
+        fadeOut(tween(durationMillis = 120)) +
+            slideOutHorizontally(tween(durationMillis = 180)) { -it / 6 }
+        )
 } else {
-    slideInHorizontally(colorOsSpring(responseSeconds = 0.32f)) { -it / 3 } togetherWith
-        slideOutHorizontally(tween(durationMillis = 320)) { it }
+    (
+        fadeIn(tween(durationMillis = 220, delayMillis = 60)) +
+            slideInHorizontally(colorOsSpring(responseSeconds = 0.32f)) { -it / 6 }
+        ) togetherWith (
+        fadeOut(tween(durationMillis = 120)) +
+            slideOutHorizontally(tween(durationMillis = 180)) { it / 4 }
+        )
 }
 
 private enum class StageBucket {
     Prepare,
     Choice,
-    ExtendedMenu,
     Confirm,
     Module,
     Completed,
@@ -842,8 +847,6 @@ private fun stageBucketOf(stage: InstallerStage): StageBucket = when (stage) {
     is InstallerStage.InstallPrepare -> StageBucket.Prepare
 
     is InstallerStage.InstallChoice -> StageBucket.Choice
-
-    is InstallerStage.InstallExtendedMenu -> StageBucket.ExtendedMenu
 
     is InstallerStage.InstallConfirm -> StageBucket.Confirm
 
@@ -901,7 +904,6 @@ private fun FullScreenStageBody(
     onOpenLsposed: () -> Unit,
     onToggleUninstallFlag: (Int, Boolean) -> Unit,
     choiceContent: @Composable () -> Unit,
-    extendedMenuContent: @Composable () -> Unit,
     errorSuggestionsContent: @Composable (Throwable) -> Unit,
 ) {
     val activeBucket = stageBucketOf(page.stage)
@@ -937,14 +939,6 @@ private fun FullScreenStageBody(
                 contentAlignment = Alignment.Center,
             ) {
                 choiceContent()
-            }
-
-            is InstallerStage.InstallExtendedMenu -> Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = FullScreenHorizontalPadding),
-            ) {
-                extendedMenuContent()
             }
 
             is InstallerStage.InstallConfirm -> FullScreenConfirmBody(stage = stage)
@@ -1246,7 +1240,6 @@ private fun FullScreenActionRow(
     onBackground: () -> Unit,
     onBackToTypeChoice: () -> Unit,
     onInstall: () -> Unit,
-    onLongInstall: (() -> Unit)?,
     onOpenApp: () -> Unit,
     onRequestUnknownSourcePermission: () -> Unit,
     onApproveSession: (Int, Boolean) -> Unit,
@@ -1273,7 +1266,6 @@ private fun FullScreenActionRow(
                     PrimaryAction(
                         text = stringResource(primaryButtonRes),
                         onClick = onInstall,
-                        onLongClick = onLongInstall,
                         enabled = enabled && canInstall,
                     )
                 }
@@ -1387,58 +1379,15 @@ private fun RowScope.PrimaryAction(
     text: String,
     onClick: () -> Unit,
     enabled: Boolean,
-    onLongClick: (() -> Unit)? = null,
 ) {
-    val viewConfiguration = LocalViewConfiguration.current
-    val hapticFeedback = LocalHapticFeedback.current
-    var hasLongPressed by remember { mutableStateOf(false) }
-
-    Box(
-        modifier = Modifier
-            .weight(1f)
-            .then(
-                if (enabled && onLongClick != null) {
-                    Modifier.pointerInput(onLongClick) {
-                        val timeoutMs = viewConfiguration.longPressTimeoutMillis
-                        val pointerContext = currentCoroutineContext()
-                        awaitEachGesture {
-                            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                            hasLongPressed = false
-                            val up = withTimeoutOrNull(timeoutMs) {
-                                while (true) {
-                                    val event = awaitPointerEvent(PointerEventPass.Initial)
-                                    val change = event.changes.firstOrNull { it.id == down.id }
-                                    if (change == null || !change.pressed) {
-                                        return@withTimeoutOrNull change
-                                    }
-                                }
-                                @Suppress("UNREACHABLE_CODE")
-                                null
-                            }
-                            if (up == null && pointerContext.isActive) {
-                                hasLongPressed = true
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onLongClick()
-                            }
-                        }
-                    }
-                } else {
-                    Modifier
-                },
-            ),
+    Button(
+        onClick = { if (enabled) onClick() },
+        enabled = enabled,
+        modifier = Modifier.weight(1f),
+        colors = ButtonDefaults.buttonColorsPrimary(),
+        insideMargin = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
     ) {
-        Button(
-            onClick = {
-                if (enabled && !hasLongPressed) onClick()
-                hasLongPressed = false
-            },
-            enabled = enabled,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColorsPrimary(),
-            insideMargin = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-        ) {
-            Text(text = text, style = COUITheme.textStyles.buttonL, maxLines = 1)
-        }
+        Text(text = text, style = COUITheme.textStyles.buttonL, maxLines = 1)
     }
 }
 

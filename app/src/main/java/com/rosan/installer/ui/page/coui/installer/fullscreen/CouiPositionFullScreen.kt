@@ -3,9 +3,14 @@
 package com.rosan.installer.ui.page.coui.installer.fullscreen
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +30,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
@@ -168,12 +174,18 @@ fun CouiPositionFullScreen(
                         Box(Modifier.fillMaxWidth().weight(1f)) { content() }
                         // Only reserved when the page actually has actions. A page without them gets
                         // the full height and lets its content reach the navigation bar.
-                        Crossfade(
-                            targetState = bottomBar != null,
-                            animationSpec = tween(durationMillis = 180),
-                            label = "FullScreenBottomBar",
-                        ) { visible ->
-                            if (visible) {
+                        val lastBottomBar = remember { mutableStateOf(bottomBar) }
+                        if (bottomBar != null) {
+                            lastBottomBar.value = bottomBar
+                        }
+                        AnimatedVisibility(
+                            visible = bottomBar != null,
+                            enter = fadeIn(tween(durationMillis = 180)) + expandVertically(tween(durationMillis = 220)),
+                            exit = fadeOut(tween(durationMillis = 120)) + shrinkVertically(tween(durationMillis = 200)),
+                        ) {
+                            CompositionLocalProvider(
+                                LocalFullScreenActionsEnabled provides (bottomBar != null && !isClosing),
+                            ) {
                                 Box(
                                     Modifier
                                         .fillMaxWidth()
@@ -182,7 +194,7 @@ fun CouiPositionFullScreen(
                                         )
                                         .height(FullScreenBottomBarHeight),
                                 ) {
-                                    bottomBar?.invoke()
+                                    lastBottomBar.value?.invoke()
                                 }
                             }
                         }
@@ -212,7 +224,9 @@ private fun FullScreenTopBar(
 ) {
     Box(Modifier.fillMaxWidth().height(FullScreenTopBarHeight)) {
         Row(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = FullScreenHorizontalPadding),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(
@@ -231,8 +245,16 @@ private fun FullScreenTopBar(
                 )
             }
             Spacer(Modifier.weight(1f))
+            val lastEndAction = remember { mutableStateOf(endAction) }
             if (endAction != null) {
-                endAction()
+                lastEndAction.value = endAction
+            }
+            AnimatedVisibility(
+                visible = endAction != null,
+                enter = fadeIn(tween(durationMillis = 180)),
+                exit = fadeOut(tween(durationMillis = 120)),
+            ) {
+                lastEndAction.value?.invoke()
             }
         }
         Crossfade(

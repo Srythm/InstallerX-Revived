@@ -517,7 +517,7 @@ fun installPrepareDialog(
                         DialogButton(
                             text = stringResource(buttonTextId),
                             weight = 1f,
-                            onLongClick = if (settings.longClickBackgroundInstall) {
+                            onLongClick = if (!isFullScreen && settings.longClickBackgroundInstall) {
                                 {
                                     // Trigger install directly
                                     viewModel.dispatch(InstallerViewAction.Install(true))

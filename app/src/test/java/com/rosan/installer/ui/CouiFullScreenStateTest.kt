@@ -43,9 +43,12 @@ class CouiFullScreenStateTest {
         val main = FullScreenPage(InstallerStage.InstallPrepare, "Prepare")
         val settings = main.copy(subPage = FullScreenSubPage.Settings)
         val permissions = main.copy(subPage = FullScreenSubPage.Permissions)
+        val extendedMenu = main.copy(stage = InstallerStage.InstallExtendedMenu, subPage = FullScreenSubPage.ExtendedMenu)
         val success = main.copy(stage = InstallerStage.InstallSuccess)
         assertNotEquals(main.key, settings.key)
         assertNotEquals(settings.key, permissions.key)
+        assertNotEquals(main.key, extendedMenu.key)
+        assertNotEquals(settings.key, extendedMenu.key)
         assertNotEquals(main.key, success.key)
     }
 
