@@ -168,7 +168,10 @@ internal data class FullScreenPage(
     val subPage: FullScreenSubPage = FullScreenSubPage.Main,
     val progress: Float? = null,
     val error: Throwable? = null,
-)
+) {
+    // Never key by progress, log contents or the module's finished flag.
+    val key: Any get() = if (subPage == FullScreenSubPage.Main) stage.javaClass else subPage
+}
 
 private data class FullScreenLiveSnapshot(
     val page: FullScreenPage,
