@@ -280,76 +280,89 @@ private fun FullScreenTopBar(
     endActionKey: Any?,
 ) {
     Box(Modifier.fillMaxWidth().height(FullScreenTopBarHeight)) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = FullScreenHorizontalPadding),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            val backTint by animateColorAsState(
-                targetValue = if (backEnabled) {
-                    COUITheme.colorScheme.labelPrimary
-                } else {
-                    COUITheme.colorScheme.disabledNeutral
-                },
-                animationSpec = tween(durationMillis = 180),
-                label = "FullScreenBackTint",
-            )
-            IconButton(
-                onClick = { if (backEnabled) onBack() },
-                enabled = backEnabled,
-            ) {
-                Icon(
-                    imageVector = AppCOUIIcons.Back,
-                    contentDescription = stringResource(R.string.back),
-                    tint = backTint,
-                    modifier = Modifier.size(24.dp),
-                )
-            }
-            Spacer(Modifier.weight(1f))
-            AnimatedContent(
-                targetState = endActionKey,
-                contentAlignment = Alignment.Center,
-                transitionSpec = {
-                    (
-                        (
-                            fadeIn(tween(durationMillis = 200)) +
-                                scaleIn(tween(durationMillis = 200), initialScale = 0.82f)
-                            ) togetherWith (
-                            fadeOut(tween(durationMillis = 140)) +
-                                scaleOut(tween(durationMillis = 140), targetScale = 0.82f)
-                            )
-                        ).using(SizeTransform(clip = false))
-                },
-                label = "FullScreenEndAction",
-            ) { slotKey ->
-                val isSlotActive = slotKey == endActionKey
-                val frozenAction = remember { FullScreenSlotRef(endAction) }
-                if (isSlotActive) {
-                    frozenAction.value = endAction
-                }
-                val actionContent = frozenAction.value
-                if (actionContent != null) {
-                    Box(
-                        modifier = if (!isSlotActive) {
-                            Modifier
-                                .clearAndSetSemantics { }
-                                .pointerInput(Unit) {
-                                    awaitPointerEventScope {
-                                        while (true) {
-                                            awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
-                                        }
-                                    }
-                                }
+        CompositionLocalProvider(LocalCOUIMaterialEffectEnabled provides false) {
+            ProvideCouiMaterialBackdrop(null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(
+                            start = FullScreenHorizontalPadding,
+                            end = FullScreenHorizontalPadding - 8.dp,
+                        ),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    val backTint by animateColorAsState(
+                        targetValue = if (backEnabled) {
+                            COUITheme.colorScheme.labelPrimary
                         } else {
-                            Modifier
+                            COUITheme.colorScheme.disabledNeutral
                         },
-                        contentAlignment = Alignment.Center,
+                        animationSpec = tween(durationMillis = 180),
+                        label = "FullScreenBackTint",
+                    )
+                    IconButton(
+                        onClick = { if (backEnabled) onBack() },
+                        enabled = backEnabled,
                     ) {
-                        actionContent()
+                        Icon(
+                            imageVector = AppCOUIIcons.Back,
+                            contentDescription = stringResource(R.string.back),
+                            tint = backTint,
+                            modifier = Modifier.size(24.dp),
+                        )
                     }
-                } else {
-                    Spacer(Modifier.size(40.dp))
+                    Spacer(Modifier.weight(1f))
+                    AnimatedContent(
+                        targetState = endActionKey,
+                        contentAlignment = Alignment.Center,
+                        transitionSpec = {
+                            (
+                                (
+                                    fadeIn(tween(durationMillis = 200)) +
+                                        scaleIn(tween(durationMillis = 200), initialScale = 0.82f)
+                                    ) togetherWith (
+                                    fadeOut(tween(durationMillis = 140)) +
+                                        scaleOut(tween(durationMillis = 140), targetScale = 0.82f)
+                                    )
+                                ).using(SizeTransform(clip = false))
+                        },
+                        label = "FullScreenEndAction",
+                    ) { slotKey ->
+                        val isSlotActive = slotKey == endActionKey
+                        val frozenAction = remember { FullScreenSlotRef(endAction) }
+                        if (isSlotActive) {
+                            frozenAction.value = endAction
+                        }
+                        val actionContent = frozenAction.value
+                        if (actionContent != null) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(8.dp)
+                                    .then(
+                                        if (!isSlotActive) {
+                                            Modifier
+                                                .clearAndSetSemantics { }
+                                                .pointerInput(Unit) {
+                                                    awaitPointerEventScope {
+                                                        while (true) {
+                                                            awaitPointerEvent(PointerEventPass.Initial)
+                                                                .changes
+                                                                .forEach { it.consume() }
+                                                        }
+                                                    }
+                                                }
+                                        } else {
+                                            Modifier
+                                        },
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                actionContent()
+                            }
+                        } else {
+                            Spacer(Modifier.size(56.dp))
+                        }
+                    }
                 }
             }
         }
