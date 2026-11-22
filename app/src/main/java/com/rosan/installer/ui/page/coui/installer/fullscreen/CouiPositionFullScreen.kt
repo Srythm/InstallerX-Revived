@@ -85,8 +85,6 @@ internal val LocalFullScreenActionsEnabled = staticCompositionLocalOf { true }
 
 internal val LocalFullScreenBottomBarPadding = staticCompositionLocalOf { 0.dp }
 
-private class SlotHolder<T>(var value: T)
-
 /**
  * The full-screen installer surface.
  *
@@ -200,7 +198,7 @@ fun CouiPositionFullScreen(
                         )
                         val bottomBarReservedPadding =
                             FullScreenBottomBarHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                        val lastBottomBar = remember { SlotHolder(bottomBar) }
+                        val lastBottomBar = remember { FullScreenSlotRef(bottomBar) }
                         if (bottomBar != null) {
                             lastBottomBar.value = bottomBar
                         }
@@ -331,7 +329,7 @@ private fun FullScreenTopBar(
                 },
             ) { slotKey ->
                 val isSlotActive = slotKey == endActionKey
-                val frozenAction = remember { SlotHolder(endAction) }
+                val frozenAction = remember { FullScreenSlotRef(endAction) }
                 if (isSlotActive) {
                     frozenAction.value = endAction
                 }

@@ -129,7 +129,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 
-private class FullScreenSlotRef<T>(var value: T)
+internal class FullScreenSlotRef<T>(var value: T)
 
 @Composable
 private fun TransitionSlotGuard(

@@ -47,8 +47,6 @@ private val MarkSize = 92.dp
 private val RingDiameter = 76.dp
 private val RingStroke = 6.dp
 
-private class SlotHolder<T>(var value: T)
-
 private data class StatusIconSnapshot(
     val icon: ImageVector,
     val tint: Color,
@@ -133,7 +131,7 @@ fun CouiFullScreenStatusContent(
                     )
                 }
             }
-            val lastProgressText = remember { SlotHolder(progressText) }
+            val lastProgressText = remember { FullScreenSlotRef(progressText) }
             if (!progressText.isNullOrBlank()) {
                 lastProgressText.value = progressText
             }
@@ -152,7 +150,7 @@ fun CouiFullScreenStatusContent(
                     )
                 }
             }
-            val lastExtraContent = remember { SlotHolder(extraContent) }
+            val lastExtraContent = remember { FullScreenSlotRef(extraContent) }
             if (extraContent != null) {
                 lastExtraContent.value = extraContent
             }
@@ -186,14 +184,14 @@ private fun StatusMark(
     iconTint: Color,
     haloColor: Color,
 ) {
-    val lastRingProgress = remember { SlotHolder(progress) }
+    val lastRingProgress = remember { FullScreenSlotRef(progress) }
     if (icon == null) {
         lastRingProgress.value = progress
     }
     val effectiveProgress = if (icon == null) progress else lastRingProgress.value
 
     val lastIcon = remember {
-        SlotHolder(icon?.let { StatusIconSnapshot(it, iconTint, haloColor) })
+        FullScreenSlotRef(icon?.let { StatusIconSnapshot(it, iconTint, haloColor) })
     }
     if (icon != null) {
         lastIcon.value = StatusIconSnapshot(icon, iconTint, haloColor)
