@@ -4,6 +4,7 @@ package com.rosan.installer.ui.page.coui.installer.fullscreen
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -134,7 +135,6 @@ fun CouiPositionFullScreen(
     }
 
     CompositionLocalProvider(
-        LocalFullScreenActionsEnabled provides !isClosing,
         // Material (edge light, inner shadow, touch spotlight) only when an internal source
         // exists. COUI keeps its opaque fill on its own when the local switch is off.
         LocalCOUIMaterialEffectEnabled provides (backdrop != null),
@@ -219,44 +219,40 @@ fun CouiPositionFullScreen(
                             // changes content height or shifts the page vertically mid-transition.
                             if (bottomBarAlpha > 0.01f) {
                                 val bottomBarActive = bottomBar != null && !isClosing
-                                CompositionLocalProvider(
-                                    LocalFullScreenActionsEnabled provides bottomBarActive,
-                                ) {
-                                    Box(
-                                        Modifier
-                                            .align(Alignment.BottomCenter)
-                                            .fillMaxWidth()
-                                            .graphicsLayer {
-                                                alpha = bottomBarAlpha
-                                                translationY = (1f - bottomBarAlpha) * 16.dp.toPx()
-                                                compositingStrategy = if (bottomBarAlpha < 1f) {
-                                                    CompositingStrategy.Offscreen
-                                                } else {
-                                                    CompositingStrategy.Auto
-                                                }
+                                Box(
+                                    Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .fillMaxWidth()
+                                        .graphicsLayer {
+                                            alpha = bottomBarAlpha
+                                            translationY = (1f - bottomBarAlpha) * 16.dp.toPx()
+                                            compositingStrategy = if (bottomBarAlpha < 1f) {
+                                                CompositingStrategy.Offscreen
+                                            } else {
+                                                CompositingStrategy.Auto
                                             }
-                                            .then(
-                                                if (!bottomBarActive) {
-                                                    Modifier
-                                                        .clearAndSetSemantics { }
-                                                        .pointerInput(Unit) {
-                                                            awaitPointerEventScope {
-                                                                while (true) {
-                                                                    awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
-                                                                }
+                                        }
+                                        .then(
+                                            if (!bottomBarActive) {
+                                                Modifier
+                                                    .clearAndSetSemantics { }
+                                                    .pointerInput(Unit) {
+                                                        awaitPointerEventScope {
+                                                            while (true) {
+                                                                awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
                                                             }
                                                         }
-                                                } else {
-                                                    Modifier
-                                                },
-                                            )
-                                            .windowInsetsPadding(
-                                                WindowInsets.navigationBars.only(WindowInsetsSides.Bottom),
-                                            )
-                                            .height(FullScreenBottomBarHeight),
-                                    ) {
-                                        lastBottomBar.value?.invoke()
-                                    }
+                                                    }
+                                            } else {
+                                                Modifier
+                                            },
+                                        )
+                                        .windowInsetsPadding(
+                                            WindowInsets.navigationBars.only(WindowInsetsSides.Bottom),
+                                        )
+                                        .height(FullScreenBottomBarHeight),
+                                ) {
+                                    lastBottomBar.value?.invoke()
                                 }
                             }
                         }
@@ -292,6 +288,15 @@ private fun FullScreenTopBar(
                 .padding(horizontal = FullScreenHorizontalPadding),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            val backTint by animateColorAsState(
+                targetValue = if (backEnabled) {
+                    COUITheme.colorScheme.labelPrimary
+                } else {
+                    COUITheme.colorScheme.disabledNeutral
+                },
+                animationSpec = tween(durationMillis = 180),
+                label = "FullScreenBackTint",
+            )
             IconButton(
                 onClick = { if (backEnabled) onBack() },
                 enabled = backEnabled,
@@ -299,11 +304,7 @@ private fun FullScreenTopBar(
                 Icon(
                     imageVector = AppCOUIIcons.Back,
                     contentDescription = stringResource(R.string.back),
-                    tint = if (backEnabled) {
-                        COUITheme.colorScheme.labelPrimary
-                    } else {
-                        COUITheme.colorScheme.disabledNeutral
-                    },
+                    tint = backTint,
                     modifier = Modifier.size(24.dp),
                 )
             }
@@ -336,26 +337,23 @@ private fun FullScreenTopBar(
                 }
                 val actionContent = frozenAction.value
                 if (actionContent != null) {
-                    val actionsEnabled = LocalFullScreenActionsEnabled.current && isSlotActive
-                    CompositionLocalProvider(LocalFullScreenActionsEnabled provides actionsEnabled) {
-                        Box(
-                            modifier = if (!isSlotActive) {
-                                Modifier
-                                    .clearAndSetSemantics { }
-                                    .pointerInput(Unit) {
-                                        awaitPointerEventScope {
-                                            while (true) {
-                                                awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
-                                            }
+                    Box(
+                        modifier = if (!isSlotActive) {
+                            Modifier
+                                .clearAndSetSemantics { }
+                                .pointerInput(Unit) {
+                                    awaitPointerEventScope {
+                                        while (true) {
+                                            awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
                                         }
                                     }
-                            } else {
-                                Modifier
-                            },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            actionContent()
-                        }
+                                }
+                        } else {
+                            Modifier
+                        },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        actionContent()
                     }
                 }
             }

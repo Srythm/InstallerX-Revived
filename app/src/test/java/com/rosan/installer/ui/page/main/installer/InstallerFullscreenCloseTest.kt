@@ -4,6 +4,7 @@ package com.rosan.installer.ui.page.main.installer
 
 import androidx.lifecycle.viewModelScope
 import com.rosan.installer.data.session.repository.InstallerSessionRepositoryImpl
+import com.rosan.installer.data.session.repository.InstallerSessionRepositoryImpl.Action
 import com.rosan.installer.domain.engine.usecase.GetAppIconColorUseCase
 import com.rosan.installer.domain.engine.usecase.GetAppIconUseCase
 import com.rosan.installer.domain.engine.usecase.GetAppLabelUseCase
@@ -17,6 +18,7 @@ import kotlin.test.assertTrue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -122,7 +124,54 @@ class InstallerFullscreenCloseTest {
         assertFalse(session2.closeRequested.value)
     }
 
-    private fun fixture(block: Harness.(TestScope) -> Unit) = runTest {
+    @Test
+    fun `fullscreen cancel defers session cancel until fade out finishes`() = fixture { scope ->
+        val actions = mutableListOf<Action>()
+        val actionJob = scope.launch(UnconfinedTestDispatcher(scope.testScheduler)) {
+            session.action.collect { actions += it }
+        }
+        try {
+            vm.setFullscreenPresentation(true)
+            vm.dispatch(InstallerViewAction.Cancel)
+            scope.runCurrent()
+
+            assertTrue(vm.isClosingFullscreen.value)
+            assertTrue(vm.uiState.value.isClosingFullscreen)
+            assertTrue(session.closeRequested.value)
+            assertFalse(Action.Cancel in actions)
+            assertEquals(0, onCloseCalls)
+
+            vm.completeFullscreenClose()
+            scope.runCurrent()
+
+            assertTrue(Action.Cancel in actions)
+            assertFalse(vm.isClosingFullscreen.value)
+            assertFalse(vm.uiState.value.isClosingFullscreen)
+        } finally {
+            actionJob.cancel()
+        }
+    }
+
+    @Test
+    fun `fullscreen background defers session background until fade out finishes`() = fixture { scope ->
+        vm.setFullscreenPresentation(true)
+        vm.dispatch(InstallerViewAction.Background)
+        scope.runCurrent()
+
+        assertTrue(vm.isClosingFullscreen.value)
+        assertTrue(vm.uiState.value.isClosingFullscreen)
+        assertFalse(session.closeRequested.value)
+        assertFalse(session.background.first())
+
+        vm.completeFullscreenClose()
+        scope.runCurrent()
+
+        assertTrue(session.background.first())
+        assertFalse(vm.isClosingFullscreen.value)
+        assertFalse(vm.uiState.value.isClosingFullscreen)
+    }
+
+    private fun fixture(block: suspend Harness.(TestScope) -> Unit) = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val harness = Harness()
         val subscription = launch(UnconfinedTestDispatcher(testScheduler)) {

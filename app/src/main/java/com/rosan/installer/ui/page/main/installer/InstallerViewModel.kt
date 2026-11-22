@@ -151,7 +151,14 @@ class InstallerViewModel(
     private var autoInstallJob: Job? = null
     private var fullscreenCloseJob: Job? = null
     private var closingFullscreenSession: InstallerSessionRepository? = null
+    private var pendingFullscreenExitAction: FullscreenExitAction? = null
     private var isFullscreenPresentationActive = false
+
+    private enum class FullscreenExitAction {
+        Close,
+        Cancel,
+        Background,
+    }
     private val settingsLoadingJob: Job
     private var collectRepoJob: Job? = null
     private var unknownSourcePermissionLabelPackageName: String? = null
@@ -203,7 +210,13 @@ class InstallerViewModel(
                 }
             }
 
-            is InstallerViewAction.Cancel -> cancel()
+            is InstallerViewAction.Cancel -> {
+                if (isFullscreenPresentationActive) {
+                    requestFullscreenExit(FullscreenExitAction.Cancel)
+                } else {
+                    cancel()
+                }
+            }
 
             is InstallerViewAction.Analyse -> analyse()
 
@@ -228,7 +241,13 @@ class InstallerViewModel(
 
             is InstallerViewAction.RequestUnknownSourcePermission -> requestUnknownSourcePermission()
 
-            is InstallerViewAction.Background -> background()
+            is InstallerViewAction.Background -> {
+                if (isFullscreenPresentationActive) {
+                    requestFullscreenExit(FullscreenExitAction.Background)
+                } else {
+                    background()
+                }
+            }
 
             is InstallerViewAction.Reboot -> session.reboot(action.reason)
 
@@ -428,6 +447,7 @@ class InstallerViewModel(
             fullscreenCloseJob?.cancel()
             fullscreenCloseJob = null
             closingFullscreenSession = null
+            pendingFullscreenExitAction = null
             _isClosingFullscreen.value = false
             packageSelectionsBeforeClear.clear()
             moduleInstallStarted = false
@@ -755,6 +775,7 @@ class InstallerViewModel(
         fullscreenCloseJob?.cancel()
         fullscreenCloseJob = null
         closingFullscreenSession = null
+        pendingFullscreenExitAction = null
         packageSelectionsBeforeClear.clear()
         autoInstallJob?.cancel()
         collectRepoJob?.cancel()
@@ -780,59 +801,46 @@ class InstallerViewModel(
     }
 
     // ---------------------------------------------------------------------
-    // Fullscreen close orchestration
+    // Fullscreen close / cancel / background orchestration
     // ---------------------------------------------------------------------
     //
-    // In fullscreen InstallMode, the install UI has a "real app" feel: the
-    // user presses back and the whole install layer fades out before the
-    // activity disappears. The fade-out is driven by [PositionFullScreen]
-    // (which animates a layer alpha from 1f to 0f), but the *final* teardown
-    // — closing the session and resetting [stage] to [InstallerStage.Ready]
-    // so the [PositionFullScreen] composable leaves composition — must
-    // happen only AFTER the fade-out completes.
-    //
-    // If we closed the session synchronously, the stage would flip to
-    // [InstallerStage.Ready] immediately, [PositionFullScreen] would leave
-    // composition at t=0, and any fade-out coroutine launched from a
-    // composition-bound scope would be cancelled before it had a chance to
-    // run — the user would see the install UI "snap" away.
-    //
-    // [requestFullscreenClose] therefore:
-    //   1. marks the session as closing so Activity.onStop cannot move it
-    //      into background mode during the exit animation,
-    //   2. flips [_isClosingFullscreen] and `uiState.isClosingFullscreen` to true
-    //      so the fullscreen shell drives its fade-out,
-    //   3. waits for [completeFullscreenClose] once the exit animation finishes,
-    //      with [FullscreenCloseFallbackTimeoutMs] as a safety timeout if the
-    //      animation callback never arrives.
+    // In fullscreen InstallMode, the install UI has a "real app" feel: exiting
+    // fades the whole install layer out before the session tears down or moves
+    // to background. The fade-out is driven by [PositionFullScreen] /
+    // [CouiPositionFullScreen] (alpha 1 -> 0), and final teardown / cancel /
+    // background commit waits for [completeFullscreenClose] (with a fallback
+    // timeout if no animation callback arrives).
 
     private val _isClosingFullscreen = MutableStateFlow(false)
     val isClosingFullscreen: StateFlow<Boolean> = _isClosingFullscreen.asStateFlow()
 
     /**
-     * Begin the fullscreen exit sequence: drive the install UI's fade-out
-     * animation, then tear down when [completeFullscreenClose] is reported or
-     * after [FullscreenCloseFallbackTimeoutMs] if no UI callback arrives.
-     * Idempotent — repeated calls while a fade-out is already in progress
-     * are ignored.
+     * Begin the fullscreen exit sequence for a Close action: fade out, then close.
+     * Idempotent — repeated calls while a fade-out is already in progress are ignored.
      */
     fun requestFullscreenClose() {
+        requestFullscreenExit(FullscreenExitAction.Close)
+    }
+
+    private fun requestFullscreenExit(action: FullscreenExitAction) {
         if (_isClosingFullscreen.value) return
         val closingSession = session
-        closingSession.prepareClose()
+        if (action != FullscreenExitAction.Background) {
+            closingSession.prepareClose()
+        }
+        if (action == FullscreenExitAction.Cancel) {
+            autoInstallJob?.cancel()
+            iconJobs.values.forEach { it.cancel() }
+            iconJobs.clear()
+        }
         closingFullscreenSession = closingSession
+        pendingFullscreenExitAction = action
         _isClosingFullscreen.value = true
         _localState.update { it.copy(isClosingFullscreen = true) }
         fullscreenCloseJob?.cancel()
         fullscreenCloseJob = viewModelScope.launch {
             delay(FullscreenCloseFallbackTimeoutMs)
-            if (this@InstallerViewModel.session === closingSession) {
-                close()
-            } else {
-                closingFullscreenSession = null
-                _isClosingFullscreen.value = false
-                _localState.update { it.copy(isClosingFullscreen = false) }
-            }
+            finishFullscreenExit(closingSession, action)
         }
     }
 
@@ -841,14 +849,54 @@ class InstallerViewModel(
      */
     fun completeFullscreenClose() {
         if (!_isClosingFullscreen.value) return
-        if (this.session === closingFullscreenSession) {
-            close()
-        } else {
+        val closingSession = closingFullscreenSession ?: return
+        val action = pendingFullscreenExitAction ?: FullscreenExitAction.Close
+        finishFullscreenExit(closingSession, action)
+    }
+
+    private fun finishFullscreenExit(
+        closingSession: InstallerSessionRepository,
+        action: FullscreenExitAction,
+    ) {
+        if (this.session !== closingSession) {
             fullscreenCloseJob?.cancel()
             fullscreenCloseJob = null
             closingFullscreenSession = null
-            _isClosingFullscreen.value = false
+            pendingFullscreenExitAction = null
             _localState.update { it.copy(isClosingFullscreen = false) }
+            _isClosingFullscreen.value = false
+            return
+        }
+        when (action) {
+            FullscreenExitAction.Close -> close()
+
+            FullscreenExitAction.Cancel -> {
+                fullscreenCloseJob?.cancel()
+                fullscreenCloseJob = null
+                closingFullscreenSession = null
+                pendingFullscreenExitAction = null
+                cancel()
+                _localState.update {
+                    it.copy(
+                        currentPackageName = null,
+                        uiUninstallInfo = null,
+                        stage = InstallerStage.Ready,
+                        mmzSelectionMode = MmzSelectionMode.INITIAL_CHOICE,
+                        isClosingFullscreen = false,
+                    )
+                }
+                _isClosingFullscreen.value = false
+            }
+
+            FullscreenExitAction.Background -> {
+                fullscreenCloseJob?.cancel()
+                fullscreenCloseJob = null
+                closingFullscreenSession = null
+                pendingFullscreenExitAction = null
+                background()
+                _localState.update { it.copy(isClosingFullscreen = false) }
+                _isClosingFullscreen.value = false
+            }
         }
     }
 

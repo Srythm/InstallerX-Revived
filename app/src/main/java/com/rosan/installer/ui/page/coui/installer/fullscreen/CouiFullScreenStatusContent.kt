@@ -6,10 +6,12 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -137,8 +139,8 @@ fun CouiFullScreenStatusContent(
             }
             AnimatedVisibility(
                 visible = !progressText.isNullOrBlank(),
-                enter = fadeIn(tween(durationMillis = 150)),
-                exit = fadeOut(tween(durationMillis = 150)),
+                enter = fadeIn(tween(durationMillis = 150)) + expandVertically(tween(durationMillis = 150)),
+                exit = fadeOut(tween(durationMillis = 150)) + shrinkVertically(tween(durationMillis = 150)),
             ) {
                 lastProgressText.value?.takeIf { it.isNotBlank() }?.let { pct ->
                     Text(
@@ -150,18 +152,25 @@ fun CouiFullScreenStatusContent(
                     )
                 }
             }
+            val lastExtraContent = remember { SlotHolder(extraContent) }
             if (extraContent != null) {
+                lastExtraContent.value = extraContent
+            }
+            AnimatedVisibility(
+                visible = extraContent != null,
+                enter = fadeIn(tween(durationMillis = 200)) + expandVertically(tween(durationMillis = 200)),
+                exit = fadeOut(tween(durationMillis = 140)) + shrinkVertically(tween(durationMillis = 140)),
+            ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 16.dp, bottom = 16.dp),
+                        .padding(top = 16.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    extraContent()
+                    lastExtraContent.value?.invoke()
                 }
-            } else {
-                Spacer(Modifier.size(16.dp))
             }
+            Spacer(Modifier.size(16.dp))
         }
     }
 }

@@ -41,7 +41,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -137,30 +136,27 @@ private fun TransitionSlotGuard(
     isActive: Boolean,
     content: @Composable () -> Unit,
 ) {
-    val actionsEnabled = LocalFullScreenActionsEnabled.current && isActive
-    CompositionLocalProvider(LocalFullScreenActionsEnabled provides actionsEnabled) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(
-                    if (!isActive) {
-                        Modifier
-                            .clearAndSetSemantics { }
-                            .pointerInput(Unit) {
-                                awaitPointerEventScope {
-                                    while (true) {
-                                        awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
-                                    }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .then(
+                if (!isActive) {
+                    Modifier
+                        .clearAndSetSemantics { }
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
                                 }
                             }
-                    } else {
-                        Modifier
-                    },
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            content()
-        }
+                        }
+                } else {
+                    Modifier
+                },
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        content()
     }
 }
 
@@ -172,10 +168,7 @@ internal data class FullScreenPage(
     val subPage: FullScreenSubPage = FullScreenSubPage.Main,
     val progress: Float? = null,
     val error: Throwable? = null,
-) {
-    // Never key by progress, log contents or the module's finished flag.
-    val key: Any get() = if (subPage == FullScreenSubPage.Main) stage.javaClass else subPage
-}
+)
 
 private data class FullScreenLiveSnapshot(
     val page: FullScreenPage,
@@ -1816,8 +1809,21 @@ private fun FullScreenModuleContent(stage: InstallerStage.InstallingModule) {
     KeyEventBlocker { it.key == Key.VolumeDown || it.key == Key.VolumeUp }
     val listState = rememberLazyListState()
     LaunchedEffect(stage.output.size, stage.isFinished) {
-        if (stage.output.isNotEmpty()) listState.scrollToItem(stage.output.lastIndex)
+        if (stage.output.isNotEmpty()) {
+            if (stage.isFinished) {
+                listState.animateScrollToItem(stage.output.lastIndex)
+            } else {
+                listState.scrollToItem(stage.output.lastIndex)
+            }
+        }
     }
+    val statusTitle = stringResource(
+        when {
+            !stage.isFinished -> R.string.installer_installing_module
+            stage.failed -> R.string.installer_install_failed
+            else -> R.string.installer_install_success
+        },
+    )
     Column(
         Modifier.fillMaxSize().padding(horizontal = FullScreenHorizontalPadding),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -1827,29 +1833,40 @@ private fun FullScreenModuleContent(stage: InstallerStage.InstallingModule) {
             horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) {
-                if (stage.isFinished) {
-                    Icon(
-                        imageVector = if (stage.failed) AppCOUIIcons.Close else AppCOUIIcons.Ok,
-                        contentDescription = null,
-                        tint = if (stage.failed) COUITheme.colorScheme.error else COUITheme.colorScheme.success,
-                        modifier = Modifier.size(24.dp),
-                    )
-                } else {
-                    CircularProgressIndicator(size = 24.dp, strokeWidth = 3.dp)
+            Crossfade(
+                targetState = stage.isFinished,
+                modifier = Modifier.size(32.dp),
+                animationSpec = tween(durationMillis = 200),
+                label = "ModuleStatusIcon",
+            ) { finished ->
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    if (finished) {
+                        Icon(
+                            imageVector = if (stage.failed) AppCOUIIcons.Close else AppCOUIIcons.Ok,
+                            contentDescription = null,
+                            tint = if (stage.failed) COUITheme.colorScheme.error else COUITheme.colorScheme.success,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    } else {
+                        CircularProgressIndicator(size = 24.dp, strokeWidth = 3.dp)
+                    }
                 }
             }
-            Text(
-                text = stringResource(
-                    when {
-                        !stage.isFinished -> R.string.installer_installing_module
-                        stage.failed -> R.string.installer_install_failed
-                        else -> R.string.installer_install_success
-                    },
-                ),
-                style = COUITheme.textStyles.headlineXS,
-                color = COUITheme.colorScheme.labelPrimary,
-            )
+            AnimatedContent(
+                targetState = statusTitle,
+                contentAlignment = Alignment.Center,
+                transitionSpec = {
+                    fadeIn(tween(durationMillis = 200)) togetherWith
+                        fadeOut(tween(durationMillis = 160))
+                },
+                label = "ModuleStatusTitle",
+            ) { label ->
+                Text(
+                    text = label,
+                    style = COUITheme.textStyles.headlineXS,
+                    color = COUITheme.colorScheme.labelPrimary,
+                )
+            }
         }
         Card(Modifier.fillMaxWidth().weight(1f)) {
             LazyColumn(
