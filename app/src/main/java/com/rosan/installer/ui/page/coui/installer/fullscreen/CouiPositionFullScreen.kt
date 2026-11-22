@@ -4,11 +4,11 @@ package com.rosan.installer.ui.page.coui.installer.fullscreen
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -307,26 +307,21 @@ private fun FullScreenTopBar(
                 )
             }
             Spacer(Modifier.weight(1f))
-            val endActionTransition = updateTransition(targetState = endActionKey, label = "FullScreenEndAction")
-            val isEndActionTransitioning = endActionTransition.currentState != endActionTransition.targetState
-            endActionTransition.AnimatedContent(
-                modifier = Modifier.graphicsLayer {
-                    compositingStrategy = if (isEndActionTransitioning) {
-                        CompositingStrategy.Offscreen
-                    } else {
-                        CompositingStrategy.Auto
-                    }
-                },
+            AnimatedContent(
+                targetState = endActionKey,
                 contentAlignment = Alignment.Center,
                 transitionSpec = {
                     (
-                        fadeIn(tween(durationMillis = 220)) +
-                            scaleIn(tween(durationMillis = 220), initialScale = 0.78f)
-                        ) togetherWith (
-                        fadeOut(tween(durationMillis = 160)) +
-                            scaleOut(tween(durationMillis = 160), targetScale = 0.78f)
-                        )
+                        (
+                            fadeIn(tween(durationMillis = 200)) +
+                                scaleIn(tween(durationMillis = 200), initialScale = 0.82f)
+                            ) togetherWith (
+                            fadeOut(tween(durationMillis = 140)) +
+                                scaleOut(tween(durationMillis = 140), targetScale = 0.82f)
+                            )
+                        ).using(SizeTransform(clip = false))
                 },
+                label = "FullScreenEndAction",
             ) { slotKey ->
                 val isSlotActive = slotKey == endActionKey
                 val frozenAction = remember { FullScreenSlotRef(endAction) }
@@ -353,6 +348,8 @@ private fun FullScreenTopBar(
                     ) {
                         actionContent()
                     }
+                } else {
+                    Spacer(Modifier.size(40.dp))
                 }
             }
         }

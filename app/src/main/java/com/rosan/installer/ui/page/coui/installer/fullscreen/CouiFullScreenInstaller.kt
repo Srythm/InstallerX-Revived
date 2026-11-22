@@ -15,6 +15,7 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
@@ -193,6 +194,34 @@ private data class FullScreenLiveSnapshot(
     val canOpenSplitChoice: Boolean,
     val uninstallInfo: UninstallInfo?,
     val uninstallIcon: ImageBitmap?,
+)
+
+private data class StageBodySnapshot(
+    val page: FullScreenPage,
+    val appInfo: AppInfoState,
+    val entity: AppEntity?,
+    val sourceLabel: String?,
+    val permissions: List<String>,
+    val sensitivePermissionCount: Int,
+    val notices: List<NoticeModel>,
+    val installedAppInfo: InstalledAppInfo?,
+    val installedModuleInfo: InstalledModuleInfo?,
+    val totalSelectedSize: Long,
+    val selectedEntityCount: Int,
+    val displaySdk: Boolean,
+    val displaySize: Boolean,
+    val hideIdenticalComparisons: Boolean,
+    val showOppoSpecial: Boolean,
+    val labShowFilePath: Boolean,
+    val labShowInstallInitiator: Boolean,
+    val isSplitUpdateMode: Boolean,
+    val isInvalidSplitInstall: Boolean,
+    val canOpenInstallOptions: Boolean,
+    val canOpenSplitChoice: Boolean,
+    val showOpenLsposed: Boolean,
+    val unknownSourceAppLabel: String,
+    val uninstallInfo: UninstallInfo?,
+    val uninstallFlags: Int,
 )
 
 // InstallerStage folds unknown progress into zero; the session retains the nullable byte progress.
@@ -689,10 +718,33 @@ internal fun CouiFullScreenInstallerContent(
         uninstallInfo = uninstallInfo,
         uninstallIcon = uninstallIcon,
     )
-    val lastHeaderData = remember { FullScreenSlotRef(headerData) }
-    if (headerData != null) {
-        lastHeaderData.value = headerData
-    }
+    val liveBodySnapshot = StageBodySnapshot(
+        page = page,
+        appInfo = appInfo,
+        entity = entity,
+        sourceLabel = sourceLabel,
+        permissions = permissions,
+        sensitivePermissionCount = sensitivePermissionCount,
+        notices = notices,
+        installedAppInfo = installedAppInfo,
+        installedModuleInfo = installedModuleInfo,
+        totalSelectedSize = totalSelectedSize,
+        selectedEntityCount = selectedEntityCount,
+        displaySdk = displaySdk,
+        displaySize = displaySize,
+        hideIdenticalComparisons = hideIdenticalComparisons,
+        showOppoSpecial = showOppoSpecial,
+        labShowFilePath = labShowFilePath,
+        labShowInstallInitiator = labShowInstallInitiator,
+        isSplitUpdateMode = isSplitUpdateMode,
+        isInvalidSplitInstall = isInvalidSplitInstall,
+        canOpenInstallOptions = canOpenInstallOptions,
+        canOpenSplitChoice = canOpenSplitChoice,
+        showOpenLsposed = showOpenLsposed,
+        unknownSourceAppLabel = unknownSourceAppLabel,
+        uninstallInfo = uninstallInfo,
+        uninstallFlags = uninstallFlags,
+    )
 
     CouiPositionFullScreen(
         title = title,
@@ -731,106 +783,6 @@ internal fun CouiFullScreenInstallerContent(
         },
         onCloseAnimationFinished = onCloseAnimationFinished,
     ) {
-        val renderSubPage: @Composable (FullScreenSubPage) -> Unit = { targetSubPage ->
-            when (targetSubPage) {
-                FullScreenSubPage.Main -> {
-                    val hasHeader = headerData != null
-                    val bodyContent: @Composable () -> Unit = {
-                        FullScreenStageBody(
-                            page = page,
-                            prepareScrollState = prepareScrollState,
-                            appInfo = appInfo,
-                            entity = entity,
-                            sourceLabel = sourceLabel,
-                            permissions = permissions,
-                            sensitivePermissionCount = sensitivePermissionCount,
-                            notices = notices,
-                            installedAppInfo = installedAppInfo,
-                            installedModuleInfo = installedModuleInfo,
-                            totalSelectedSize = totalSelectedSize,
-                            selectedEntityCount = selectedEntityCount,
-                            displaySdk = displaySdk,
-                            displaySize = displaySize,
-                            hideIdenticalComparisons = hideIdenticalComparisons,
-                            showOppoSpecial = showOppoSpecial,
-                            labShowFilePath = labShowFilePath,
-                            labShowInstallInitiator = labShowInstallInitiator,
-                            isSplitUpdateMode = isSplitUpdateMode,
-                            isInvalidSplitInstall = isInvalidSplitInstall,
-                            canOpenInstallOptions = canOpenInstallOptions,
-                            canOpenSplitChoice = canOpenSplitChoice,
-                            showOpenLsposed = showOpenLsposed,
-                            unknownSourceAppLabel = unknownSourceAppLabel,
-                            uninstallInfo = uninstallInfo,
-                            uninstallFlags = uninstallFlags,
-                            onOpenPermissions = { onAction(InstallerViewAction.ShowCouiPermissionList) },
-                            onOpenInstallOptions = onOpenInstallOptions,
-                            onOpenSplitChoice = onOpenSplitChoice,
-                            onOpenLsposed = onOpenLsposed,
-                            onToggleUninstallFlag = onToggleUninstallFlag,
-                            choiceContent = choiceContent,
-                            errorSuggestionsContent = errorSuggestionsContent,
-                        )
-                    }
-                    AnimatedContent(
-                        targetState = hasHeader,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clipToBounds(),
-                        contentAlignment = Alignment.Center,
-                        contentKey = { it },
-                        transitionSpec = {
-                            fadeIn(tween(durationMillis = 220)) togetherWith
-                                fadeOut(tween(durationMillis = 180))
-                        },
-                        label = "FullScreenHeaderMode",
-                    ) { slotHasHeader ->
-                        val modeRenderer: @Composable () -> Unit = {
-                            if (slotHasHeader) {
-                                Column(Modifier.fillMaxSize()) {
-                                    lastHeaderData.value?.let { header ->
-                                        CouiFullScreenAppHeader(
-                                            appInfo = header.appInfo,
-                                            versionLine = header.versionLine,
-                                            onIconClick = header.onIconClick,
-                                        )
-                                    }
-                                    Box(Modifier.fillMaxWidth().weight(1f)) {
-                                        bodyContent()
-                                    }
-                                }
-                            } else {
-                                Box(Modifier.fillMaxSize()) {
-                                    bodyContent()
-                                }
-                            }
-                        }
-                        val frozenMode = remember { FullScreenSlotRef(modeRenderer) }
-                        if (slotHasHeader == hasHeader) {
-                            frozenMode.value = modeRenderer
-                        }
-                        TransitionSlotGuard(isActive = slotHasHeader == hasHeader) {
-                            frozenMode.value()
-                        }
-                    }
-                }
-
-                FullScreenSubPage.Permissions -> CouiFullScreenPermissionContent(permissions)
-
-                FullScreenSubPage.Settings -> Box(
-                    Modifier.fillMaxSize().padding(horizontal = FullScreenHorizontalPadding),
-                ) {
-                    settingsContent()
-                }
-
-                FullScreenSubPage.ExtendedMenu -> Box(
-                    Modifier.fillMaxSize().padding(horizontal = FullScreenHorizontalPadding),
-                ) {
-                    extendedMenuContent()
-                }
-            }
-        }
-
         AnimatedContent(
             targetState = page.subPage,
             modifier = Modifier.fillMaxSize().clipToBounds(),
@@ -838,14 +790,94 @@ internal fun CouiFullScreenInstallerContent(
             transitionSpec = { subPageTransition() },
             label = "FullScreenSubPage",
         ) { subPage ->
-            val frozen = remember {
-                FullScreenSlotRef<@Composable () -> Unit>({ renderSubPage(subPage) })
+            val frozenSubPage = remember {
+                FullScreenSlotRef(Triple(headerData, liveBodySnapshot, permissions))
             }
             if (subPage == page.subPage) {
-                frozen.value = { renderSubPage(subPage) }
+                frozenSubPage.value = Triple(headerData, liveBodySnapshot, permissions)
             }
+            val (slotHeaderData, slotBodySnapshot, slotPermissions) = frozenSubPage.value
             TransitionSlotGuard(isActive = subPage == page.subPage) {
-                frozen.value()
+                when (subPage) {
+                    FullScreenSubPage.Main -> {
+                        val hasHeader = slotHeaderData != null
+                        AnimatedContent(
+                            targetState = hasHeader,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clipToBounds(),
+                            contentAlignment = Alignment.Center,
+                            contentKey = { it },
+                            transitionSpec = {
+                                fadeIn(tween(durationMillis = 220)) togetherWith
+                                    fadeOut(tween(durationMillis = 180))
+                            },
+                            label = "FullScreenHeaderMode",
+                        ) { slotHasHeader ->
+                            val frozenHeaderSlot = remember {
+                                FullScreenSlotRef(Pair(slotHeaderData, slotBodySnapshot))
+                            }
+                            if (slotHasHeader == hasHeader) {
+                                frozenHeaderSlot.value = Pair(slotHeaderData, slotBodySnapshot)
+                            }
+                            val (frozenHeader, frozenBody) = frozenHeaderSlot.value
+                            TransitionSlotGuard(isActive = slotHasHeader == hasHeader) {
+                                if (slotHasHeader) {
+                                    Column(Modifier.fillMaxSize()) {
+                                        frozenHeader?.let { header ->
+                                            CouiFullScreenAppHeader(
+                                                appInfo = header.appInfo,
+                                                versionLine = header.versionLine,
+                                                onIconClick = header.onIconClick,
+                                            )
+                                        }
+                                        Box(Modifier.fillMaxWidth().weight(1f)) {
+                                            FullScreenStageBody(
+                                                snapshot = frozenBody,
+                                                prepareScrollState = prepareScrollState,
+                                                onOpenPermissions = { onAction(InstallerViewAction.ShowCouiPermissionList) },
+                                                onOpenInstallOptions = onOpenInstallOptions,
+                                                onOpenSplitChoice = onOpenSplitChoice,
+                                                onOpenLsposed = onOpenLsposed,
+                                                onToggleUninstallFlag = onToggleUninstallFlag,
+                                                choiceContent = choiceContent,
+                                                errorSuggestionsContent = errorSuggestionsContent,
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    Box(Modifier.fillMaxSize()) {
+                                        FullScreenStageBody(
+                                            snapshot = frozenBody,
+                                            prepareScrollState = prepareScrollState,
+                                            onOpenPermissions = { onAction(InstallerViewAction.ShowCouiPermissionList) },
+                                            onOpenInstallOptions = onOpenInstallOptions,
+                                            onOpenSplitChoice = onOpenSplitChoice,
+                                            onOpenLsposed = onOpenLsposed,
+                                            onToggleUninstallFlag = onToggleUninstallFlag,
+                                            choiceContent = choiceContent,
+                                            errorSuggestionsContent = errorSuggestionsContent,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    FullScreenSubPage.Permissions -> CouiFullScreenPermissionContent(slotPermissions)
+
+                    FullScreenSubPage.Settings -> Box(
+                        Modifier.fillMaxSize().padding(horizontal = FullScreenHorizontalPadding),
+                    ) {
+                        settingsContent()
+                    }
+
+                    FullScreenSubPage.ExtendedMenu -> Box(
+                        Modifier.fillMaxSize().padding(horizontal = FullScreenHorizontalPadding),
+                    ) {
+                        extendedMenuContent()
+                    }
+                }
             }
         }
     }
@@ -971,32 +1003,8 @@ private fun stageBucketOf(stage: InstallerStage): StageBucket = when (stage) {
 
 @Composable
 private fun FullScreenStageBody(
-    page: FullScreenPage,
+    snapshot: StageBodySnapshot,
     prepareScrollState: ScrollState,
-    appInfo: AppInfoState,
-    entity: AppEntity?,
-    sourceLabel: String?,
-    permissions: List<String>,
-    sensitivePermissionCount: Int,
-    notices: List<NoticeModel>,
-    installedAppInfo: InstalledAppInfo?,
-    installedModuleInfo: InstalledModuleInfo?,
-    totalSelectedSize: Long,
-    selectedEntityCount: Int,
-    displaySdk: Boolean,
-    displaySize: Boolean,
-    hideIdenticalComparisons: Boolean,
-    showOppoSpecial: Boolean,
-    labShowFilePath: Boolean,
-    labShowInstallInitiator: Boolean,
-    isSplitUpdateMode: Boolean,
-    isInvalidSplitInstall: Boolean,
-    canOpenInstallOptions: Boolean,
-    canOpenSplitChoice: Boolean,
-    showOpenLsposed: Boolean,
-    unknownSourceAppLabel: String,
-    uninstallInfo: UninstallInfo?,
-    uninstallFlags: Int,
     onOpenPermissions: () -> Unit,
     onOpenInstallOptions: () -> Unit,
     onOpenSplitChoice: () -> Unit,
@@ -1005,118 +1013,7 @@ private fun FullScreenStageBody(
     choiceContent: @Composable () -> Unit,
     errorSuggestionsContent: @Composable (Throwable) -> Unit,
 ) {
-    val activeBucket = stageBucketOf(page.stage)
-    val renderBody: @Composable () -> Unit = {
-        val bodyModifier = if (page.stage is InstallerStage.InstallChoice) {
-            Modifier.fillMaxSize()
-        } else {
-            Modifier
-                .fillMaxSize()
-                .padding(bottom = LocalFullScreenBottomBarPadding.current)
-        }
-        Box(modifier = bodyModifier) {
-            when (val stage = page.stage) {
-                is InstallerStage.InstallPrepare -> CouiFullScreenPrepareContent(
-                    entity = entity,
-                    sourceLabel = sourceLabel,
-                    permissionCount = permissions.size,
-                    sensitivePermissionCount = sensitivePermissionCount,
-                    onOpenPermissions = onOpenPermissions,
-                    scrollState = prepareScrollState,
-                    notices = notices,
-                    installedAppInfo = installedAppInfo,
-                    installedModuleInfo = installedModuleInfo,
-                    totalSelectedSize = totalSelectedSize,
-                    selectedEntityCount = selectedEntityCount,
-                    displaySdk = displaySdk,
-                    displaySize = displaySize,
-                    hideIdenticalComparisons = hideIdenticalComparisons,
-                    showOppoSpecial = showOppoSpecial,
-                    labShowFilePath = labShowFilePath,
-                    labShowInstallInitiator = labShowInstallInitiator,
-                    isSplitUpdateMode = isSplitUpdateMode,
-                    isInvalidSplitInstall = isInvalidSplitInstall,
-                    onOpenInstallOptions = if (canOpenInstallOptions) onOpenInstallOptions else null,
-                    onOpenSplitChoice = if (canOpenSplitChoice) onOpenSplitChoice else null,
-                )
-
-                is InstallerStage.InstallChoice -> Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = FullScreenHorizontalPadding),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    choiceContent()
-                }
-
-                is InstallerStage.InstallConfirm -> FullScreenConfirmBody(stage = stage)
-
-                is InstallerStage.InstallingModule -> FullScreenModuleContent(stage)
-
-                is InstallerStage.InstallCompleted -> FullScreenResultsContent(stage.results)
-
-                is InstallerStage.InstallFailed -> {
-                    val errorTitle = stringResource(R.string.installer_install_failed)
-                    FullScreenErrorBody(
-                        title = errorTitle,
-                        error = page.error ?: Throwable(),
-                        suggestions = {
-                            if (page.error != null && page.error !is ModuleInstallException) {
-                                errorSuggestionsContent(page.error)
-                            }
-                        },
-                    )
-                }
-
-                is InstallerStage.ResolveFailed -> FullScreenErrorBody(
-                    title = stringResource(R.string.installer_resolve_failed),
-                    error = page.error ?: Throwable(),
-                )
-
-                is InstallerStage.AnalyseFailed -> FullScreenErrorBody(
-                    title = stringResource(R.string.installer_analyse_failed),
-                    error = page.error ?: Throwable(),
-                )
-
-                is InstallerStage.UninstallFailed,
-                is InstallerStage.UninstallResolveFailed,
-                -> FullScreenErrorBody(
-                    title = stringResource(R.string.uninstall_failed_message),
-                    error = page.error ?: Throwable(),
-                )
-
-                is InstallerStage.UnarchiveFailed -> FullScreenErrorBody(
-                    title = stringResource(R.string.unarchive_failed),
-                    error = page.error ?: Throwable(),
-                )
-
-                is InstallerStage.UninstallReady -> FullScreenUninstallPrepareBody(
-                    isArchived = uninstallInfo?.isArchived == true,
-                    uninstallFlags = uninstallFlags,
-                    onToggleUninstallFlag = onToggleUninstallFlag,
-                )
-
-                is InstallerStage.UnarchiveReady -> FullScreenUnarchiveReadyBody(
-                    appLabel = stage.appLabel,
-                    installerLabel = stage.installerLabel,
-                )
-
-                is InstallerStage.UnarchiveError -> FullScreenUnarchiveErrorBody(
-                    status = stage.status,
-                    requiredBytes = stage.requiredBytes,
-                    installerLabel = stage.installerLabel,
-                )
-
-                else -> FullScreenStatusBody(
-                    page = page,
-                    appInfo = appInfo,
-                    unknownSourceAppLabel = unknownSourceAppLabel,
-                    showOpenLsposed = showOpenLsposed,
-                    onOpenLsposed = onOpenLsposed,
-                )
-            }
-        }
-    }
+    val activeBucket = stageBucketOf(snapshot.page.stage)
 
     AnimatedContent(
         targetState = activeBucket,
@@ -1131,12 +1028,146 @@ private fun FullScreenStageBody(
         },
         label = "FullScreenStageBody",
     ) { slotBucket ->
-        val frozen = remember { FullScreenSlotRef(renderBody) }
+        val frozenSnapshot = remember { FullScreenSlotRef(snapshot) }
         if (slotBucket == activeBucket) {
-            frozen.value = renderBody
+            frozenSnapshot.value = snapshot
         }
         TransitionSlotGuard(isActive = slotBucket == activeBucket) {
-            frozen.value()
+            StageBodyContent(
+                snapshot = frozenSnapshot.value,
+                prepareScrollState = prepareScrollState,
+                onOpenPermissions = onOpenPermissions,
+                onOpenInstallOptions = onOpenInstallOptions,
+                onOpenSplitChoice = onOpenSplitChoice,
+                onOpenLsposed = onOpenLsposed,
+                onToggleUninstallFlag = onToggleUninstallFlag,
+                choiceContent = choiceContent,
+                errorSuggestionsContent = errorSuggestionsContent,
+            )
+        }
+    }
+}
+
+@Composable
+private fun StageBodyContent(
+    snapshot: StageBodySnapshot,
+    prepareScrollState: ScrollState,
+    onOpenPermissions: () -> Unit,
+    onOpenInstallOptions: () -> Unit,
+    onOpenSplitChoice: () -> Unit,
+    onOpenLsposed: () -> Unit,
+    onToggleUninstallFlag: (Int, Boolean) -> Unit,
+    choiceContent: @Composable () -> Unit,
+    errorSuggestionsContent: @Composable (Throwable) -> Unit,
+) {
+    val page = snapshot.page
+    val bodyModifier = if (page.stage is InstallerStage.InstallChoice) {
+        Modifier.fillMaxSize()
+    } else {
+        Modifier
+            .fillMaxSize()
+            .padding(bottom = LocalFullScreenBottomBarPadding.current)
+    }
+    Box(modifier = bodyModifier) {
+        when (val stage = page.stage) {
+            is InstallerStage.InstallPrepare -> CouiFullScreenPrepareContent(
+                entity = snapshot.entity,
+                sourceLabel = snapshot.sourceLabel,
+                permissionCount = snapshot.permissions.size,
+                sensitivePermissionCount = snapshot.sensitivePermissionCount,
+                onOpenPermissions = onOpenPermissions,
+                scrollState = prepareScrollState,
+                notices = snapshot.notices,
+                installedAppInfo = snapshot.installedAppInfo,
+                installedModuleInfo = snapshot.installedModuleInfo,
+                totalSelectedSize = snapshot.totalSelectedSize,
+                selectedEntityCount = snapshot.selectedEntityCount,
+                displaySdk = snapshot.displaySdk,
+                displaySize = snapshot.displaySize,
+                hideIdenticalComparisons = snapshot.hideIdenticalComparisons,
+                showOppoSpecial = snapshot.showOppoSpecial,
+                labShowFilePath = snapshot.labShowFilePath,
+                labShowInstallInitiator = snapshot.labShowInstallInitiator,
+                isSplitUpdateMode = snapshot.isSplitUpdateMode,
+                isInvalidSplitInstall = snapshot.isInvalidSplitInstall,
+                onOpenInstallOptions = if (snapshot.canOpenInstallOptions) onOpenInstallOptions else null,
+                onOpenSplitChoice = if (snapshot.canOpenSplitChoice) onOpenSplitChoice else null,
+            )
+
+            is InstallerStage.InstallChoice -> Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = FullScreenHorizontalPadding),
+                contentAlignment = Alignment.Center,
+            ) {
+                choiceContent()
+            }
+
+            is InstallerStage.InstallConfirm -> FullScreenConfirmBody(stage = stage)
+
+            is InstallerStage.InstallingModule -> FullScreenModuleContent(stage)
+
+            is InstallerStage.InstallCompleted -> FullScreenResultsContent(stage.results)
+
+            is InstallerStage.InstallFailed -> {
+                val errorTitle = stringResource(R.string.installer_install_failed)
+                FullScreenErrorBody(
+                    title = errorTitle,
+                    error = page.error ?: Throwable(),
+                    suggestions = {
+                        if (page.error != null && page.error !is ModuleInstallException) {
+                            errorSuggestionsContent(page.error)
+                        }
+                    },
+                )
+            }
+
+            is InstallerStage.ResolveFailed -> FullScreenErrorBody(
+                title = stringResource(R.string.installer_resolve_failed),
+                error = page.error ?: Throwable(),
+            )
+
+            is InstallerStage.AnalyseFailed -> FullScreenErrorBody(
+                title = stringResource(R.string.installer_analyse_failed),
+                error = page.error ?: Throwable(),
+            )
+
+            is InstallerStage.UninstallFailed,
+            is InstallerStage.UninstallResolveFailed,
+            -> FullScreenErrorBody(
+                title = stringResource(R.string.uninstall_failed_message),
+                error = page.error ?: Throwable(),
+            )
+
+            is InstallerStage.UnarchiveFailed -> FullScreenErrorBody(
+                title = stringResource(R.string.unarchive_failed),
+                error = page.error ?: Throwable(),
+            )
+
+            is InstallerStage.UninstallReady -> FullScreenUninstallPrepareBody(
+                isArchived = snapshot.uninstallInfo?.isArchived == true,
+                uninstallFlags = snapshot.uninstallFlags,
+                onToggleUninstallFlag = onToggleUninstallFlag,
+            )
+
+            is InstallerStage.UnarchiveReady -> FullScreenUnarchiveReadyBody(
+                appLabel = stage.appLabel,
+                installerLabel = stage.installerLabel,
+            )
+
+            is InstallerStage.UnarchiveError -> FullScreenUnarchiveErrorBody(
+                status = stage.status,
+                requiredBytes = stage.requiredBytes,
+                installerLabel = stage.installerLabel,
+            )
+
+            else -> FullScreenStatusBody(
+                page = page,
+                appInfo = snapshot.appInfo,
+                unknownSourceAppLabel = snapshot.unknownSourceAppLabel,
+                showOpenLsposed = snapshot.showOpenLsposed,
+                onOpenLsposed = onOpenLsposed,
+            )
         }
     }
 }
@@ -1452,7 +1483,12 @@ private fun FullScreenActionRow(
         },
         label = "FullScreenActions",
     ) { slotLayout ->
-        val slotContent: @Composable () -> Unit = {
+        val frozenSpec = remember { FullScreenSlotRef(spec) }
+        if (slotLayout == layoutKey) {
+            frozenSpec.value = spec
+        }
+        val slotSpec = frozenSpec.value
+        TransitionSlotGuard(isActive = slotLayout == layoutKey) {
             Row(
                 modifier = Modifier
                     .fillMaxSize()
@@ -1460,7 +1496,7 @@ private fun FullScreenActionRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                spec.secondary?.let { btn ->
+                slotSpec.secondary?.let { btn ->
                     Box(modifier = Modifier.weight(1f)) {
                         if (btn.isDestructive) {
                             DestructiveAction(btn.text, btn.onClick, btn.enabled)
@@ -1469,7 +1505,7 @@ private fun FullScreenActionRow(
                         }
                     }
                 }
-                spec.primary?.let { btn ->
+                slotSpec.primary?.let { btn ->
                     Box(modifier = Modifier.weight(1f)) {
                         if (btn.isDestructive) {
                             DestructiveAction(btn.text, btn.onClick, btn.enabled)
@@ -1479,13 +1515,6 @@ private fun FullScreenActionRow(
                     }
                 }
             }
-        }
-        val frozen = remember { FullScreenSlotRef(slotContent) }
-        if (slotLayout == layoutKey) {
-            frozen.value = slotContent
-        }
-        TransitionSlotGuard(isActive = slotLayout == layoutKey) {
-            frozen.value()
         }
     }
 }
@@ -1836,10 +1865,16 @@ private fun FullScreenModuleContent(stage: InstallerStage.InstallingModule) {
             horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Crossfade(
+            AnimatedContent(
                 targetState = stage.isFinished,
                 modifier = Modifier.size(32.dp),
-                animationSpec = tween(durationMillis = 200),
+                contentAlignment = Alignment.Center,
+                transitionSpec = {
+                    (
+                        fadeIn(tween(durationMillis = 150, delayMillis = 80)) +
+                            scaleIn(tween(durationMillis = 180, delayMillis = 80), initialScale = 0.85f)
+                        ) togetherWith fadeOut(tween(durationMillis = 80))
+                },
                 label = "ModuleStatusIcon",
             ) { finished ->
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -1859,8 +1894,8 @@ private fun FullScreenModuleContent(stage: InstallerStage.InstallingModule) {
                 targetState = statusTitle,
                 contentAlignment = Alignment.Center,
                 transitionSpec = {
-                    fadeIn(tween(durationMillis = 200)) togetherWith
-                        fadeOut(tween(durationMillis = 160))
+                    fadeIn(tween(durationMillis = 150, delayMillis = 80)) togetherWith
+                        fadeOut(tween(durationMillis = 80))
                 },
                 label = "ModuleStatusTitle",
             ) { label ->
