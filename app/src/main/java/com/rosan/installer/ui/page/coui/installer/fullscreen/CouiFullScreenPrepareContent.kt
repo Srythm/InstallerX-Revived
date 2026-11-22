@@ -4,6 +4,7 @@ package com.rosan.installer.ui.page.coui.installer.fullscreen
 
 import android.content.ClipData
 import android.os.Build
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -72,6 +73,7 @@ fun CouiFullScreenPrepareContent(
     sensitivePermissionCount: Int,
     onOpenPermissions: () -> Unit,
     modifier: Modifier = Modifier,
+    scrollState: ScrollState = rememberScrollState(),
     notices: List<NoticeModel> = emptyList(),
     installedAppInfo: InstalledAppInfo? = null,
     installedModuleInfo: InstalledModuleInfo? = null,
@@ -338,7 +340,7 @@ fun CouiFullScreenPrepareContent(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scrollState)
             .padding(bottom = 20.dp),
     ) {
         if (notices.isNotEmpty()) {

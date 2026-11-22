@@ -147,19 +147,19 @@ fun InstallChoiceContent(
             transitionSpec = {
                 if (targetState) {
                     (
-                        fadeIn(tween(durationMillis = 220, delayMillis = 60)) +
+                        fadeIn(tween(durationMillis = 220)) +
                             slideInHorizontally(colorOsSpring(responseSeconds = 0.32f)) { -it / 6 }
                         ) togetherWith (
-                        fadeOut(tween(durationMillis = 120)) +
-                            slideOutHorizontally(tween(durationMillis = 180)) { it / 4 }
+                        fadeOut(tween(durationMillis = 160)) +
+                            slideOutHorizontally(tween(durationMillis = 160)) { it / 4 }
                         )
                 } else {
                     (
-                        fadeIn(tween(durationMillis = 220, delayMillis = 60)) +
+                        fadeIn(tween(durationMillis = 220)) +
                             slideInHorizontally(colorOsSpring(responseSeconds = 0.32f)) { it / 4 }
                         ) togetherWith (
-                        fadeOut(tween(durationMillis = 120)) +
-                            slideOutHorizontally(tween(durationMillis = 180)) { -it / 6 }
+                        fadeOut(tween(durationMillis = 160)) +
+                            slideOutHorizontally(tween(durationMillis = 160)) { -it / 6 }
                         )
                 }
             },

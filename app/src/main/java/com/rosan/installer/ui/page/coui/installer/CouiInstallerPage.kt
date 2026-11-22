@@ -124,10 +124,9 @@ fun CouiInstallerPage(
     val currentPackageName = uiState.currentPackageName
     val displayIcons = uiState.displayIcons
     val error = uiState.error
-    // Owned by the ViewModel, not by this composition: it flips before the
-    // session is torn down so the full-screen layer gets a full fade-out window
-    // even though the teardown would otherwise remove it from the tree.
-    val isClosingFullscreen by viewModel.isClosingFullscreen.collectAsStateWithLifecycle()
+    // Combined atomically with `stage` in `uiState` so tearing down the
+    // fullscreen layer never pairs `isClosing = false` with an outdated stage.
+    val isClosingFullscreen = uiState.isClosingFullscreen
 
     val globalSeedColor = InstallerTheme.seedColor
     val themeMode = InstallerTheme.themeMode
@@ -312,6 +311,7 @@ fun CouiInstallerPage(
                     preparedFromTypeChoice = preparedFromTypeChoice,
                     returnedToTypeChoice = returnedToTypeChoice,
                     isClosing = isClosingFullscreen,
+                    onCloseAnimationFinished = { viewModel.completeFullscreenClose() },
                     viewModel = viewModel,
                     session = session,
                     onClose = { viewModel.dispatch(InstallerViewAction.Close) },

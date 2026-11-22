@@ -17,6 +17,7 @@ import com.rosan.installer.domain.settings.model.preferences.RootMode
  */
 data class InstallerState(
     val stage: InstallerStage = InstallerStage.Ready,
+    val isClosingFullscreen: Boolean = false,
 
     // UI specific toggles and settings
     val viewSettings: InstallerViewSettings = InstallerViewSettings(),

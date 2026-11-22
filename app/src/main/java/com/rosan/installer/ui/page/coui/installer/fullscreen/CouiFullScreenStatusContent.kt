@@ -23,7 +23,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,6 +44,14 @@ import io.github.suqi8.coui.kmp.theme.COUITheme
 private val MarkSize = 92.dp
 private val RingDiameter = 76.dp
 private val RingStroke = 6.dp
+
+private class SlotHolder<T>(var value: T)
+
+private data class StatusIconSnapshot(
+    val icon: ImageVector,
+    val tint: Color,
+    val haloColor: Color,
+)
 
 /** Negative/non-finite values mean unknown; zero is a genuine determinate value. */
 internal fun fullScreenProgress(progress: Float?): Float? = progress?.takeIf { it.isFinite() && it >= 0f }?.coerceAtMost(1f)
@@ -124,7 +131,7 @@ fun CouiFullScreenStatusContent(
                     )
                 }
             }
-            val lastProgressText = remember { mutableStateOf(progressText) }
+            val lastProgressText = remember { SlotHolder(progressText) }
             if (!progressText.isNullOrBlank()) {
                 lastProgressText.value = progressText
             }
@@ -170,6 +177,19 @@ private fun StatusMark(
     iconTint: Color,
     haloColor: Color,
 ) {
+    val lastRingProgress = remember { SlotHolder(progress) }
+    if (icon == null) {
+        lastRingProgress.value = progress
+    }
+    val effectiveProgress = if (icon == null) progress else lastRingProgress.value
+
+    val lastIcon = remember {
+        SlotHolder(icon?.let { StatusIconSnapshot(it, iconTint, haloColor) })
+    }
+    if (icon != null) {
+        lastIcon.value = StatusIconSnapshot(icon, iconTint, haloColor)
+    }
+
     Box(Modifier.size(MarkSize), contentAlignment = Alignment.Center) {
         AnimatedVisibility(
             visible = icon == null,
@@ -178,7 +198,7 @@ private fun StatusMark(
             modifier = Modifier.align(Alignment.Center),
         ) {
             Crossfade(
-                targetState = progress == null,
+                targetState = effectiveProgress == null,
                 modifier = Modifier.fillMaxSize(),
                 animationSpec = tween(durationMillis = 180),
                 label = "StatusRingMode",
@@ -188,7 +208,7 @@ private fun StatusMark(
                     contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator(
-                        progress = if (indeterminate) null else progress,
+                        progress = if (indeterminate) null else effectiveProgress,
                         colors = ProgressIndicatorDefaults.loadingViewColors(),
                         // The determinate variant subtracts 8dp from its visible ring diameter.
                         size = if (indeterminate) RingDiameter else RingDiameter + 8.dp,
@@ -204,7 +224,7 @@ private fun StatusMark(
             exit = fadeOut(tween(durationMillis = 120)),
             modifier = Modifier.align(Alignment.Center),
         ) {
-            if (icon != null) {
+            lastIcon.value?.let { snap ->
                 Box(
                     // Soft halo instead of a solid disc: a radial ramp fades out on its own, so
                     // the mark reads as light rather than as a second circle.
@@ -213,8 +233,8 @@ private fun StatusMark(
                         .background(
                             brush = Brush.radialGradient(
                                 colors = listOf(
-                                    haloColor,
-                                    haloColor.copy(alpha = haloColor.alpha * 0.55f),
+                                    snap.haloColor,
+                                    snap.haloColor.copy(alpha = snap.haloColor.alpha * 0.55f),
                                     Color.Transparent,
                                 ),
                             ),
@@ -223,9 +243,9 @@ private fun StatusMark(
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        imageVector = icon,
+                        imageVector = snap.icon,
                         contentDescription = null, // The adjacent title names the result.
-                        tint = iconTint,
+                        tint = snap.tint,
                         modifier = Modifier.size(36.dp),
                     )
                 }

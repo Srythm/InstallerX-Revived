@@ -38,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -121,6 +122,7 @@ fun PositionFullScreen(
      * teardown must not run inside a composition-bound coroutine.
      */
     isClosing: Boolean = false,
+    onCloseAnimationFinished: () -> Unit = {},
     leftIcon: @Composable (() -> Unit)? = null,
     centerIcon: @Composable (() -> Unit)? = null,
     rightIcon: @Composable (() -> Unit)? = null,
@@ -152,6 +154,8 @@ fun PositionFullScreen(
     // the exit fade must not retrigger the close path.
     var isDismissing by remember { mutableStateOf(false) }
 
+    val currentOnCloseAnimationFinished by rememberUpdatedState(onCloseAnimationFinished)
+
     // Enter: fade the install UI in on the very first composition.
     LaunchedEffect(Unit) {
         uiAlpha.animateTo(1f, animationSpec = tween(durationMillis = EnterExitDurationMs))
@@ -159,18 +163,15 @@ fun PositionFullScreen(
 
     // Exit: driven by the external [isClosing] signal. When the caller
     // (typically the ViewModel's `requestFullscreenClose`) flips this to
-    // true, we fade the layer out and *do nothing else* — the caller is
-    // responsible for tearing down the session ~220ms later on its own
-    // scope. Doing the teardown here would let the synchronous close()
-    // path (e.g. `close()` setting `stage = InstallerStage.Ready`)
-    // immediately remove this composable from the tree, cancelling
-    // `animateTo` mid-flight and producing the "instant disappear" bug.
+    // true, we fade the layer out and then notify [onCloseAnimationFinished]
+    // so teardown runs right after the final frame instead of on a separate timer.
     LaunchedEffect(isClosing) {
         if (isClosing) {
             if (!isDismissing) {
                 isDismissing = true
                 uiAlpha.animateTo(0f, animationSpec = tween(durationMillis = EnterExitDurationMs))
             }
+            currentOnCloseAnimationFinished()
         } else if (isDismissing) {
             isDismissing = false
             uiAlpha.animateTo(1f, animationSpec = tween(durationMillis = EnterExitDurationMs))

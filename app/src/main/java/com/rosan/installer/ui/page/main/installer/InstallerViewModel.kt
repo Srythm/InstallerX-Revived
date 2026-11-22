@@ -150,6 +150,7 @@ class InstallerViewModel(
     private val iconJobs = mutableMapOf<String, Job>()
     private var autoInstallJob: Job? = null
     private var fullscreenCloseJob: Job? = null
+    private var closingFullscreenSession: InstallerSessionRepository? = null
     private var isFullscreenPresentationActive = false
     private val settingsLoadingJob: Job
     private var collectRepoJob: Job? = null
@@ -426,6 +427,7 @@ class InstallerViewModel(
         if (this.session !== session) {
             fullscreenCloseJob?.cancel()
             fullscreenCloseJob = null
+            closingFullscreenSession = null
             _isClosingFullscreen.value = false
             packageSelectionsBeforeClear.clear()
             moduleInstallStarted = false
@@ -441,6 +443,7 @@ class InstallerViewModel(
             it.copy(
                 config = session.config, // Synchronize the entire ConfigModel to UI state
                 currentPackageName = null,
+                isClosingFullscreen = false,
                 initiatorAppLabel = null, // Reset label on new session
                 unknownSourcePermissionAppLabel = null,
                 analysisResults = session.analysisResults,
@@ -751,29 +754,25 @@ class InstallerViewModel(
     private fun close() {
         fullscreenCloseJob?.cancel()
         fullscreenCloseJob = null
+        closingFullscreenSession = null
         packageSelectionsBeforeClear.clear()
         autoInstallJob?.cancel()
         collectRepoJob?.cancel()
         iconJobs.values.forEach { it.cancel() }
         iconJobs.clear()
         session.close()
-        // Reset the fullscreen close signal so the next time the user
-        // triggers an install in fullscreen mode the layer enters via
-        // its normal fade-in (instead of starting from the dismissed
-        // state). Without this, [_isClosingFullscreen] would stay `true`
-        // across the activity boundary (the ViewModel is tied to the
-        // activity, not to the install session) and the very first
-        // composition of [PositionFullScreen] on the next install would
-        // see `isClosing = true` and fade out immediately.
-        _isClosingFullscreen.value = false
+        // Update `_localState` before resetting `_isClosingFullscreen` so `uiState` atomically emits
+        // `stage = Ready` with `isClosingFullscreen = false` on teardown.
         _localState.update {
             it.copy(
                 currentPackageName = null,
                 uiUninstallInfo = null,
                 stage = InstallerStage.Ready,
                 mmzSelectionMode = MmzSelectionMode.INITIAL_CHOICE,
+                isClosingFullscreen = false,
             )
         }
+        _isClosingFullscreen.value = false
     }
 
     fun setFullscreenPresentation(active: Boolean) {
@@ -801,23 +800,19 @@ class InstallerViewModel(
     // [requestFullscreenClose] therefore:
     //   1. marks the session as closing so Activity.onStop cannot move it
     //      into background mode during the exit animation,
-    //   2. flips [_isClosingFullscreen] to true (drives the fade-out in
-    //      [PositionFullScreen] via [isClosingFullscreen] state),
-    //   3. waits [FullscreenCloseFadeOutMs] on [viewModelScope] (which is
-    //      tied to the ViewModel's lifetime, not the composition's, so it
-    //      survives any composition churn in the meantime),
-    //   4. then calls [close] which performs the synchronous teardown.
-    //
-    // The delay is intentionally a wall-clock wait, not coupled to the
-    // animation, so a small drift between the two clocks does not leave a
-    // visible "transparent UI with a not-yet-disposed session" frame.
+    //   2. flips [_isClosingFullscreen] and `uiState.isClosingFullscreen` to true
+    //      so the fullscreen shell drives its fade-out,
+    //   3. waits for [completeFullscreenClose] once the exit animation finishes,
+    //      with [FullscreenCloseFallbackTimeoutMs] as a safety timeout if the
+    //      animation callback never arrives.
 
     private val _isClosingFullscreen = MutableStateFlow(false)
     val isClosingFullscreen: StateFlow<Boolean> = _isClosingFullscreen.asStateFlow()
 
     /**
      * Begin the fullscreen exit sequence: drive the install UI's fade-out
-     * animation, then close the session once the fade has had time to play.
+     * animation, then tear down when [completeFullscreenClose] is reported or
+     * after [FullscreenCloseFallbackTimeoutMs] if no UI callback arrives.
      * Idempotent — repeated calls while a fade-out is already in progress
      * are ignored.
      */
@@ -825,15 +820,35 @@ class InstallerViewModel(
         if (_isClosingFullscreen.value) return
         val closingSession = session
         closingSession.prepareClose()
+        closingFullscreenSession = closingSession
         _isClosingFullscreen.value = true
+        _localState.update { it.copy(isClosingFullscreen = true) }
         fullscreenCloseJob?.cancel()
         fullscreenCloseJob = viewModelScope.launch {
-            delay(FullscreenCloseFadeOutMs)
+            delay(FullscreenCloseFallbackTimeoutMs)
             if (this@InstallerViewModel.session === closingSession) {
                 close()
             } else {
+                closingFullscreenSession = null
                 _isClosingFullscreen.value = false
+                _localState.update { it.copy(isClosingFullscreen = false) }
             }
+        }
+    }
+
+    /**
+     * Complete the fullscreen exit sequence once the shell's fade-out animation finishes.
+     */
+    fun completeFullscreenClose() {
+        if (!_isClosingFullscreen.value) return
+        if (this.session === closingFullscreenSession) {
+            close()
+        } else {
+            fullscreenCloseJob?.cancel()
+            fullscreenCloseJob = null
+            closingFullscreenSession = null
+            _isClosingFullscreen.value = false
+            _localState.update { it.copy(isClosingFullscreen = false) }
         }
     }
 
@@ -1153,5 +1168,6 @@ class InstallerViewModel(
 
     companion object {
         const val FullscreenCloseFadeOutMs = 220L
+        const val FullscreenCloseFallbackTimeoutMs = 1000L
     }
 }

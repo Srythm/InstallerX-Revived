@@ -8,8 +8,10 @@ import android.provider.Settings
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -18,6 +20,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,12 +41,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,8 +59,11 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -124,6 +132,38 @@ import org.koin.compose.koinInject
 
 private class FullScreenSlotRef<T>(var value: T)
 
+@Composable
+private fun TransitionSlotGuard(
+    isActive: Boolean,
+    content: @Composable () -> Unit,
+) {
+    val actionsEnabled = LocalFullScreenActionsEnabled.current && isActive
+    CompositionLocalProvider(LocalFullScreenActionsEnabled provides actionsEnabled) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (!isActive) {
+                        Modifier
+                            .clearAndSetSemantics { }
+                            .pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+                                    }
+                                }
+                            }
+                    } else {
+                        Modifier
+                    },
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            content()
+        }
+    }
+}
+
 internal enum class FullScreenSubPage { Main, Permissions, Settings, ExtendedMenu }
 
 internal data class FullScreenPage(
@@ -173,6 +213,7 @@ fun CouiFullScreenInstaller(
     preparedFromTypeChoice: Boolean,
     returnedToTypeChoice: Boolean,
     isClosing: Boolean,
+    onCloseAnimationFinished: () -> Unit = {},
     viewModel: InstallerViewModel,
     session: InstallerSessionRepository,
     onClose: () -> Unit,
@@ -258,6 +299,7 @@ fun CouiFullScreenInstaller(
     val activePackageName = uiState.currentPackageName
         ?: uiState.analysisResults.firstOrNull()?.packageName
         ?: activeSnapshot.appInfo.packageName
+    val prepareScrollState = remember(session.id, activePackageName) { ScrollState(0) }
     val launchIntent = remember(activePackageName) {
         if (activePackageName.isNotEmpty()) {
             context.packageManager.getLaunchIntentForPackage(activePackageName)
@@ -279,6 +321,20 @@ fun CouiFullScreenInstaller(
     val safeClose: () -> Unit = { if (!viewModel.isClosingFullscreen.value) onClose() }
     val safeDispatch: (InstallerViewAction) -> Unit = {
         if (!viewModel.isClosingFullscreen.value) viewModel.dispatch(it)
+    }
+
+    val topEndActionKey: Any? = when {
+        isClosing || activeSnapshot.page.subPage != FullScreenSubPage.Main -> null
+
+        activeSnapshot.page.stage is InstallerStage.InstallPrepare -> "prepare_settings"
+
+        activeSnapshot.page.stage is InstallerStage.InstallSuccess && activePackageName.isNotEmpty() ->
+            "install_success_info"
+
+        activeSnapshot.page.stage is InstallerStage.InstallingModule &&
+            activeSnapshot.page.stage.isFinished -> "module_reboot"
+
+        else -> null
     }
 
     val topEndAction: (@Composable () -> Unit)? = when {
@@ -332,6 +388,7 @@ fun CouiFullScreenInstaller(
     CouiFullScreenInstallerContent(
         page = activeSnapshot.page,
         appInfo = activeSnapshot.appInfo,
+        prepareScrollState = prepareScrollState,
         useBlur = settings.useBlur,
         isModule = viewModel.isInstallingModule,
         entity = activeSnapshot.entity,
@@ -368,6 +425,7 @@ fun CouiFullScreenInstaller(
         canOpenInstallOptions = activeSnapshot.canOpenInstallOptions,
         canOpenSplitChoice = activeSnapshot.canOpenSplitChoice,
         isClosing = isClosing,
+        onCloseAnimationFinished = onCloseAnimationFinished,
         onClose = safeClose,
         onCancel = { safeDispatch(InstallerViewAction.Cancel) },
         onBackground = { safeDispatch(InstallerViewAction.Background) },
@@ -431,6 +489,7 @@ fun CouiFullScreenInstaller(
         },
         onAction = safeDispatch,
         topEndAction = topEndAction,
+        topEndActionKey = topEndActionKey,
         choiceContent = {
             InstallChoiceContent(
                 viewModel = viewModel,
@@ -466,6 +525,7 @@ fun CouiFullScreenInstaller(
 internal fun CouiFullScreenInstallerContent(
     page: FullScreenPage,
     appInfo: AppInfoState,
+    prepareScrollState: ScrollState = rememberScrollState(),
     useBlur: Boolean = false,
     isModule: Boolean = false,
     entity: AppEntity? = null,
@@ -502,6 +562,7 @@ internal fun CouiFullScreenInstallerContent(
     canOpenInstallOptions: Boolean = false,
     canOpenSplitChoice: Boolean = false,
     isClosing: Boolean = false,
+    onCloseAnimationFinished: () -> Unit = {},
     onClose: () -> Unit = {},
     onCancel: () -> Unit = onClose,
     onBackground: () -> Unit = {},
@@ -520,6 +581,7 @@ internal fun CouiFullScreenInstallerContent(
     onIconClick: (() -> Unit)? = null,
     onAction: (InstallerViewAction) -> Unit = {},
     topEndAction: (@Composable () -> Unit)? = null,
+    topEndActionKey: Any? = topEndAction != null,
     choiceContent: @Composable () -> Unit = {},
     extendedMenuContent: @Composable () -> Unit = {},
     settingsContent: @Composable () -> Unit = {},
@@ -631,7 +693,7 @@ internal fun CouiFullScreenInstallerContent(
         uninstallInfo = uninstallInfo,
         uninstallIcon = uninstallIcon,
     )
-    val lastHeaderData = remember { mutableStateOf(headerData) }
+    val lastHeaderData = remember { FullScreenSlotRef(headerData) }
     if (headerData != null) {
         lastHeaderData.value = headerData
     }
@@ -642,6 +704,7 @@ internal fun CouiFullScreenInstallerContent(
         onBack = backAction,
         backEnabled = backEnabled,
         endAction = topEndAction,
+        endActionKey = topEndActionKey,
         useBlur = useBlur,
         bottomBar = if (usesShellBottomBar) {
             {
@@ -670,6 +733,7 @@ internal fun CouiFullScreenInstallerContent(
         } else {
             null
         },
+        onCloseAnimationFinished = onCloseAnimationFinished,
     ) {
         val renderSubPage: @Composable (FullScreenSubPage) -> Unit = { targetSubPage ->
             when (targetSubPage) {
@@ -678,6 +742,7 @@ internal fun CouiFullScreenInstallerContent(
                     val bodyContent: @Composable () -> Unit = {
                         FullScreenStageBody(
                             page = page,
+                            prepareScrollState = prepareScrollState,
                             appInfo = appInfo,
                             entity = entity,
                             sourceLabel = sourceLabel,
@@ -748,7 +813,9 @@ internal fun CouiFullScreenInstallerContent(
                         if (slotHasHeader == hasHeader) {
                             frozenMode.value = modeRenderer
                         }
-                        frozenMode.value()
+                        TransitionSlotGuard(isActive = slotHasHeader == hasHeader) {
+                            frozenMode.value()
+                        }
                     }
                 }
 
@@ -781,7 +848,9 @@ internal fun CouiFullScreenInstallerContent(
             if (subPage == page.subPage) {
                 frozen.value = { renderSubPage(subPage) }
             }
-            frozen.value()
+            TransitionSlotGuard(isActive = subPage == page.subPage) {
+                frozen.value()
+            }
         }
     }
 }
@@ -801,7 +870,9 @@ private fun rememberHeaderDisplay(
     uninstallIcon: ImageBitmap?,
 ): HeaderDisplayData? = when {
     (
-        stage is InstallerStage.InstallPrepare ||
+        stage is InstallerStage.Preparing ||
+            stage is InstallerStage.InstallPrepare ||
+            stage is InstallerStage.InstallWaitingUnknownSource ||
             stage is InstallerStage.Installing ||
             stage is InstallerStage.InstallRetryDowngradeUsingUninstall ||
             stage is InstallerStage.InstallSuccess ||
@@ -845,19 +916,19 @@ private fun rememberHeaderDisplay(
 
 private fun AnimatedContentTransitionScope<FullScreenSubPage>.subPageTransition(): ContentTransform = if (targetState != FullScreenSubPage.Main) {
     (
-        fadeIn(tween(durationMillis = 220, delayMillis = 60)) +
+        fadeIn(tween(durationMillis = 220)) +
             slideInHorizontally(colorOsSpring(responseSeconds = 0.32f)) { it / 4 }
         ) togetherWith (
-        fadeOut(tween(durationMillis = 120)) +
-            slideOutHorizontally(tween(durationMillis = 180)) { -it / 6 }
+        fadeOut(tween(durationMillis = 160)) +
+            slideOutHorizontally(tween(durationMillis = 160)) { -it / 6 }
         )
 } else {
     (
-        fadeIn(tween(durationMillis = 220, delayMillis = 60)) +
+        fadeIn(tween(durationMillis = 220)) +
             slideInHorizontally(colorOsSpring(responseSeconds = 0.32f)) { -it / 6 }
         ) togetherWith (
-        fadeOut(tween(durationMillis = 120)) +
-            slideOutHorizontally(tween(durationMillis = 180)) { it / 4 }
+        fadeOut(tween(durationMillis = 160)) +
+            slideOutHorizontally(tween(durationMillis = 160)) { it / 4 }
         )
 }
 
@@ -905,6 +976,7 @@ private fun stageBucketOf(stage: InstallerStage): StageBucket = when (stage) {
 @Composable
 private fun FullScreenStageBody(
     page: FullScreenPage,
+    prepareScrollState: ScrollState,
     appInfo: AppInfoState,
     entity: AppEntity?,
     sourceLabel: String?,
@@ -954,6 +1026,7 @@ private fun FullScreenStageBody(
                     permissionCount = permissions.size,
                     sensitivePermissionCount = sensitivePermissionCount,
                     onOpenPermissions = onOpenPermissions,
+                    scrollState = prepareScrollState,
                     notices = notices,
                     installedAppInfo = installedAppInfo,
                     installedModuleInfo = installedModuleInfo,
@@ -1066,7 +1139,9 @@ private fun FullScreenStageBody(
         if (slotBucket == activeBucket) {
             frozen.value = renderBody
         }
-        frozen.value()
+        TransitionSlotGuard(isActive = slotBucket == activeBucket) {
+            frozen.value()
+        }
     }
 }
 
@@ -1078,6 +1153,16 @@ private fun FullScreenStatusBody(
     showOpenLsposed: Boolean,
     onOpenLsposed: () -> Unit,
 ) {
+    val isEarlyLoading = page.stage is InstallerStage.Resolving || page.stage is InstallerStage.Analysing
+    var showEarlyLoading by remember { mutableStateOf(false) }
+    LaunchedEffect(isEarlyLoading) {
+        if (isEarlyLoading) {
+            delay(120)
+            showEarlyLoading = true
+        } else {
+            showEarlyLoading = false
+        }
+    }
     val spec = statusSpecOf(page, appInfo, unknownSourceAppLabel)
     val actionsEnabled = LocalFullScreenActionsEnabled.current
     val extraContent: (@Composable () -> Unit)? = if (page.stage is InstallerStage.InstallSuccess && showOpenLsposed) {
@@ -1092,16 +1177,23 @@ private fun FullScreenStatusBody(
     } else {
         null
     }
-    CouiFullScreenStatusContent(
-        title = spec.title,
-        subtitle = spec.subtitle,
-        progressText = spec.progressText,
-        progress = spec.progress,
-        icon = spec.icon,
-        iconTint = spec.iconTint,
-        haloColor = spec.halo,
-        extraContent = extraContent,
-    )
+    AnimatedVisibility(
+        visible = !isEarlyLoading || showEarlyLoading,
+        enter = fadeIn(tween(durationMillis = 180)),
+        exit = ExitTransition.None,
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        CouiFullScreenStatusContent(
+            title = spec.title,
+            subtitle = spec.subtitle,
+            progressText = spec.progressText,
+            progress = spec.progress,
+            icon = spec.icon,
+            iconTint = spec.iconTint,
+            haloColor = spec.halo,
+            extraContent = extraContent,
+        )
+    }
 }
 
 private data class StatusSpec(
@@ -1396,7 +1488,9 @@ private fun FullScreenActionRow(
         if (slotLayout == layoutKey) {
             frozen.value = slotContent
         }
-        frozen.value()
+        TransitionSlotGuard(isActive = slotLayout == layoutKey) {
+            frozen.value()
+        }
     }
 }
 

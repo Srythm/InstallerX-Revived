@@ -7,8 +7,11 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
@@ -33,8 +36,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -81,6 +84,8 @@ internal val LocalFullScreenActionsEnabled = staticCompositionLocalOf { true }
 
 internal val LocalFullScreenBottomBarPadding = staticCompositionLocalOf { 0.dp }
 
+private class SlotHolder<T>(var value: T)
+
 /**
  * The full-screen installer surface.
  *
@@ -88,7 +93,8 @@ internal val LocalFullScreenBottomBarPadding = staticCompositionLocalOf { 0.dp }
  * letting each page draw its own bar put two sets of icon buttons on the same pixels during a
  * push, which reads as the buttons flashing grey. Only [content] moves between pages.
  *
- * The ViewModel owns teardown; this shell only follows its closing signal.
+ * The ViewModel owns teardown; this shell notifies [onCloseAnimationFinished] when the exit fade
+ * finishes (with a ViewModel fallback timeout if the callback never arrives).
  */
 @Composable
 fun CouiPositionFullScreen(
@@ -98,8 +104,10 @@ fun CouiPositionFullScreen(
     modifier: Modifier = Modifier,
     backEnabled: Boolean = true,
     endAction: (@Composable () -> Unit)? = null,
+    endActionKey: Any? = endAction != null,
     useBlur: Boolean = false,
     bottomBar: (@Composable () -> Unit)? = null,
+    onCloseAnimationFinished: () -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     val inspectionMode = LocalInspectionMode.current
@@ -107,6 +115,7 @@ fun CouiPositionFullScreen(
     // The only backdrop source on this page. Null when blur is disabled by the user or the
     // runtime cannot support it, which is what every material surface below degrades on.
     val backdrop = if (inspectionMode) null else rememberCouiBlurBackdrop(useBlur)
+    val currentOnCloseAnimationFinished by rememberUpdatedState(onCloseAnimationFinished)
     // Start transparent at runtime for symmetric enter fade; previews start opaque.
     val uiAlpha = remember { Animatable(if (inspectionMode) 1f else 0f) }
     LaunchedEffect(isClosing) {
@@ -114,6 +123,9 @@ fun CouiPositionFullScreen(
             targetValue = if (isClosing) 0f else 1f,
             animationSpec = tween(InstallerViewModel.FullscreenCloseFadeOutMs.toInt()),
         )
+        if (isClosing) {
+            currentOnCloseAnimationFinished()
+        }
     }
 
     // Always consume system back while fullscreen is mounted; invoke onBack only when allowed.
@@ -184,10 +196,11 @@ fun CouiPositionFullScreen(
                             onBack = onBack,
                             backEnabled = backEnabled && !isClosing,
                             endAction = endAction,
+                            endActionKey = endActionKey,
                         )
                         val bottomBarReservedPadding =
                             FullScreenBottomBarHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                        val lastBottomBar = remember { mutableStateOf(bottomBar) }
+                        val lastBottomBar = remember { SlotHolder(bottomBar) }
                         if (bottomBar != null) {
                             lastBottomBar.value = bottomBar
                         }
@@ -205,8 +218,9 @@ fun CouiPositionFullScreen(
                             // Overlaid rather than stacked in the Column so toggling sub-pages never
                             // changes content height or shifts the page vertically mid-transition.
                             if (bottomBarAlpha > 0.01f) {
+                                val bottomBarActive = bottomBar != null && !isClosing
                                 CompositionLocalProvider(
-                                    LocalFullScreenActionsEnabled provides (bottomBar != null && !isClosing),
+                                    LocalFullScreenActionsEnabled provides bottomBarActive,
                                 ) {
                                     Box(
                                         Modifier
@@ -221,6 +235,21 @@ fun CouiPositionFullScreen(
                                                     CompositingStrategy.Auto
                                                 }
                                             }
+                                            .then(
+                                                if (!bottomBarActive) {
+                                                    Modifier
+                                                        .clearAndSetSemantics { }
+                                                        .pointerInput(Unit) {
+                                                            awaitPointerEventScope {
+                                                                while (true) {
+                                                                    awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+                                                                }
+                                                            }
+                                                        }
+                                                } else {
+                                                    Modifier
+                                                },
+                                            )
                                             .windowInsetsPadding(
                                                 WindowInsets.navigationBars.only(WindowInsetsSides.Bottom),
                                             )
@@ -254,6 +283,7 @@ private fun FullScreenTopBar(
     onBack: () -> Unit,
     backEnabled: Boolean,
     endAction: (@Composable () -> Unit)?,
+    endActionKey: Any?,
 ) {
     Box(Modifier.fillMaxWidth().height(FullScreenTopBarHeight)) {
         Row(
@@ -278,29 +308,55 @@ private fun FullScreenTopBar(
                 )
             }
             Spacer(Modifier.weight(1f))
-            val lastEndAction = remember { mutableStateOf(endAction) }
-            if (endAction != null) {
-                lastEndAction.value = endAction
-            }
-            val endActionAlpha by animateFloatAsState(
-                targetValue = if (endAction != null) 1f else 0f,
-                animationSpec = tween(durationMillis = if (endAction != null) 240 else 200),
-                label = "FullScreenEndActionAlpha",
-            )
-            if (endActionAlpha > 0.01f) {
-                Box(
-                    modifier = Modifier.graphicsLayer {
-                        alpha = endActionAlpha
-                        scaleX = 0.78f + 0.22f * endActionAlpha
-                        scaleY = 0.78f + 0.22f * endActionAlpha
-                        compositingStrategy = if (endActionAlpha < 1f) {
-                            CompositingStrategy.Offscreen
-                        } else {
-                            CompositingStrategy.Auto
+            val endActionTransition = updateTransition(targetState = endActionKey, label = "FullScreenEndAction")
+            val isEndActionTransitioning = endActionTransition.currentState != endActionTransition.targetState
+            endActionTransition.AnimatedContent(
+                modifier = Modifier.graphicsLayer {
+                    compositingStrategy = if (isEndActionTransitioning) {
+                        CompositingStrategy.Offscreen
+                    } else {
+                        CompositingStrategy.Auto
+                    }
+                },
+                contentAlignment = Alignment.Center,
+                transitionSpec = {
+                    (
+                        fadeIn(tween(durationMillis = 220)) +
+                            scaleIn(tween(durationMillis = 220), initialScale = 0.78f)
+                        ) togetherWith (
+                        fadeOut(tween(durationMillis = 160)) +
+                            scaleOut(tween(durationMillis = 160), targetScale = 0.78f)
+                        )
+                },
+            ) { slotKey ->
+                val isSlotActive = slotKey == endActionKey
+                val frozenAction = remember { SlotHolder(endAction) }
+                if (isSlotActive) {
+                    frozenAction.value = endAction
+                }
+                val actionContent = frozenAction.value
+                if (actionContent != null) {
+                    val actionsEnabled = LocalFullScreenActionsEnabled.current && isSlotActive
+                    CompositionLocalProvider(LocalFullScreenActionsEnabled provides actionsEnabled) {
+                        Box(
+                            modifier = if (!isSlotActive) {
+                                Modifier
+                                    .clearAndSetSemantics { }
+                                    .pointerInput(Unit) {
+                                        awaitPointerEventScope {
+                                            while (true) {
+                                                awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+                                            }
+                                        }
+                                    }
+                            } else {
+                                Modifier
+                            },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            actionContent()
                         }
-                    },
-                ) {
-                    lastEndAction.value?.invoke()
+                    }
                 }
             }
         }
@@ -309,11 +365,11 @@ private fun FullScreenTopBar(
             contentAlignment = Alignment.Center,
             transitionSpec = {
                 (
-                    fadeIn(tween(durationMillis = 220, delayMillis = 60)) +
-                        slideInVertically(tween(durationMillis = 240, delayMillis = 40)) { it / 3 }
+                    fadeIn(tween(durationMillis = 200)) +
+                        slideInVertically(tween(durationMillis = 220)) { it / 3 }
                     ) togetherWith (
-                    fadeOut(tween(durationMillis = 120)) +
-                        slideOutVertically(tween(durationMillis = 160)) { -it / 3 }
+                    fadeOut(tween(durationMillis = 140)) +
+                        slideOutVertically(tween(durationMillis = 140)) { -it / 3 }
                     )
             },
             modifier = Modifier.align(Alignment.Center).clipToBounds(),

@@ -54,12 +54,9 @@ fun DialogPage(
     val installMode = uiState.config.installMode
     val temporarySeedColor = uiState.seedColor
     val useBlur = viewSettings.useBlur
-    // External signal that drives the fullscreen layer's exit fade. Flipped
-    // to `true` by [InstallerViewModel.requestFullscreenClose] (which is
-    // what [performBack] / [performFullscreenExit] call from the fullscreen
-    // branch below). The actual session teardown happens ~220ms later on
-    // `viewModelScope` so the fade-out has time to play.
-    val isClosingFullscreen by viewModel.isClosingFullscreen.collectAsStateWithLifecycle()
+    // Combined atomically with `stage` in `uiState` so tearing down the
+    // fullscreen layer never pairs `isClosing = false` with an outdated stage.
+    val isClosingFullscreen = uiState.isClosingFullscreen
 
     val globalColorScheme = InstallerTheme.colorScheme
     val isDark = InstallerTheme.isDark
@@ -289,6 +286,7 @@ fun DialogPage(
                     PositionFullScreen(
                         onBackRequest = { performBack() },
                         isClosing = isClosingFullscreen,
+                        onCloseAnimationFinished = { viewModel.completeFullscreenClose() },
                         contentKey = FullScreenContentKey(
                             stageType = stage::class,
                             textId = if (isModuleInstalling) "module" else params.text.id,

@@ -35,15 +35,43 @@ class InstallerFullscreenCloseTest {
     fun `fullscreen close defers session close until fade out finishes`() = fixture { scope ->
         vm.setFullscreenPresentation(true)
         vm.dispatch(InstallerViewAction.Close)
-
-        assertTrue(vm.isClosingFullscreen.value)
-        assertTrue(session.closeRequested.value)
-        assertEquals(0, onCloseCalls)
-
-        scope.advanceTimeBy(InstallerViewModel.FullscreenCloseFadeOutMs - 1)
         scope.runCurrent()
 
         assertTrue(vm.isClosingFullscreen.value)
+        assertTrue(vm.uiState.value.isClosingFullscreen)
+        assertTrue(session.closeRequested.value)
+        assertEquals(0, onCloseCalls)
+
+        scope.advanceTimeBy(InstallerViewModel.FullscreenCloseFadeOutMs)
+        scope.runCurrent()
+
+        assertTrue(vm.isClosingFullscreen.value)
+        assertTrue(vm.uiState.value.isClosingFullscreen)
+        assertEquals(0, onCloseCalls)
+
+        vm.completeFullscreenClose()
+        scope.runCurrent()
+
+        assertEquals(1, onCloseCalls)
+        assertFalse(vm.isClosingFullscreen.value)
+        assertFalse(vm.uiState.value.isClosingFullscreen)
+    }
+
+    @Test
+    fun `fullscreen close falls back to timeout when animation callback never arrives`() = fixture { scope ->
+        vm.setFullscreenPresentation(true)
+        vm.dispatch(InstallerViewAction.Close)
+        scope.runCurrent()
+
+        assertTrue(vm.isClosingFullscreen.value)
+        assertTrue(vm.uiState.value.isClosingFullscreen)
+        assertEquals(0, onCloseCalls)
+
+        scope.advanceTimeBy(InstallerViewModel.FullscreenCloseFallbackTimeoutMs - 1)
+        scope.runCurrent()
+
+        assertTrue(vm.isClosingFullscreen.value)
+        assertTrue(vm.uiState.value.isClosingFullscreen)
         assertEquals(0, onCloseCalls)
 
         scope.advanceTimeBy(1)
@@ -51,6 +79,7 @@ class InstallerFullscreenCloseTest {
 
         assertEquals(1, onCloseCalls)
         assertFalse(vm.isClosingFullscreen.value)
+        assertFalse(vm.uiState.value.isClosingFullscreen)
     }
 
     @Test
@@ -59,6 +88,7 @@ class InstallerFullscreenCloseTest {
         vm.dispatch(InstallerViewAction.Close)
 
         assertFalse(vm.isClosingFullscreen.value)
+        assertFalse(vm.uiState.value.isClosingFullscreen)
         assertTrue(session.closeRequested.value)
         assertEquals(1, onCloseCalls)
     }
@@ -68,10 +98,11 @@ class InstallerFullscreenCloseTest {
         vm.setFullscreenPresentation(true)
         vm.dispatch(InstallerViewAction.Close)
 
-        scope.advanceTimeBy(InstallerViewModel.FullscreenCloseFadeOutMs / 2)
+        scope.advanceTimeBy(InstallerViewModel.FullscreenCloseFallbackTimeoutMs / 2)
         scope.runCurrent()
 
         assertTrue(vm.isClosingFullscreen.value)
+        assertTrue(vm.uiState.value.isClosingFullscreen)
         assertTrue(session.closeRequested.value)
         assertEquals(0, onCloseCalls)
 
@@ -81,8 +112,9 @@ class InstallerFullscreenCloseTest {
         scope.runCurrent()
 
         assertFalse(vm.isClosingFullscreen.value)
+        assertFalse(vm.uiState.value.isClosingFullscreen)
 
-        scope.advanceTimeBy(InstallerViewModel.FullscreenCloseFadeOutMs * 2)
+        scope.advanceTimeBy(InstallerViewModel.FullscreenCloseFallbackTimeoutMs * 2)
         scope.runCurrent()
 
         assertEquals(0, onCloseCalls)
