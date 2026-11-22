@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Process as AndroidProcess
 import android.util.LruCache
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.scale
 import com.materialkolor.quantize.QuantizerCelebi
@@ -307,8 +308,33 @@ class AppIconRepositoryImpl(private val context: Context) : AppIconRepository {
         } else {
             rawEntityIconDrawable?.toSafeBitmap(iconSizePx)
                 ?: installedAppInfo?.let {
-                    AppIconCache.loadIconBitmap(context, it, userId, iconSizePx)
+                    loadRawInstalledIcon(it, iconSizePx)
+                        ?: AppIconCache.loadIconBitmap(context, it, userId, iconSizePx)
                 }
+        }
+    }
+
+    /**
+     * Loads an installed app's unbadged drawable directly from its APK resources without passing
+     * through [AppIconLoader]'s Launcher3 shadow/shrink pipeline.
+     */
+    private fun loadRawInstalledIcon(appInfo: ApplicationInfo, iconSizePx: Int): Bitmap? {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM && appInfo.isArchived) {
+            return null
+        }
+        return try {
+            val resDrawable = if (appInfo.icon != 0) {
+                runCatching {
+                    ResourcesCompat.getDrawable(pm.getResourcesForApplication(appInfo), appInfo.icon, null)
+                }.getOrNull()
+            } else {
+                null
+            }
+            val rawDrawable: Drawable? = resDrawable ?: appInfo.loadUnbadgedIcon(pm)
+            rawDrawable?.toSafeBitmap(iconSizePx)
+        } catch (e: Exception) {
+            Timber.w(e, "Could not load raw installed icon for package: %s", appInfo.packageName)
+            null
         }
     }
 
