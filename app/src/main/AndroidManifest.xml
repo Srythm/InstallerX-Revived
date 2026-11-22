@@ -139,7 +139,7 @@
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
             android:excludeFromRecents="true"
             android:exported="true"
-            android:launchMode="singleInstance"
+            android:noHistory="true"
             android:theme="@style/Theme.Installer.Translucent">
 
             <intent-filter>
@@ -157,6 +157,15 @@
             </intent-filter>
 
         </activity>
+
+        <activity
+            android:name=".ui.activity.UninstallerSessionActivity"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Installer.Translucent" />
 
         <activity
             android:name=".ui.activity.UnarchiveActivity"

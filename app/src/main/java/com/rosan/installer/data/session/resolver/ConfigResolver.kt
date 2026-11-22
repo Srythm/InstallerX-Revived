@@ -30,7 +30,9 @@ class ConfigResolver(private val getResolvedConfigUseCase: GetResolvedConfigUseC
     suspend fun resolve(activity: Activity): ConfigModel {
         Timber.tag(TAG).d("resolveConfig: Starting.")
 
-        if (activity::class.java.name == ActivityContracts.UNINSTALLER_ACTIVITY) {
+        if (activity::class.java.name == ActivityContracts.UNINSTALLER_ACTIVITY ||
+            activity::class.java.name == ActivityContracts.UNINSTALLER_SESSION_ACTIVITY
+        ) {
             Timber.tag(TAG).d("Activity is UninstallerActivity. Returning default config immediately.")
             return getConfigForSource(InstallSource.unknown(), trustedNotUnknownSource = false)
         }

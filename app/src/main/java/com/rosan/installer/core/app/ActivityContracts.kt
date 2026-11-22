@@ -6,6 +6,7 @@ object ActivityContracts {
     const val SETTINGS_ACTIVITY = "com.rosan.installer.ui.activity.SettingsActivity"
     const val INSTALLER_ACTIVITY = "com.rosan.installer.ui.activity.InstallerActivity"
     const val UNINSTALLER_ACTIVITY = "com.rosan.installer.ui.activity.UninstallerActivity"
+    const val UNINSTALLER_SESSION_ACTIVITY = "com.rosan.installer.ui.activity.UninstallerSessionActivity"
     const val KEY_INSTALLER_ID = "installer_id"
     const val KEY_UNINSTALLER_ID = "uninstaller_id"
 }
