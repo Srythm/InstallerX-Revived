@@ -163,7 +163,7 @@ private fun PermissionCard(
                     ) {
                         Text(
                             text = context.getBestPermissionLabel(permission),
-                            style = COUITheme.textStyles.bodyXL,
+                            style = COUITheme.textStyles.headlineXS,
                             color = COUITheme.colorScheme.labelPrimary,
                         )
                         Text(

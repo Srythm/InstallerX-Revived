@@ -13,11 +13,9 @@ import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
@@ -620,6 +618,7 @@ internal fun CouiFullScreenInstallerContent(
 ) {
     val stage = page.stage
     val isMain = page.subPage == FullScreenSubPage.Main
+    val shellTopBleed = LocalFullScreenTopBleed.current
 
     val title = when (page.subPage) {
         FullScreenSubPage.Permissions -> stringResource(R.string.permission_list)
@@ -760,31 +759,6 @@ internal fun CouiFullScreenInstallerContent(
         endAction = topEndAction,
         endActionKey = topEndActionKey,
         useBlur = useBlur,
-        fixedHeader = {
-            // The chrome height drives the content's top padding and the band above it, so the
-            // identity block has to collapse smoothly: a snap here reads as the page jumping.
-            val showFixedHeader = page.subPage == FullScreenSubPage.Main && headerData != null
-            val lastHeader = remember { FullScreenSlotRef(headerData) }
-            if (headerData != null) {
-                lastHeader.value = headerData
-            }
-            AnimatedVisibility(
-                visible = showFixedHeader,
-                enter = fadeIn(tween(durationMillis = 220)) +
-                    expandVertically(tween(durationMillis = 240)),
-                exit = fadeOut(tween(durationMillis = 160)) +
-                    shrinkVertically(tween(durationMillis = 200)),
-            ) {
-                val header = lastHeader.value
-                if (header != null) {
-                    CouiFullScreenAppHeader(
-                        appInfo = header.appInfo,
-                        versionLine = header.versionLine,
-                        onIconClick = header.onIconClick,
-                    )
-                }
-            }
-        },
         bottomBar = if (usesShellBottomBar) {
             {
                 FullScreenActionRow(
@@ -822,25 +796,83 @@ internal fun CouiFullScreenInstallerContent(
             label = "FullScreenSubPage",
         ) { subPage ->
             val frozenSubPage = remember {
-                FullScreenSlotRef(Pair(liveBodySnapshot, permissions))
+                FullScreenSlotRef(Triple(headerData, liveBodySnapshot, permissions))
             }
             if (subPage == page.subPage) {
-                frozenSubPage.value = Pair(liveBodySnapshot, permissions)
+                frozenSubPage.value = Triple(headerData, liveBodySnapshot, permissions)
             }
-            val (slotBodySnapshot, slotPermissions) = frozenSubPage.value
+            val (slotHeaderData, slotBodySnapshot, slotPermissions) = frozenSubPage.value
             TransitionSlotGuard(isActive = subPage == page.subPage) {
                 when (subPage) {
-                    FullScreenSubPage.Main -> FullScreenStageBody(
-                        snapshot = slotBodySnapshot,
-                        prepareScrollState = prepareScrollState,
-                        onOpenPermissions = { onAction(InstallerViewAction.ShowCouiPermissionList) },
-                        onOpenInstallOptions = onOpenInstallOptions,
-                        onOpenSplitChoice = onOpenSplitChoice,
-                        onOpenLsposed = onOpenLsposed,
-                        onToggleUninstallFlag = onToggleUninstallFlag,
-                        choiceContent = choiceContent,
-                        errorSuggestionsContent = errorSuggestionsContent,
-                    )
+                    FullScreenSubPage.Main -> {
+                        val hasHeader = slotHeaderData != null
+                        AnimatedContent(
+                            targetState = hasHeader,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clipToBounds(),
+                            contentAlignment = Alignment.Center,
+                            contentKey = { it },
+                            transitionSpec = {
+                                fadeIn(tween(durationMillis = 220)) togetherWith
+                                    fadeOut(tween(durationMillis = 180))
+                            },
+                            label = "FullScreenHeaderMode",
+                        ) { slotHasHeader ->
+                            val frozenHeaderSlot = remember {
+                                FullScreenSlotRef(Pair(slotHeaderData, slotBodySnapshot))
+                            }
+                            if (slotHasHeader == hasHeader) {
+                                frozenHeaderSlot.value = Pair(slotHeaderData, slotBodySnapshot)
+                            }
+                            val (frozenHeader, frozenBody) = frozenHeaderSlot.value
+                            TransitionSlotGuard(isActive = slotHasHeader == hasHeader) {
+                                if (slotHasHeader) {
+                                    // The identity block stays inside the page so it pushes with it,
+                                    // exactly as released. It reserves the chrome space once here,
+                                    // so the body below must not reserve it again.
+                                    CompositionLocalProvider(LocalFullScreenTopBleed provides 0.dp) {
+                                        Column(Modifier.fillMaxSize().padding(top = shellTopBleed)) {
+                                            frozenHeader?.let { header ->
+                                                CouiFullScreenAppHeader(
+                                                    appInfo = header.appInfo,
+                                                    versionLine = header.versionLine,
+                                                    onIconClick = header.onIconClick,
+                                                )
+                                            }
+                                            Box(Modifier.fillMaxWidth().weight(1f)) {
+                                                FullScreenStageBody(
+                                                    snapshot = frozenBody,
+                                                    prepareScrollState = prepareScrollState,
+                                                    onOpenPermissions = { onAction(InstallerViewAction.ShowCouiPermissionList) },
+                                                    onOpenInstallOptions = onOpenInstallOptions,
+                                                    onOpenSplitChoice = onOpenSplitChoice,
+                                                    onOpenLsposed = onOpenLsposed,
+                                                    onToggleUninstallFlag = onToggleUninstallFlag,
+                                                    choiceContent = choiceContent,
+                                                    errorSuggestionsContent = errorSuggestionsContent,
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Box(Modifier.fillMaxSize()) {
+                                        FullScreenStageBody(
+                                            snapshot = frozenBody,
+                                            prepareScrollState = prepareScrollState,
+                                            onOpenPermissions = { onAction(InstallerViewAction.ShowCouiPermissionList) },
+                                            onOpenInstallOptions = onOpenInstallOptions,
+                                            onOpenSplitChoice = onOpenSplitChoice,
+                                            onOpenLsposed = onOpenLsposed,
+                                            onToggleUninstallFlag = onToggleUninstallFlag,
+                                            choiceContent = choiceContent,
+                                            errorSuggestionsContent = errorSuggestionsContent,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
 
                     FullScreenSubPage.Permissions -> CouiFullScreenPermissionContent(slotPermissions)
 

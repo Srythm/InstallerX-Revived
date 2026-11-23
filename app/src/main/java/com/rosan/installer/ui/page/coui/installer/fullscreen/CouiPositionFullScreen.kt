@@ -102,10 +102,10 @@ internal val LocalFullScreenBottomBleed = staticCompositionLocalOf { 0.dp }
 /**
  * The full-screen installer surface.
  *
- * The bar, the identity block and the action row are drawn exactly once, here, and never take part
- * in a page change: letting each page draw its own bar put two sets of icon buttons on the same
- * pixels during a push, which reads as the buttons flashing grey. Only [content] moves between
- * pages, and it is the only thing recorded into the content blur source.
+ * The bar and the action row are drawn exactly once, here, and never take part in a page change:
+ * letting each page draw its own bar put two sets of icon buttons on the same pixels during a
+ * push, which reads as the buttons flashing grey. Only [content] moves between pages, and it is
+ * the only thing recorded into the content blur source.
  *
  * The ViewModel owns teardown; this shell notifies [onCloseAnimationFinished] when the exit fade
  * finishes (with a ViewModel fallback timeout if the callback never arrives).
@@ -120,7 +120,6 @@ fun CouiPositionFullScreen(
     endAction: (@Composable () -> Unit)? = null,
     endActionKey: Any? = endAction != null,
     useBlur: Boolean = false,
-    fixedHeader: (@Composable () -> Unit)? = null,
     bottomBar: (@Composable () -> Unit)? = null,
     onCloseAnimationFinished: () -> Unit = {},
     content: @Composable () -> Unit,
@@ -250,7 +249,9 @@ fun CouiPositionFullScreen(
                             )
                         }
 
-                        // Fixed chrome: one bar and one identity block, never part of a page change.
+                        // Fixed chrome: one bar, never part of a page change. Its height is stable,
+                        // so sub-page pushes keep the released horizontal motion with no vertical
+                        // shift of the content viewport.
                         Column(
                             modifier = Modifier
                                 .align(Alignment.TopCenter)
@@ -267,7 +268,6 @@ fun CouiPositionFullScreen(
                                 endAction = endAction,
                                 endActionKey = endActionKey,
                             )
-                            fixedHeader?.invoke()
                         }
 
                         val lastBottomBar = remember { FullScreenSlotRef(bottomBar) }
