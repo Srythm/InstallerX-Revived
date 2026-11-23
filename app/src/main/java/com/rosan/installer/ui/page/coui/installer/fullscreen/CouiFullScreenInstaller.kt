@@ -12,7 +12,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -756,7 +755,6 @@ internal fun CouiFullScreenInstallerContent(
     )
     var fixedHeaderHeightPx by remember { mutableIntStateOf(0) }
     val fixedHeaderHeight = with(LocalDensity.current) { fixedHeaderHeightPx.toDp() }
-    val headerState = FullScreenHeaderState(page.subPage, hasHeader = headerData != null)
 
     CouiPositionFullScreen(
         title = title,
@@ -767,38 +765,39 @@ internal fun CouiFullScreenInstallerContent(
         endActionKey = topEndActionKey,
         useBlur = useBlur,
         fixedHeader = { headerMeasureModifier ->
-            // The identity block leaves towards, and returns from, the right edge. Body pages keep
-            // the standard push direction. Never clip the header vertically; the shell may animate
-            // its band height while page slots own stable top insets below.
-            AnimatedContent(
-                targetState = headerState,
-                modifier = Modifier.fillMaxWidth(),
-                contentKey = { it },
-                transitionSpec = {
-                    val transform = if (initialState.subPage == targetState.subPage) {
-                        fadeIn(tween(durationMillis = 220)) togetherWith fadeOut(tween(durationMillis = 180))
-                    } else {
-                        headerSubPageTransition()
+            // The whole header rides the page push: it leaves to, and returns from, the left edge.
+            // A stage change inside Main keeps its own cross-fade, so progress pages do not slide.
+            // Page slots below own stable top insets, so this exit cannot drag the body viewport.
+            val hasHeader = headerData != null
+            AnimatedVisibility(
+                visible = page.subPage == FullScreenSubPage.Main,
+                enter = fadeIn(tween(durationMillis = 220)) +
+                    slideInHorizontally(colorOsSpring(responseSeconds = 0.32f)) { -it / 4 },
+                exit = fadeOut(tween(durationMillis = 160)) +
+                    slideOutHorizontally(tween(durationMillis = 160)) { -it / 4 },
+            ) {
+                AnimatedContent(
+                    targetState = hasHeader,
+                    contentKey = { it },
+                    transitionSpec = {
+                        fadeIn(tween(durationMillis = 220)) togetherWith
+                            fadeOut(tween(durationMillis = 180))
+                    },
+                    label = "FullScreenHeaderMode",
+                ) { slotHasHeader ->
+                    val frozenHeader = remember { FullScreenSlotRef(headerData) }
+                    if (slotHasHeader == hasHeader && headerData != null) {
+                        frozenHeader.value = headerData
                     }
-                    transform.using(
-                        SizeTransform(clip = false) { _, _ -> colorOsSpring(responseSeconds = 0.32f) },
-                    )
-                },
-                label = "FullScreenSubPageHeader",
-            ) { slotState ->
-                val isActive = slotState == headerState
-                val frozenHeader = remember { FullScreenSlotRef(headerData) }
-                if (isActive) {
-                    frozenHeader.value = headerData
-                }
-                val header = frozenHeader.value
-                if (slotState.subPage == FullScreenSubPage.Main && slotState.hasHeader && header != null) {
-                    CouiFullScreenAppHeader(
-                        appInfo = header.appInfo,
-                        versionLine = header.versionLine,
-                        modifier = headerMeasureModifier.onSizeChanged { fixedHeaderHeightPx = it.height },
-                        onIconClick = if (isActive) header.onIconClick else null,
-                    )
+                    val header = frozenHeader.value
+                    if (slotHasHeader && header != null) {
+                        CouiFullScreenAppHeader(
+                            appInfo = header.appInfo,
+                            versionLine = header.versionLine,
+                            modifier = headerMeasureModifier.onSizeChanged { fixedHeaderHeightPx = it.height },
+                            onIconClick = header.onIconClick,
+                        )
+                    }
                 }
             }
         },
@@ -908,11 +907,6 @@ private fun FullScreenSubPageLayout(
     }
 }
 
-private data class FullScreenHeaderState(
-    val subPage: FullScreenSubPage,
-    val hasHeader: Boolean,
-)
-
 private data class HeaderDisplayData(
     val appInfo: AppInfoState,
     val versionLine: String?,
@@ -972,18 +966,7 @@ private fun rememberHeaderDisplay(
     else -> null
 }
 
-/** The identity block always exits to, and returns from, the right edge. */
-private fun headerSubPageTransition(): ContentTransform = (
-    fadeIn(tween(durationMillis = 220)) +
-        slideInHorizontally(colorOsSpring(responseSeconds = 0.32f)) { it / 4 }
-    ) togetherWith (
-    fadeOut(tween(durationMillis = 160)) +
-        slideOutHorizontally(tween(durationMillis = 160)) { it / 6 }
-    )
-
-private fun AnimatedContentTransitionScope<FullScreenSubPage>.subPageTransition(): ContentTransform = subPageTransition(targetState)
-
-private fun subPageTransition(targetState: FullScreenSubPage): ContentTransform = if (targetState != FullScreenSubPage.Main) {
+private fun AnimatedContentTransitionScope<FullScreenSubPage>.subPageTransition(): ContentTransform = if (targetState != FullScreenSubPage.Main) {
     (
         fadeIn(tween(durationMillis = 220)) +
             slideInHorizontally(colorOsSpring(responseSeconds = 0.32f)) { it / 4 }
