@@ -11,7 +11,7 @@
 | 能力 | 位置 | 状态 |
 | --- | --- | --- |
 | 内容采样源 + 覆盖式外壳 | `CouiPositionFullScreen.kt` | 已落地；静态源供材质/弹出层，内容源供上下渐进带 |
-| 顶部渐进带（顶栏＋头部整段，带主题遮罩） | `CouiPositionFullScreen.kt`、`Backdrop.kt CouiProgressiveEdgeBand` | 已落地；观感以 2dc8a1a7 为基准恢复 |
+| 顶部渐进带（状态栏＋顶栏＋头部整段，带主题遮罩） | `CouiPositionFullScreen.kt`、`Backdrop.kt CouiProgressiveEdgeBand` | 已落地；观感以 2dc8a1a7 为基准恢复 |
 | 底部渐进带（仅有操作栏的页面） | `CouiPositionFullScreen.kt` | 已落地；无按钮页面不绘制 |
 | 留白下沉（准备/权限/临时设置/批量结果） | 各 content 文件 | 已落地；居中状态页保留预留布局 |
 | 文案「最低 SDK」、准备页黑色行标题 `headlineXS` | `strings.xml` ×2、`CouiFullScreenPrepareContent.kt` | 已落地 |
@@ -23,7 +23,7 @@
 
 头部位于外壳固定区，chrome 高度 = 顶栏 + 头部。进入子页时头部以 `AnimatedVisibility` + `colorOsSpring(0.32s)` 平滑收起，正文顶边留白与顶部带随之连续变化；发行版（26.11.1）头部在页面槽内随页面纯横向滑出，视口顶边恒定。
 
-- 现状：几何与模糊观感正确（用户认可 2dc8a1a7），但推送含一段纵向收起运动。
+- 现状：几何与模糊观感正确（用户认可 2dc8a1a7），但推送含一段纵向收起运动。当前参数：头部 `fadeIn 220ms / fadeOut 160ms` + `expand/shrinkVertically(colorOsSpring(0.32s))`；子页横向 `slideInHorizontally(colorOsSpring(0.32s)) { it / 4 }`，退出 `slideOutHorizontally(tween(160)) { -it / 6 }`（`subPageTransition()`）。
 - 已尝试并失败的替代方案：
   - `5818183b` 头部放回页面槽：推送恢复发行版，但准备页顶部失去真实内容渐进（头部下缘无带）。
   - `90782412` / `8e2f73dd` / `ef20c9ed` / `b58e4d57` 正文顶边小带方案：先后出现头部被糊、色带（实色底采样源 + 无遮罩纯模糊）等问题。
@@ -37,12 +37,12 @@
 ### 2.3 部分页面顶部仍为静态材质（设计内限制）
 
 - 安装选项页：卡片整体从顶栏下缘开始，列表视口不伸到栏后，顶部带只采样背景 → 无真实内容渐进；卡片圆角保留。
-- 模块日志、确认页、进度/完成/错误页、卸载/归档恢复：保留预留布局与居中语义，顶部静态材质。
+- 模块日志、确认页、分包选择页、进度/完成/错误页、卸载/归档恢复：保留预留布局与居中语义（`StageBodyContent` 的 `else -> padding(top = topBleed, bottom = bottomBleed)`），顶部静态材质。
 - 准备页顶部为真实渐进（正文滚过顶栏+头部后方）；权限页、临时设置页顶部为真实渐进；准备页与批量结果底部为真实渐进。
 
 ### 2.4 底部带在按钮区不透明度偏高（观感待复核）
 
-底部带遮罩在操作按钮所在高度约 0.87 不透明度，视觉上接近一条实色底栏。用户曾要求「无按钮页面去掉遮罩」（已实现），但有按钮页面的遮罩强度是否合适未确认。
+底部带遮罩沿用顶部带的镜像 stops（浅色 `0 → 0.7@0.4 → 1`，深色 `0 → 0.4`，见 `Backdrop.kt` `CouiProgressiveEdgeBand`）。操作按钮位于带的不透明端附近，视觉上接近一条实色底栏。用户曾要求「无按钮页面去掉遮罩」（已实现：底部带以 `bottomBar != null` 为门），但有按钮页面的遮罩强度是否合适未确认。
 
 ## 3. 未验证项（验收缺口）
 
