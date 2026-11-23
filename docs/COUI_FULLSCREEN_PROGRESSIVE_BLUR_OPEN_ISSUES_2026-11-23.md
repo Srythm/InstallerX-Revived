@@ -2,9 +2,9 @@
 
 - 日期：2026-11-23
 - 源码基线：`main` @ `e3e0ce4b`（tag `26.11.1`，versionCode 1721）
-- 工作分支：`feat/coui-fullscreen-progressive-blur`，未合 main；本轮动画修复提交 `c7271f0b`，后续文档更新不改变该基线。
+- 工作分支：`feat/coui-fullscreen-progressive-blur`，未合 main；本轮动画修复提交 `8df262f3`（取代失效的 `c7271f0b`），后续文档更新不改变该基线。
 - 文档性质：问题清单与待决事项；不是功能说明，也不替代 `COUI_FULLSCREEN_PROGRESSIVE_BLUR_REPORT_2026-11-23.md` 的适配方案。
-- 验证状态：`./gradlew spotlessApply` 通过；CI `manual-build.yml`（Preview/debug）多次通过，动画修复最终 run `45182311088` 通过；**未跑单元测试、无真机自动化验收**。本机无 Android SDK，编译验证只能走 CI。
+- 验证状态：`./gradlew spotlessApply` 通过；CI `manual-build.yml`（Preview/debug）多次通过，动画修复最终 run `45184368115` 通过；**未跑单元测试、无真机自动化验收**。本机无 Android SDK，编译验证只能走 CI。
 
 ## 1. 已落地且编译验证通过的部分
 
@@ -22,10 +22,10 @@
 ### 2.1 子页推送动画与发行版不一致（已实现修复，待真机复核）
 
 - `d38d9ba0`：头部与正文开始解耦；头部仍在外壳覆盖层，不进入内容采样源。
-- 方向修正（本提交，取代 `c7271f0b`）：`c7271f0b` 只改了空目标槽上的 `AnimatedContent` 位移符号，头部退出仍不可见。现改回 `AnimatedVisibility` 作为真正的 enter/exit 宿主：进入子页时头部向左退出，返回主页时从左侧进入。正文仍使用 `subPageTransition()` 的标准推送（旧主页向左退、子页从右进）。
+- 方向修正 `8df262f3`（取代 `c7271f0b`）：`c7271f0b` 只改了空目标槽上的 `AnimatedContent` 位移符号，头部退出仍不可见。现改回 `AnimatedVisibility` 作为真正的 enter/exit 宿主：进入子页时头部向左退出，返回主页时从左侧进入。正文仍使用 `subPageTransition()` 的标准推送（旧主页向左退、子页从右进）。
 - 旧主页与新子页分别持有稳定的顶部布局：开启模糊时各自保留固定 top bleed，关闭模糊时各自保留固定 viewport top inset；转场期间不再由 chrome 高度驱动正文顶边连续变化。共享采样源与 `CouiProgressiveEdgeBand` 的实现未改。
 - `d7f1cced`：同一主页内仅阶段导致头部出现／消失时，保留 220/180ms 淡入淡出；该内层转场继续保留，只有子页变化才让整个头部左出左回。
-- 验证：`spotlessApply` 通过；CI run `45168880991`、`45169673533` 与最终 run `45182311088` 均通过 Preview/debug 组装。**尚无真机录屏，进入与返回子页、关模糊降级仍需复核。**
+- 验证：`spotlessApply` 通过；CI run `45168880991`、`45169673533`、`45182311088` 与最终 run `45184368115` 均通过 Preview/debug 组装。**尚无真机录屏，进入与返回子页、关模糊降级仍需复核。**
 
 ### 2.2 顶部带遮罩与页面 wash 的轻微色差（理论存在，未真机复核）
 
@@ -69,7 +69,7 @@
 
 ## 5. 建议的下一步顺序
 
-1. 真机验收 run 45182311088 的 APK：准备页几何/渐进、子页进入与返回的纯横向推送、头部向右退出/右侧返回、选项页卡片、权限页字重、深色与关模糊降级。
+1. 真机验收 run 45184368115 的 APK：准备页几何/渐进、子页进入与返回的纯横向推送、头部向左退出/左侧返回、选项页卡片、权限页字重、深色与关模糊降级。
 2. 就 §2.4 的底部遮罩强度给出结论；如需改动，只动遮罩 stops，不动采样/带几何。
 3. 决定 §4.1 pin 合回 main 的时机（独立提交，不携带模糊功能）。
 4. 补跑 `testUnstableDebugUnitTest` 与性能测量，再决定 squash 与合并 main。
