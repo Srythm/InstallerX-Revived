@@ -71,6 +71,7 @@ import com.rosan.installer.ui.theme.CouiProgressiveEdgeBand
 import com.rosan.installer.ui.theme.ProvideCouiMaterialBackdrop
 import com.rosan.installer.ui.theme.colorOsSpring
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
+import com.rosan.installer.ui.theme.rememberCouiSurfaceBackdrop
 import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.IconButton
 import io.github.suqi8.coui.kmp.basic.Text
@@ -141,8 +142,9 @@ fun CouiPositionFullScreen(
     val backdrop = if (inspectionMode) null else rememberCouiBlurBackdrop(useBlur)
     val contentBackdrop = if (inspectionMode) null else rememberCouiBlurBackdrop(useBlur)
     // Records only the scrolling body of pages with a fixed identity block, so a band on the body's
-    // top edge blurs the list without ever sampling the block above it.
-    val bodyBackdrop = if (inspectionMode) null else rememberCouiBlurBackdrop(useBlur)
+    // top edge blurs the list without ever sampling the block above it. No opaque fill: the list
+    // fades out at its top edge, and a fill would survive that fade as a flat colour band.
+    val bodyBackdrop = if (inspectionMode) null else rememberCouiSurfaceBackdrop(useBlur)
     val currentOnCloseAnimationFinished by rememberUpdatedState(onCloseAnimationFinished)
     // Start transparent at runtime for symmetric enter fade; previews start opaque.
     val uiAlpha = remember { Animatable(if (inspectionMode) 1f else 0f) }
