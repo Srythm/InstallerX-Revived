@@ -90,22 +90,22 @@ val FullScreenTopBarHeight = 56.dp
 internal val LocalFullScreenActionsEnabled = staticCompositionLocalOf { true }
 
 /**
- * Height of the fixed top bar including the status bar inset. Pages that scroll behind the chrome
- * reserve it in their scroll content and draw their own band over it; fixed pages reserve it as
- * outer padding. A page with an identity block overrides it with the block's height below the bar.
+ * Top space a page must reserve for the fixed chrome, which is also the height of the progressive
+ * band above it. Scrolling pages put it in their content padding so the list can run behind the
+ * chrome; fixed pages put it in their outer padding. Zero when there is no content blur to sample.
  */
 internal val LocalFullScreenTopBleed = staticCompositionLocalOf { 0.dp }
 
-/** Bottom counterpart of the top reserve, sized by the reserved action row. */
+/** Bottom counterpart of [LocalFullScreenTopBleed], sized by the reserved action row. */
 internal val LocalFullScreenBottomBleed = staticCompositionLocalOf { 0.dp }
 
 /**
  * The full-screen installer surface.
  *
- * The bar and the action row are drawn exactly once, here, and never take part in a page change:
- * letting each page draw its own bar put two sets of icon buttons on the same pixels during a
- * push, which reads as the buttons flashing grey. Only [content] moves between pages, and it is
- * the only thing recorded into the content blur source.
+ * The bar, the identity block and the action row are drawn exactly once, here, and never take part
+ * in a page change: letting each page draw its own bar put two sets of icon buttons on the same
+ * pixels during a push, which reads as the buttons flashing grey. Only [content] moves between
+ * pages, and it is the only thing recorded into the content blur source.
  *
  * The ViewModel owns teardown; this shell notifies [onCloseAnimationFinished] when the exit fade
  * finishes (with a ViewModel fallback timeout if the callback never arrives).
@@ -120,6 +120,7 @@ fun CouiPositionFullScreen(
     endAction: (@Composable () -> Unit)? = null,
     endActionKey: Any? = endAction != null,
     useBlur: Boolean = false,
+    fixedHeader: (@Composable () -> Unit)? = null,
     bottomBar: (@Composable () -> Unit)? = null,
     onCloseAnimationFinished: () -> Unit = {},
     content: @Composable () -> Unit,
@@ -201,13 +202,16 @@ fun CouiPositionFullScreen(
                         val fixedTopHeight = with(density) { fixedTopHeightPx.toDp() }
                         val bottomBarReservedPadding =
                             FullScreenBottomBarHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                        // Pages own their top overlap and band; the shell only reports the bar
-                        // height and keeps the bottom reserve. Without a content source the bottom
-                        // viewport stops at the action row exactly as released.
+                        // The band and the viewport both run to the screen edge: the ramp's opaque,
+                        // fully blurred end then sits off-screen instead of drawing a rectangle edge
+                        // across the page wash. Content at rest starts where the ramp reaches clear.
+                        // Without a content source the viewport stops at the chrome as it did before.
+                        val topBleed = if (contentBackdrop != null) fixedTopHeight else 0.dp
                         val bottomBleed = if (contentBackdrop != null) bottomBarReservedPadding else 0.dp
+                        val viewportTopInset = (fixedTopHeight - topBleed).coerceAtLeast(0.dp)
 
-                        // Recorded content for the bottom band. The wash is repeated here so the
-                        // sampled layer carries the same base colour as the page.
+                        // Recorded content. The wash is repeated here so the sampled layer carries
+                        // the same base colour as the page instead of transparent margins.
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -221,11 +225,12 @@ fun CouiPositionFullScreen(
                                         WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal),
                                     )
                                     .padding(
+                                        top = viewportTopInset,
                                         bottom = (bottomBarReservedPadding - bottomBleed).coerceAtLeast(0.dp),
                                     ),
                             ) {
                                 CompositionLocalProvider(
-                                    LocalFullScreenTopBleed provides fixedTopHeight,
+                                    LocalFullScreenTopBleed provides topBleed,
                                     LocalFullScreenBottomBleed provides bottomBleed,
                                 ) {
                                     content()
@@ -233,9 +238,19 @@ fun CouiPositionFullScreen(
                             }
                         }
 
-                        // Fixed chrome: one bar, never part of a page change. Its height is stable,
-                        // so sub-page pushes keep the released horizontal motion with no vertical
-                        // shift of the content viewport.
+                        // Progressive band over the whole fixed top chrome, clear at its bottom edge.
+                        if (contentBackdrop != null) {
+                            CouiProgressiveEdgeBand(
+                                backdrop = contentBackdrop,
+                                fromTop = true,
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .fillMaxWidth()
+                                    .height(topBleed),
+                            )
+                        }
+
+                        // Fixed chrome: one bar and one identity block, never part of a page change.
                         Column(
                             modifier = Modifier
                                 .align(Alignment.TopCenter)
@@ -252,6 +267,7 @@ fun CouiPositionFullScreen(
                                 endAction = endAction,
                                 endActionKey = endActionKey,
                             )
+                            fixedHeader?.invoke()
                         }
 
                         val lastBottomBar = remember { FullScreenSlotRef(bottomBar) }
