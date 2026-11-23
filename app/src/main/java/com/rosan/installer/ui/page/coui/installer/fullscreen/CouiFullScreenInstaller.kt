@@ -42,7 +42,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -619,7 +618,9 @@ internal fun CouiFullScreenInstallerContent(
 ) {
     val stage = page.stage
     val isMain = page.subPage == FullScreenSubPage.Main
-    val shellTopBleed = LocalFullScreenTopBleed.current
+    // Sub-pages and batch results scroll behind the bar; the prepare page keeps its identity block
+    // fixed below the bar, so it must not run under the top band.
+    val topOverlap = !isMain || stage is InstallerStage.InstallCompleted
 
     val title = when (page.subPage) {
         FullScreenSubPage.Permissions -> stringResource(R.string.permission_list)
@@ -760,6 +761,7 @@ internal fun CouiFullScreenInstallerContent(
         endAction = topEndAction,
         endActionKey = topEndActionKey,
         useBlur = useBlur,
+        topOverlap = topOverlap,
         bottomBar = if (usesShellBottomBar) {
             {
                 FullScreenActionRow(
@@ -830,30 +832,28 @@ internal fun CouiFullScreenInstallerContent(
                             TransitionSlotGuard(isActive = slotHasHeader == hasHeader) {
                                 if (slotHasHeader) {
                                     // The identity block stays inside the page so it pushes with it,
-                                    // exactly as released. It reserves the chrome space once here,
-                                    // so the body below must not reserve it again.
-                                    CompositionLocalProvider(LocalFullScreenTopBleed provides 0.dp) {
-                                        Column(Modifier.fillMaxSize().padding(top = shellTopBleed)) {
-                                            frozenHeader?.let { header ->
-                                                CouiFullScreenAppHeader(
-                                                    appInfo = header.appInfo,
-                                                    versionLine = header.versionLine,
-                                                    onIconClick = header.onIconClick,
-                                                )
-                                            }
-                                            Box(Modifier.fillMaxWidth().weight(1f)) {
-                                                FullScreenStageBody(
-                                                    snapshot = frozenBody,
-                                                    prepareScrollState = prepareScrollState,
-                                                    onOpenPermissions = { onAction(InstallerViewAction.ShowCouiPermissionList) },
-                                                    onOpenInstallOptions = onOpenInstallOptions,
-                                                    onOpenSplitChoice = onOpenSplitChoice,
-                                                    onOpenLsposed = onOpenLsposed,
-                                                    onToggleUninstallFlag = onToggleUninstallFlag,
-                                                    choiceContent = choiceContent,
-                                                    errorSuggestionsContent = errorSuggestionsContent,
-                                                )
-                                            }
+                                    // exactly as released. The shell already stops this page's
+                                    // viewport at the bar, so no extra top reserve is needed here.
+                                    Column(Modifier.fillMaxSize()) {
+                                        frozenHeader?.let { header ->
+                                            CouiFullScreenAppHeader(
+                                                appInfo = header.appInfo,
+                                                versionLine = header.versionLine,
+                                                onIconClick = header.onIconClick,
+                                            )
+                                        }
+                                        Box(Modifier.fillMaxWidth().weight(1f)) {
+                                            FullScreenStageBody(
+                                                snapshot = frozenBody,
+                                                prepareScrollState = prepareScrollState,
+                                                onOpenPermissions = { onAction(InstallerViewAction.ShowCouiPermissionList) },
+                                                onOpenInstallOptions = onOpenInstallOptions,
+                                                onOpenSplitChoice = onOpenSplitChoice,
+                                                onOpenLsposed = onOpenLsposed,
+                                                onToggleUninstallFlag = onToggleUninstallFlag,
+                                                choiceContent = choiceContent,
+                                                errorSuggestionsContent = errorSuggestionsContent,
+                                            )
                                         }
                                     }
                                 } else {

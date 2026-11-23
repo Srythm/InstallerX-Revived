@@ -107,6 +107,10 @@ internal val LocalFullScreenBottomBleed = staticCompositionLocalOf { 0.dp }
  * push, which reads as the buttons flashing grey. Only [content] moves between pages, and it is
  * the only thing recorded into the content blur source.
  *
+ * [topOverlap] lets a page run its content behind the bar so the top band has real content to
+ * blur. Pages with a fixed identity block leave it false: the block is recorded too, and a band
+ * over it would blur the very information it is meant to keep readable.
+ *
  * The ViewModel owns teardown; this shell notifies [onCloseAnimationFinished] when the exit fade
  * finishes (with a ViewModel fallback timeout if the callback never arrives).
  */
@@ -120,6 +124,7 @@ fun CouiPositionFullScreen(
     endAction: (@Composable () -> Unit)? = null,
     endActionKey: Any? = endAction != null,
     useBlur: Boolean = false,
+    topOverlap: Boolean = false,
     bottomBar: (@Composable () -> Unit)? = null,
     onCloseAnimationFinished: () -> Unit = {},
     content: @Composable () -> Unit,
@@ -201,11 +206,10 @@ fun CouiPositionFullScreen(
                         val fixedTopHeight = with(density) { fixedTopHeightPx.toDp() }
                         val bottomBarReservedPadding =
                             FullScreenBottomBarHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                        // The band and the viewport both run to the screen edge: the ramp's opaque,
-                        // fully blurred end then sits off-screen instead of drawing a rectangle edge
-                        // across the page wash. Content at rest starts where the ramp reaches clear.
-                        // Without a content source the viewport stops at the chrome as it did before.
-                        val topBleed = if (contentBackdrop != null) fixedTopHeight else 0.dp
+                        // Only pages whose content actually scrolls behind the bar get the overlap
+                        // and the band. A page with a fixed identity block must not: the block is
+                        // part of the recording and would be blurred by its own band.
+                        val topBleed = if (contentBackdrop != null && topOverlap) fixedTopHeight else 0.dp
                         val bottomBleed = if (contentBackdrop != null) bottomBarReservedPadding else 0.dp
                         val viewportTopInset = (fixedTopHeight - topBleed).coerceAtLeast(0.dp)
 
@@ -238,7 +242,7 @@ fun CouiPositionFullScreen(
                         }
 
                         // Progressive band over the whole fixed top chrome, clear at its bottom edge.
-                        if (contentBackdrop != null) {
+                        if (contentBackdrop != null && topOverlap) {
                             CouiProgressiveEdgeBand(
                                 backdrop = contentBackdrop,
                                 fromTop = true,
