@@ -767,8 +767,9 @@ internal fun CouiFullScreenInstallerContent(
         endActionKey = topEndActionKey,
         useBlur = useBlur,
         fixedHeader = { headerMeasureModifier ->
-            // Share the body's horizontal transition, but never clip the identity block vertically.
-            // The shell may still animate its band height; page slots own stable top insets below.
+            // The identity block leaves towards, and returns from, the right edge. Body pages keep
+            // the standard push direction. Never clip the header vertically; the shell may animate
+            // its band height while page slots own stable top insets below.
             AnimatedContent(
                 targetState = headerState,
                 modifier = Modifier.fillMaxWidth(),
@@ -777,7 +778,7 @@ internal fun CouiFullScreenInstallerContent(
                     val transform = if (initialState.subPage == targetState.subPage) {
                         fadeIn(tween(durationMillis = 220)) togetherWith fadeOut(tween(durationMillis = 180))
                     } else {
-                        subPageTransition(targetState.subPage)
+                        headerSubPageTransition()
                     }
                     transform.using(
                         SizeTransform(clip = false) { _, _ -> colorOsSpring(responseSeconds = 0.32f) },
@@ -970,6 +971,15 @@ private fun rememberHeaderDisplay(
 
     else -> null
 }
+
+/** The identity block always exits to, and returns from, the right edge. */
+private fun headerSubPageTransition(): ContentTransform = (
+    fadeIn(tween(durationMillis = 220)) +
+        slideInHorizontally(colorOsSpring(responseSeconds = 0.32f)) { it / 4 }
+    ) togetherWith (
+    fadeOut(tween(durationMillis = 160)) +
+        slideOutHorizontally(tween(durationMillis = 160)) { it / 6 }
+    )
 
 private fun AnimatedContentTransitionScope<FullScreenSubPage>.subPageTransition(): ContentTransform = subPageTransition(targetState)
 
