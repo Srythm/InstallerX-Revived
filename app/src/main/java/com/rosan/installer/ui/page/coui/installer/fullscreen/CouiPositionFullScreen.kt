@@ -87,18 +87,12 @@ val FullScreenHorizontalPadding = 16.dp
 /** COUI's `SmallTopAppBar` height. */
 val FullScreenTopBarHeight = 56.dp
 
-/**
- * How far the content viewport reaches behind the fixed top chrome. The progressive band covers
- * exactly this overlap, so content at rest starts where the ramp has already reached clear.
- */
-private val FullScreenTopBleed = 24.dp
-
 internal val LocalFullScreenActionsEnabled = staticCompositionLocalOf { true }
 
 /**
- * Top space a page must reserve for the fixed chrome. The shell already clips the viewport this
- * far short of the chrome's bottom edge, so scrolling pages put it in their content padding and
- * fixed pages put it in their outer padding. Zero when there is no content blur to sample.
+ * Top space a page must reserve for the fixed chrome, which is also the height of the progressive
+ * band above it. Scrolling pages put it in their content padding so the list can run behind the
+ * chrome; fixed pages put it in their outer padding. Zero when there is no content blur to sample.
  */
 internal val LocalFullScreenTopBleed = staticCompositionLocalOf { 0.dp }
 
@@ -208,9 +202,11 @@ fun CouiPositionFullScreen(
                         val fixedTopHeight = with(density) { fixedTopHeightPx.toDp() }
                         val bottomBarReservedPadding =
                             FullScreenBottomBarHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                        // Without a content source there is nothing to blur, so the viewport stops
-                        // at the fixed regions exactly as it did before and no band is drawn.
-                        val topBleed = if (contentBackdrop != null) FullScreenTopBleed else 0.dp
+                        // The band and the viewport both run to the screen edge: the ramp's opaque,
+                        // fully blurred end then sits off-screen instead of drawing a rectangle edge
+                        // across the page wash. Content at rest starts where the ramp reaches clear.
+                        // Without a content source the viewport stops at the chrome as it did before.
+                        val topBleed = if (contentBackdrop != null) fixedTopHeight else 0.dp
                         val bottomBleed = if (contentBackdrop != null) bottomBarReservedPadding else 0.dp
                         val viewportTopInset = (fixedTopHeight - topBleed).coerceAtLeast(0.dp)
 
@@ -242,7 +238,7 @@ fun CouiPositionFullScreen(
                             }
                         }
 
-                        // Progressive band anchored on the bottom edge of the fixed top chrome.
+                        // Progressive band over the whole fixed top chrome, clear at its bottom edge.
                         if (contentBackdrop != null) {
                             CouiProgressiveEdgeBand(
                                 backdrop = contentBackdrop,
@@ -250,7 +246,6 @@ fun CouiPositionFullScreen(
                                 modifier = Modifier
                                     .align(Alignment.TopCenter)
                                     .fillMaxWidth()
-                                    .padding(top = viewportTopInset)
                                     .height(topBleed),
                             )
                         }
@@ -285,9 +280,9 @@ fun CouiPositionFullScreen(
                             label = "FullScreenBottomBarAlpha",
                         )
                         if (bottomBarAlpha > 0.01f) {
-                            // The band stays on the fixed boundary and only fades; the buttons keep
-                            // their own slide so the sampled region never drifts with them.
-                            if (contentBackdrop != null) {
+                            // Only pages that actually have an action row get a bottom band; a page
+                            // without buttons must not keep a mask while the old row fades out.
+                            if (contentBackdrop != null && bottomBar != null) {
                                 CouiProgressiveEdgeBand(
                                     backdrop = contentBackdrop,
                                     fromTop = false,

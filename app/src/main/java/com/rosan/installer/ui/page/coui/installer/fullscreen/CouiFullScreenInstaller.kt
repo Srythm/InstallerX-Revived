@@ -13,9 +13,11 @@ import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
@@ -759,22 +761,22 @@ internal fun CouiFullScreenInstallerContent(
         endActionKey = topEndActionKey,
         useBlur = useBlur,
         fixedHeader = {
+            // The chrome height drives the content's top padding and the band above it, so the
+            // identity block has to collapse smoothly: a snap here reads as the page jumping.
             val showFixedHeader = page.subPage == FullScreenSubPage.Main && headerData != null
-            AnimatedContent(
-                targetState = showFixedHeader,
-                contentKey = { it },
-                transitionSpec = {
-                    fadeIn(tween(durationMillis = 220)) togetherWith
-                        fadeOut(tween(durationMillis = 180))
-                },
-                label = "FullScreenHeaderMode",
-            ) { slotPresent ->
-                val frozenHeader = remember { FullScreenSlotRef(headerData) }
-                if (slotPresent == showFixedHeader) {
-                    frozenHeader.value = headerData
-                }
-                val header = frozenHeader.value
-                if (slotPresent && header != null) {
+            val lastHeader = remember { FullScreenSlotRef(headerData) }
+            if (headerData != null) {
+                lastHeader.value = headerData
+            }
+            AnimatedVisibility(
+                visible = showFixedHeader,
+                enter = fadeIn(tween(durationMillis = 220)) +
+                    expandVertically(tween(durationMillis = 240)),
+                exit = fadeOut(tween(durationMillis = 160)) +
+                    shrinkVertically(tween(durationMillis = 200)),
+            ) {
+                val header = lastHeader.value
+                if (header != null) {
                     CouiFullScreenAppHeader(
                         appInfo = header.appInfo,
                         versionLine = header.versionLine,
