@@ -802,7 +802,7 @@
     <string name="installer_detail_title">详情</string>
     <string name="installer_detail_size">大小</string>
     <string name="installer_detail_target_sdk">目标 SDK</string>
-    <string name="installer_detail_min_sdk">最低 Android 版本</string>
+    <string name="installer_detail_min_sdk">最低 SDK</string>
     <string name="installer_detail_arch">架构</string>
     <string name="installer_detail_source">来源</string>
     <string name="installer_detail_signature">签名</string>

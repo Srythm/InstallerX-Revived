@@ -432,7 +432,7 @@ private fun DetailRow(entry: DetailEntry) {
     ) {
         Text(
             text = entry.label,
-            style = COUITheme.textStyles.bodyXL,
+            style = COUITheme.textStyles.headlineXS,
             color = COUITheme.colorScheme.labelPrimary,
             maxLines = 1,
             modifier = Modifier.weight(1f),
@@ -475,7 +475,7 @@ private fun NavigationRow(
         Column(Modifier.weight(1f)) {
             Text(
                 text = entry.title,
-                style = COUITheme.textStyles.bodyXL,
+                style = COUITheme.textStyles.headlineXS,
                 color = COUITheme.colorScheme.labelPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

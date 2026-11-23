@@ -53,15 +53,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontFamily
@@ -137,6 +143,22 @@ internal class FullScreenSlotRef<T>(var value: T)
 
 /** Overlap the prepare list keeps behind its own top band, below the identity block. */
 private val BodyTopBandHeight = 24.dp
+
+/** Fades the list out at its viewport top so neither the clip edge nor the blur band leaves a line. */
+private fun Modifier.fadeTopEdge(heightPx: Float): Modifier = this
+    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+    .drawWithContent {
+        drawContent()
+        drawRect(
+            brush = Brush.verticalGradient(
+                0f to Color.Transparent,
+                1f to Color.Black,
+                startY = 0f,
+                endY = heightPx,
+            ),
+            blendMode = BlendMode.DstIn,
+        )
+    }
 
 @Composable
 private fun TransitionSlotGuard(
@@ -1085,6 +1107,7 @@ private fun StageBodyContent(
     val bottomBleed = LocalFullScreenBottomBleed.current
     val bodyBackdrop = LocalFullScreenBodyBackdrop.current
     val bodyBand = if (recordBody && bodyBackdrop != null) BodyTopBandHeight else 0.dp
+    val bodyBandPx = with(LocalDensity.current) { bodyBand.toPx() }
     // Prepare and batch results scroll, so their safe distance goes into the scroll content and the
     // viewport can run behind the fixed chrome. Every other body keeps its layout reserved, which
     // is what keeps the centred status marks from moving.
@@ -1117,6 +1140,7 @@ private fun StageBodyContent(
                         permissionCount = snapshot.permissions.size,
                         sensitivePermissionCount = snapshot.sensitivePermissionCount,
                         onOpenPermissions = onOpenPermissions,
+                        modifier = if (bodyBand > 0.dp) Modifier.fadeTopEdge(bodyBandPx) else Modifier,
                         scrollState = prepareScrollState,
                         notices = snapshot.notices,
                         installedAppInfo = snapshot.installedAppInfo,
@@ -1141,6 +1165,7 @@ private fun StageBodyContent(
                     CouiProgressiveEdgeBand(
                         backdrop = bodyBackdrop,
                         fromTop = true,
+                        tinted = false,
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .fillMaxWidth()
