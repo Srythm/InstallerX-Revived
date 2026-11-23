@@ -1,13 +1,35 @@
-# Gradle & Kotlin build directories (anywhere in the project)
+# ---------------------------------------------------------------------------
+# Gradle & Kotlin 构建目录（全仓库任意层级）
+# ---------------------------------------------------------------------------
 build/
 .gradle/
 .kotlin/
 .cxx/
 .externalNativeBuild/
 /captures/
-/docs/superpowers/
+/bin/
+/out/
 
-# Local configuration & Keystore files
+# ---------------------------------------------------------------------------
+# 构建产物 / 打包中间件
+# ---------------------------------------------------------------------------
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+*.hprof
+.artifacts/
+/app/release/
+/app/debug/
+
+# JVM 崩溃与堆转储日志
+hs_err_pid*.log
+replay_pid*.log
+
+# ---------------------------------------------------------------------------
+# 本地配置与签名材料（绝不入库）
+# ---------------------------------------------------------------------------
 local.properties
 keystore.properties
 keystore.properties.*
@@ -20,10 +42,16 @@ keystore/
 *.keystore
 *.p12
 *.pfx
+*.pk8
+*.pem
 # base64 导出的中间产物，等同明文密钥
 *.b64
+.env
+.env.*
 
+# ---------------------------------------------------------------------------
 # IntelliJ / Android Studio
+# ---------------------------------------------------------------------------
 .idea/*
 !.idea/.gitignore
 !.idea/codeStyles/
@@ -37,12 +65,54 @@ keystore/
 !.idea/fileTemplates/
 !.idea/fileTemplates/**
 .artifacts/
-
 *.iml
-.DS_Store
-/.agents
-/logs
 
-# Local agent working notes (may contain machine-specific paths and environment details)
+# ---------------------------------------------------------------------------
+# 其他 IDE / 编辑器
+# ---------------------------------------------------------------------------
+.vscode/
+.fleet/
+.navigation/
+.history/
+*.swp
+*.swo
+*~
+
+# ---------------------------------------------------------------------------
+# 操作系统垃圾文件
+# ---------------------------------------------------------------------------
+.DS_Store
+._*
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# ---------------------------------------------------------------------------
+# 日志 / 临时 / 合并残留
+# ---------------------------------------------------------------------------
+/logs
+*.log
+*.tmp
+.tmp/
+/tmp/
+*.bak
+*.orig
+*.rej
+
+# ---------------------------------------------------------------------------
+# 本地 agent 工作目录与本地分析产出
+# ---------------------------------------------------------------------------
 .workbuddy/
 .agents/
+/.agents
+/.claude/
+/.codebuddy/
+/analysis/
+
+# docs/ 下的阶段性工作笔记与分析报告：仅本地留存，不入库。
+# 若确实需要提交某个文件，用 `git add -f <path>` 覆盖忽略规则。
+/docs/superpowers/
+docs/*_HANDOFF_*.md
+docs/*_REVIEW_*.md
+docs/*_REPORT_*.md
+docs/*_ANALYSIS_*.html
