@@ -2,7 +2,7 @@
 
 - 日期：2026-11-23
 - 源码基线：`main` @ `e3e0ce4b`（tag `26.11.1`，versionCode 1721）
-- 工作分支：`feat/coui-fullscreen-progressive-blur`，head `c7271f0b`（18 个提交，未合 main）
+- 工作分支：`feat/coui-fullscreen-progressive-blur`，未合 main；本轮动画修复提交 `c7271f0b`，后续文档更新不改变该基线。
 - 文档性质：问题清单与待决事项；不是功能说明，也不替代 `COUI_FULLSCREEN_PROGRESSIVE_BLUR_REPORT_2026-11-23.md` 的适配方案。
 - 验证状态：`./gradlew spotlessApply` 通过；CI `manual-build.yml`（Preview/debug）多次通过，动画修复最终 run `45182311088` 通过；**未跑单元测试、无真机自动化验收**。本机无 Android SDK，编译验证只能走 CI。
 
