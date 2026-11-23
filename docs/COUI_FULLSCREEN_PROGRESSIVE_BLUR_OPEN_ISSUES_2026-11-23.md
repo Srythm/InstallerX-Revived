@@ -2,9 +2,9 @@
 
 - 日期：2026-11-23
 - 源码基线：`main` @ `e3e0ce4b`（tag `26.11.1`，versionCode 1721）
-- 工作分支：`feat/coui-fullscreen-progressive-blur`，head `0b897e10`（12 个提交，未合 main）
+- 工作分支：`feat/coui-fullscreen-progressive-blur`，head `c7271f0b`（18 个提交，未合 main）
 - 文档性质：问题清单与待决事项；不是功能说明，也不替代 `COUI_FULLSCREEN_PROGRESSIVE_BLUR_REPORT_2026-11-23.md` 的适配方案。
-- 验证状态：`./gradlew spotlessApply` 通过；CI `manual-build.yml`（Preview/debug）多次通过；**未跑单元测试、无真机自动化验收**。本机无 Android SDK，编译验证只能走 CI。
+- 验证状态：`./gradlew spotlessApply` 通过；CI `manual-build.yml`（Preview/debug）多次通过，动画修复最终 run `45182311088` 通过；**未跑单元测试、无真机自动化验收**。本机无 Android SDK，编译验证只能走 CI。
 
 ## 1. 已落地且编译验证通过的部分
 
@@ -19,16 +19,13 @@
 
 ## 2. 未解决的视觉/交互问题
 
-### 2.1 子页推送动画与发行版不一致（已知取舍，待决）
+### 2.1 子页推送动画与发行版不一致（已实现修复，待真机复核）
 
-头部位于外壳固定区，chrome 高度 = 顶栏 + 头部。进入子页时头部以 `AnimatedVisibility` + `colorOsSpring(0.32s)` 平滑收起，正文顶边留白与顶部带随之连续变化；发行版（26.11.1）头部在页面槽内随页面纯横向滑出，视口顶边恒定。
-
-- 现状：几何与模糊观感正确（用户认可 2dc8a1a7），但推送含一段纵向收起运动。当前参数：头部 `fadeIn 220ms / fadeOut 160ms` + `expand/shrinkVertically(colorOsSpring(0.32s))`；子页横向 `slideInHorizontally(colorOsSpring(0.32s)) { it / 4 }`，退出 `slideOutHorizontally(tween(160)) { -it / 6 }`（`subPageTransition()`）。
-- 已尝试并失败的替代方案：
-  - `5818183b` 头部放回页面槽：推送恢复发行版，但准备页顶部失去真实内容渐进（头部下缘无带）。
-  - `90782412` / `8e2f73dd` / `ef20c9ed` / `b58e4d57` 正文顶边小带方案：先后出现头部被糊、色带（实色底采样源 + 无遮罩纯模糊）等问题。
-  - `5a254b1e` / `55c660cb` 每槽自带采样源与带：真机几何损坏（头部位置错、背景被截断），已整体撤销。
-- 待决：是否接受当前取舍；若不接受，需要在不破坏 2dc8a1a7 几何的前提下另行设计动画，不应再改动采样/带几何。
+- `d38d9ba0`：头部与正文开始使用横向转场；头部转场使用 `SizeTransform(clip = false)`，不再以 `expand/shrinkVertically` 纵向裁切。头部仍在外壳覆盖层，不进入内容采样源。
+- 方向修正：头部改用独立 `headerSubPageTransition()`，进入子页时向右退出，返回主页时从右侧进入；正文仍使用 `subPageTransition()` 的标准推送（旧主页向左退、子页从右进）。
+- 旧主页与新子页分别持有稳定的顶部布局：开启模糊时各自保留固定 top bleed，关闭模糊时各自保留固定 viewport top inset；转场期间不再由 chrome 高度驱动正文顶边连续变化。共享采样源与 `CouiProgressiveEdgeBand` 的实现未改。
+- `d7f1cced`：同一主页内仅阶段导致头部出现／消失时，保留 220/180ms 淡入淡出；只有子页变化才进入横向推送。
+- 验证：`spotlessApply` 通过；CI run `45168880991`、`45169673533` 与最终 run `45182311088` 均通过 Preview/debug 组装。**尚无真机录屏，进入与返回子页、关模糊降级仍需复核。**
 
 ### 2.2 顶部带遮罩与页面 wash 的轻微色差（理论存在，未真机复核）
 
@@ -72,7 +69,7 @@
 
 ## 5. 建议的下一步顺序
 
-1. 真机验收 run 45163188739 的 APK：准备页几何/渐进、子页推送、选项页卡片、权限页字重、深色与关模糊降级。
-2. 就 §2.1 的动画取舍与 §2.4 的底部遮罩强度给出结论；如需改动，只动动画参数或遮罩 stops，不动采样/带几何。
+1. 真机验收 run 45182311088 的 APK：准备页几何/渐进、子页进入与返回的纯横向推送、头部向右退出/右侧返回、选项页卡片、权限页字重、深色与关模糊降级。
+2. 就 §2.4 的底部遮罩强度给出结论；如需改动，只动遮罩 stops，不动采样/带几何。
 3. 决定 §4.1 pin 合回 main 的时机（独立提交，不携带模糊功能）。
 4. 补跑 `testUnstableDebugUnitTest` 与性能测量，再决定 squash 与合并 main。
