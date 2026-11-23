@@ -76,6 +76,7 @@ import io.github.suqi8.coui.kmp.basic.IconButton
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.effect.LocalCOUIMaterialEffectEnabled
 import io.github.suqi8.coui.kmp.theme.COUITheme
+import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 /** Reserved even when installing has no actions, so the status mark never moves. */
@@ -98,6 +99,9 @@ internal val LocalFullScreenTopBleed = staticCompositionLocalOf { 0.dp }
 
 /** Bottom counterpart of [LocalFullScreenTopBleed], sized by the reserved action row. */
 internal val LocalFullScreenBottomBleed = staticCompositionLocalOf { 0.dp }
+
+/** Source recording just the scrolling body, for a band on the body's own top edge. */
+internal val LocalFullScreenBodyBackdrop = staticCompositionLocalOf<LayerBackdrop?> { null }
 
 /**
  * The full-screen installer surface.
@@ -136,6 +140,9 @@ fun CouiPositionFullScreen(
     // Both are null when blur is off or unsupported, which is what every consumer degrades on.
     val backdrop = if (inspectionMode) null else rememberCouiBlurBackdrop(useBlur)
     val contentBackdrop = if (inspectionMode) null else rememberCouiBlurBackdrop(useBlur)
+    // Records only the scrolling body of pages with a fixed identity block, so a band on the body's
+    // top edge blurs the list without ever sampling the block above it.
+    val bodyBackdrop = if (inspectionMode) null else rememberCouiBlurBackdrop(useBlur)
     val currentOnCloseAnimationFinished by rememberUpdatedState(onCloseAnimationFinished)
     // Start transparent at runtime for symmetric enter fade; previews start opaque.
     val uiAlpha = remember { Animatable(if (inspectionMode) 1f else 0f) }
@@ -235,6 +242,7 @@ fun CouiPositionFullScreen(
                                 CompositionLocalProvider(
                                     LocalFullScreenTopBleed provides topBleed,
                                     LocalFullScreenBottomBleed provides bottomBleed,
+                                    LocalFullScreenBodyBackdrop provides bodyBackdrop,
                                 ) {
                                     content()
                                 }

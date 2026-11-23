@@ -111,6 +111,7 @@ import com.rosan.installer.ui.page.main.installer.InstallerViewAction
 import com.rosan.installer.ui.page.main.installer.InstallerViewModel
 import com.rosan.installer.ui.page.main.installer.rememberUnknownSourcePermissionActionVisible
 import com.rosan.installer.ui.page.main.widget.chip.NoticeModel
+import com.rosan.installer.ui.theme.CouiProgressiveEdgeBand
 import com.rosan.installer.ui.theme.InstallerTheme.useCouiMonet
 import com.rosan.installer.ui.theme.colorOsSpring
 import com.rosan.installer.ui.util.KeyEventBlocker
@@ -130,8 +131,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 internal class FullScreenSlotRef<T>(var value: T)
+
+/** Overlap the prepare list keeps behind its own top band, below the identity block. */
+private val BodyTopBandHeight = 24.dp
 
 @Composable
 private fun TransitionSlotGuard(
@@ -853,6 +858,7 @@ internal fun CouiFullScreenInstallerContent(
                                                 onToggleUninstallFlag = onToggleUninstallFlag,
                                                 choiceContent = choiceContent,
                                                 errorSuggestionsContent = errorSuggestionsContent,
+                                                recordBody = slotHasHeader == hasHeader,
                                             )
                                         }
                                     }
@@ -1023,6 +1029,7 @@ private fun FullScreenStageBody(
     onToggleUninstallFlag: (Int, Boolean) -> Unit,
     choiceContent: @Composable () -> Unit,
     errorSuggestionsContent: @Composable (Throwable) -> Unit,
+    recordBody: Boolean = false,
 ) {
     val activeBucket = stageBucketOf(snapshot.page.stage)
 
@@ -1054,6 +1061,7 @@ private fun FullScreenStageBody(
                 onToggleUninstallFlag = onToggleUninstallFlag,
                 choiceContent = choiceContent,
                 errorSuggestionsContent = errorSuggestionsContent,
+                recordBody = recordBody && slotBucket == activeBucket,
             )
         }
     }
@@ -1070,10 +1078,13 @@ private fun StageBodyContent(
     onToggleUninstallFlag: (Int, Boolean) -> Unit,
     choiceContent: @Composable () -> Unit,
     errorSuggestionsContent: @Composable (Throwable) -> Unit,
+    recordBody: Boolean = false,
 ) {
     val page = snapshot.page
     val topBleed = LocalFullScreenTopBleed.current
     val bottomBleed = LocalFullScreenBottomBleed.current
+    val bodyBackdrop = LocalFullScreenBodyBackdrop.current
+    val bodyBand = if (recordBody && bodyBackdrop != null) BodyTopBandHeight else 0.dp
     // Prepare and batch results scroll, so their safe distance goes into the scroll content and the
     // viewport can run behind the fixed chrome. Every other body keeps its layout reserved, which
     // is what keeps the centred status marks from moving.
@@ -1086,31 +1097,57 @@ private fun StageBodyContent(
     }
     Box(modifier = bodyModifier) {
         when (val stage = page.stage) {
-            is InstallerStage.InstallPrepare -> CouiFullScreenPrepareContent(
-                entity = snapshot.entity,
-                sourceLabel = snapshot.sourceLabel,
-                permissionCount = snapshot.permissions.size,
-                sensitivePermissionCount = snapshot.sensitivePermissionCount,
-                onOpenPermissions = onOpenPermissions,
-                scrollState = prepareScrollState,
-                notices = snapshot.notices,
-                installedAppInfo = snapshot.installedAppInfo,
-                installedModuleInfo = snapshot.installedModuleInfo,
-                totalSelectedSize = snapshot.totalSelectedSize,
-                selectedEntityCount = snapshot.selectedEntityCount,
-                displaySdk = snapshot.displaySdk,
-                displaySize = snapshot.displaySize,
-                hideIdenticalComparisons = snapshot.hideIdenticalComparisons,
-                showOppoSpecial = snapshot.showOppoSpecial,
-                labShowFilePath = snapshot.labShowFilePath,
-                labShowInstallInitiator = snapshot.labShowInstallInitiator,
-                isSplitUpdateMode = snapshot.isSplitUpdateMode,
-                isInvalidSplitInstall = snapshot.isInvalidSplitInstall,
-                onOpenInstallOptions = if (snapshot.canOpenInstallOptions) onOpenInstallOptions else null,
-                onOpenSplitChoice = if (snapshot.canOpenSplitChoice) onOpenSplitChoice else null,
-                contentTopPadding = topBleed,
-                contentBottomPadding = bottomBleed + 20.dp,
-            )
+            is InstallerStage.InstallPrepare -> Box(Modifier.fillMaxSize()) {
+                // Only the list is recorded; the band below is a sibling, so it never samples
+                // itself, and the identity block above stays out of this source entirely.
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(
+                            if (bodyBand > 0.dp && bodyBackdrop != null) {
+                                Modifier.layerBackdrop(bodyBackdrop)
+                            } else {
+                                Modifier
+                            },
+                        ),
+                ) {
+                    CouiFullScreenPrepareContent(
+                        entity = snapshot.entity,
+                        sourceLabel = snapshot.sourceLabel,
+                        permissionCount = snapshot.permissions.size,
+                        sensitivePermissionCount = snapshot.sensitivePermissionCount,
+                        onOpenPermissions = onOpenPermissions,
+                        scrollState = prepareScrollState,
+                        notices = snapshot.notices,
+                        installedAppInfo = snapshot.installedAppInfo,
+                        installedModuleInfo = snapshot.installedModuleInfo,
+                        totalSelectedSize = snapshot.totalSelectedSize,
+                        selectedEntityCount = snapshot.selectedEntityCount,
+                        displaySdk = snapshot.displaySdk,
+                        displaySize = snapshot.displaySize,
+                        hideIdenticalComparisons = snapshot.hideIdenticalComparisons,
+                        showOppoSpecial = snapshot.showOppoSpecial,
+                        labShowFilePath = snapshot.labShowFilePath,
+                        labShowInstallInitiator = snapshot.labShowInstallInitiator,
+                        isSplitUpdateMode = snapshot.isSplitUpdateMode,
+                        isInvalidSplitInstall = snapshot.isInvalidSplitInstall,
+                        onOpenInstallOptions = if (snapshot.canOpenInstallOptions) onOpenInstallOptions else null,
+                        onOpenSplitChoice = if (snapshot.canOpenSplitChoice) onOpenSplitChoice else null,
+                        contentTopPadding = topBleed + bodyBand,
+                        contentBottomPadding = bottomBleed + 20.dp,
+                    )
+                }
+                if (bodyBand > 0.dp && bodyBackdrop != null) {
+                    CouiProgressiveEdgeBand(
+                        backdrop = bodyBackdrop,
+                        fromTop = true,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .fillMaxWidth()
+                            .height(bodyBand),
+                    )
+                }
+            }
 
             is InstallerStage.InstallChoice -> Box(
                 modifier = Modifier
