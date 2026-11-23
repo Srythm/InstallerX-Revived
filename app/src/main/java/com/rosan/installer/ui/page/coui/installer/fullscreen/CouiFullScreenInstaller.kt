@@ -68,6 +68,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
@@ -523,6 +524,7 @@ fun CouiFullScreenInstaller(
                 onSelectMixedModuleType = onSelectMixedModuleType,
                 onBackToTypeChoice = onBackToTypeChoice,
                 onCancel = safeClose,
+                contentTopPadding = LocalFullScreenTopBleed.current,
             )
         },
         extendedMenuContent = {
@@ -530,12 +532,14 @@ fun CouiFullScreenInstaller(
                 viewModel = viewModel,
                 backHandlerEnabled = false,
                 showBackButton = false,
+                contentTopPadding = LocalFullScreenTopBleed.current,
             )
         },
         settingsContent = {
             PrepareSettingsContent(
                 viewModel = viewModel,
                 backHandlerEnabled = false,
+                contentTopPadding = LocalFullScreenTopBleed.current,
             )
         },
         errorSuggestionsContent = { err ->
@@ -754,6 +758,31 @@ internal fun CouiFullScreenInstallerContent(
         endAction = topEndAction,
         endActionKey = topEndActionKey,
         useBlur = useBlur,
+        fixedHeader = {
+            val showFixedHeader = page.subPage == FullScreenSubPage.Main && headerData != null
+            AnimatedContent(
+                targetState = showFixedHeader,
+                contentKey = { it },
+                transitionSpec = {
+                    fadeIn(tween(durationMillis = 220)) togetherWith
+                        fadeOut(tween(durationMillis = 180))
+                },
+                label = "FullScreenHeaderMode",
+            ) { slotPresent ->
+                val frozenHeader = remember { FullScreenSlotRef(headerData) }
+                if (slotPresent == showFixedHeader) {
+                    frozenHeader.value = headerData
+                }
+                val header = frozenHeader.value
+                if (slotPresent && header != null) {
+                    CouiFullScreenAppHeader(
+                        appInfo = header.appInfo,
+                        versionLine = header.versionLine,
+                        onIconClick = header.onIconClick,
+                    )
+                }
+            }
+        },
         bottomBar = if (usesShellBottomBar) {
             {
                 FullScreenActionRow(
@@ -791,78 +820,25 @@ internal fun CouiFullScreenInstallerContent(
             label = "FullScreenSubPage",
         ) { subPage ->
             val frozenSubPage = remember {
-                FullScreenSlotRef(Triple(headerData, liveBodySnapshot, permissions))
+                FullScreenSlotRef(Pair(liveBodySnapshot, permissions))
             }
             if (subPage == page.subPage) {
-                frozenSubPage.value = Triple(headerData, liveBodySnapshot, permissions)
+                frozenSubPage.value = Pair(liveBodySnapshot, permissions)
             }
-            val (slotHeaderData, slotBodySnapshot, slotPermissions) = frozenSubPage.value
+            val (slotBodySnapshot, slotPermissions) = frozenSubPage.value
             TransitionSlotGuard(isActive = subPage == page.subPage) {
                 when (subPage) {
-                    FullScreenSubPage.Main -> {
-                        val hasHeader = slotHeaderData != null
-                        AnimatedContent(
-                            targetState = hasHeader,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clipToBounds(),
-                            contentAlignment = Alignment.Center,
-                            contentKey = { it },
-                            transitionSpec = {
-                                fadeIn(tween(durationMillis = 220)) togetherWith
-                                    fadeOut(tween(durationMillis = 180))
-                            },
-                            label = "FullScreenHeaderMode",
-                        ) { slotHasHeader ->
-                            val frozenHeaderSlot = remember {
-                                FullScreenSlotRef(Pair(slotHeaderData, slotBodySnapshot))
-                            }
-                            if (slotHasHeader == hasHeader) {
-                                frozenHeaderSlot.value = Pair(slotHeaderData, slotBodySnapshot)
-                            }
-                            val (frozenHeader, frozenBody) = frozenHeaderSlot.value
-                            TransitionSlotGuard(isActive = slotHasHeader == hasHeader) {
-                                if (slotHasHeader) {
-                                    Column(Modifier.fillMaxSize()) {
-                                        frozenHeader?.let { header ->
-                                            CouiFullScreenAppHeader(
-                                                appInfo = header.appInfo,
-                                                versionLine = header.versionLine,
-                                                onIconClick = header.onIconClick,
-                                            )
-                                        }
-                                        Box(Modifier.fillMaxWidth().weight(1f)) {
-                                            FullScreenStageBody(
-                                                snapshot = frozenBody,
-                                                prepareScrollState = prepareScrollState,
-                                                onOpenPermissions = { onAction(InstallerViewAction.ShowCouiPermissionList) },
-                                                onOpenInstallOptions = onOpenInstallOptions,
-                                                onOpenSplitChoice = onOpenSplitChoice,
-                                                onOpenLsposed = onOpenLsposed,
-                                                onToggleUninstallFlag = onToggleUninstallFlag,
-                                                choiceContent = choiceContent,
-                                                errorSuggestionsContent = errorSuggestionsContent,
-                                            )
-                                        }
-                                    }
-                                } else {
-                                    Box(Modifier.fillMaxSize()) {
-                                        FullScreenStageBody(
-                                            snapshot = frozenBody,
-                                            prepareScrollState = prepareScrollState,
-                                            onOpenPermissions = { onAction(InstallerViewAction.ShowCouiPermissionList) },
-                                            onOpenInstallOptions = onOpenInstallOptions,
-                                            onOpenSplitChoice = onOpenSplitChoice,
-                                            onOpenLsposed = onOpenLsposed,
-                                            onToggleUninstallFlag = onToggleUninstallFlag,
-                                            choiceContent = choiceContent,
-                                            errorSuggestionsContent = errorSuggestionsContent,
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    FullScreenSubPage.Main -> FullScreenStageBody(
+                        snapshot = slotBodySnapshot,
+                        prepareScrollState = prepareScrollState,
+                        onOpenPermissions = { onAction(InstallerViewAction.ShowCouiPermissionList) },
+                        onOpenInstallOptions = onOpenInstallOptions,
+                        onOpenSplitChoice = onOpenSplitChoice,
+                        onOpenLsposed = onOpenLsposed,
+                        onToggleUninstallFlag = onToggleUninstallFlag,
+                        choiceContent = choiceContent,
+                        errorSuggestionsContent = errorSuggestionsContent,
+                    )
 
                     FullScreenSubPage.Permissions -> CouiFullScreenPermissionContent(slotPermissions)
 
@@ -1061,12 +1037,17 @@ private fun StageBodyContent(
     errorSuggestionsContent: @Composable (Throwable) -> Unit,
 ) {
     val page = snapshot.page
-    val bodyModifier = if (page.stage is InstallerStage.InstallChoice) {
-        Modifier.fillMaxSize()
-    } else {
-        Modifier
-            .fillMaxSize()
-            .padding(bottom = LocalFullScreenBottomBarPadding.current)
+    val topBleed = LocalFullScreenTopBleed.current
+    val bottomBleed = LocalFullScreenBottomBleed.current
+    // Prepare and batch results scroll, so their safe distance goes into the scroll content and the
+    // viewport can run behind the fixed chrome. Every other body keeps its layout reserved, which
+    // is what keeps the centred status marks from moving.
+    val scrollsUnderChrome = page.stage is InstallerStage.InstallPrepare ||
+        page.stage is InstallerStage.InstallCompleted
+    val bodyModifier = when {
+        page.stage is InstallerStage.InstallChoice -> Modifier.fillMaxSize()
+        scrollsUnderChrome -> Modifier.fillMaxSize()
+        else -> Modifier.fillMaxSize().padding(top = topBleed, bottom = bottomBleed)
     }
     Box(modifier = bodyModifier) {
         when (val stage = page.stage) {
@@ -1092,6 +1073,8 @@ private fun StageBodyContent(
                 isInvalidSplitInstall = snapshot.isInvalidSplitInstall,
                 onOpenInstallOptions = if (snapshot.canOpenInstallOptions) onOpenInstallOptions else null,
                 onOpenSplitChoice = if (snapshot.canOpenSplitChoice) onOpenSplitChoice else null,
+                contentTopPadding = topBleed,
+                contentBottomPadding = bottomBleed + 20.dp,
             )
 
             is InstallerStage.InstallChoice -> Box(
@@ -1107,7 +1090,11 @@ private fun StageBodyContent(
 
             is InstallerStage.InstallingModule -> FullScreenModuleContent(stage)
 
-            is InstallerStage.InstallCompleted -> FullScreenResultsContent(stage.results)
+            is InstallerStage.InstallCompleted -> FullScreenResultsContent(
+                results = stage.results,
+                contentTopPadding = topBleed,
+                contentBottomPadding = bottomBleed,
+            )
 
             is InstallerStage.InstallFailed -> {
                 val errorTitle = stringResource(R.string.installer_install_failed)
@@ -1926,7 +1913,11 @@ private fun FullScreenModuleContent(stage: InstallerStage.InstallingModule) {
 }
 
 @Composable
-private fun FullScreenResultsContent(results: List<InstallResult>) {
+private fun FullScreenResultsContent(
+    results: List<InstallResult>,
+    contentTopPadding: Dp = 0.dp,
+    contentBottomPadding: Dp = 0.dp,
+) {
     val groupedResults = remember(results) {
         results
             .groupBy { it.entity.app.packageName }
@@ -1939,7 +1930,12 @@ private fun FullScreenResultsContent(results: List<InstallResult>) {
     val successes = groupedResults.count { it.success }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = FullScreenHorizontalPadding, vertical = 8.dp),
+        contentPadding = PaddingValues(
+            start = FullScreenHorizontalPadding,
+            end = FullScreenHorizontalPadding,
+            top = contentTopPadding + 8.dp,
+            bottom = contentBottomPadding + 8.dp,
+        ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {

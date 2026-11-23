@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.rosan.installer.R
 import com.rosan.installer.core.device.model.Manufacturer
@@ -89,6 +90,8 @@ fun CouiFullScreenPrepareContent(
     isInvalidSplitInstall: Boolean = false,
     onOpenInstallOptions: (() -> Unit)? = null,
     onOpenSplitChoice: (() -> Unit)? = null,
+    contentTopPadding: Dp = 0.dp,
+    contentBottomPadding: Dp = 20.dp,
 ) {
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
@@ -341,7 +344,7 @@ fun CouiFullScreenPrepareContent(
         modifier = modifier
             .fillMaxWidth()
             .verticalScroll(scrollState)
-            .padding(bottom = 20.dp),
+            .padding(top = contentTopPadding, bottom = contentBottomPadding),
     ) {
         if (notices.isNotEmpty()) {
             CouiInfoChipGroup(

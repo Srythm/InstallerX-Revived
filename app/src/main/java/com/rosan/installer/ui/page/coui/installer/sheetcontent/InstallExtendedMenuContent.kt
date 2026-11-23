@@ -6,6 +6,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
@@ -53,6 +55,7 @@ fun InstallExtendedMenuContent(
     viewModel: InstallerViewModel,
     backHandlerEnabled: Boolean = true,
     showBackButton: Boolean = true,
+    contentTopPadding: Dp = 0.dp,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -160,6 +163,7 @@ fun InstallExtendedMenuContent(
                 defaultInstallerFromSettings = defaultInstallerFromSettings,
                 availableUsers = availableUsers,
                 selectedUserId = selectedUserId,
+                contentTopPadding = contentTopPadding,
             )
         }
 
@@ -194,6 +198,7 @@ private fun ExtendedMenuLazyList(
     defaultInstallerFromSettings: String?,
     availableUsers: Map<Int, String>,
     selectedUserId: Int,
+    contentTopPadding: Dp = 0.dp,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -205,6 +210,7 @@ private fun ExtendedMenuLazyList(
                 .scrollEndHaptic()
                 .overScrollVertical(),
             overscrollEffect = null,
+            contentPadding = PaddingValues(top = contentTopPadding),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(entities, key = { it.menuItem.nameResourceId }) { item ->

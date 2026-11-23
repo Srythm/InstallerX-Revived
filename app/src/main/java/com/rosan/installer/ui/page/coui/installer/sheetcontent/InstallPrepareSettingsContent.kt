@@ -16,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
@@ -33,6 +34,7 @@ import io.github.suqi8.coui.kmp.basic.Card
 fun PrepareSettingsContent(
     viewModel: InstallerViewModel,
     backHandlerEnabled: Boolean = true,
+    contentTopPadding: Dp = 0.dp,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val settings = uiState.viewSettings
@@ -48,7 +50,7 @@ fun PrepareSettingsContent(
         modifier = Modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
-            .padding(bottom = if (isGestureNavigation()) 24.dp else 0.dp),
+            .padding(top = contentTopPadding, bottom = if (isGestureNavigation()) 24.dp else 0.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         CouiInstallerTipCard(stringResource(R.string.installer_temp_settings_tip))

@@ -37,8 +37,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,6 +54,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -63,6 +67,7 @@ import com.rosan.installer.ui.icons.AppCOUIIcons
 import com.rosan.installer.ui.page.coui.widgets.CouiSheetPopupHost
 import com.rosan.installer.ui.page.coui.widgets.CouiSheetPopupProvider
 import com.rosan.installer.ui.page.main.installer.InstallerViewModel
+import com.rosan.installer.ui.theme.CouiProgressiveEdgeBand
 import com.rosan.installer.ui.theme.ProvideCouiMaterialBackdrop
 import com.rosan.installer.ui.theme.colorOsSpring
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
@@ -82,16 +87,31 @@ val FullScreenHorizontalPadding = 16.dp
 /** COUI's `SmallTopAppBar` height. */
 val FullScreenTopBarHeight = 56.dp
 
+/**
+ * How far the content viewport reaches behind the fixed top chrome. The progressive band covers
+ * exactly this overlap, so content at rest starts where the ramp has already reached clear.
+ */
+private val FullScreenTopBleed = 24.dp
+
 internal val LocalFullScreenActionsEnabled = staticCompositionLocalOf { true }
 
-internal val LocalFullScreenBottomBarPadding = staticCompositionLocalOf { 0.dp }
+/**
+ * Top space a page must reserve for the fixed chrome. The shell already clips the viewport this
+ * far short of the chrome's bottom edge, so scrolling pages put it in their content padding and
+ * fixed pages put it in their outer padding. Zero when there is no content blur to sample.
+ */
+internal val LocalFullScreenTopBleed = staticCompositionLocalOf { 0.dp }
+
+/** Bottom counterpart of [LocalFullScreenTopBleed], sized by the reserved action row. */
+internal val LocalFullScreenBottomBleed = staticCompositionLocalOf { 0.dp }
 
 /**
  * The full-screen installer surface.
  *
- * The bar and the action row are drawn exactly once, here, and never take part in a page change:
- * letting each page draw its own bar put two sets of icon buttons on the same pixels during a
- * push, which reads as the buttons flashing grey. Only [content] moves between pages.
+ * The bar, the identity block and the action row are drawn exactly once, here, and never take part
+ * in a page change: letting each page draw its own bar put two sets of icon buttons on the same
+ * pixels during a push, which reads as the buttons flashing grey. Only [content] moves between
+ * pages, and it is the only thing recorded into the content blur source.
  *
  * The ViewModel owns teardown; this shell notifies [onCloseAnimationFinished] when the exit fade
  * finishes (with a ViewModel fallback timeout if the callback never arrives).
@@ -106,15 +126,18 @@ fun CouiPositionFullScreen(
     endAction: (@Composable () -> Unit)? = null,
     endActionKey: Any? = endAction != null,
     useBlur: Boolean = false,
+    fixedHeader: (@Composable () -> Unit)? = null,
     bottomBar: (@Composable () -> Unit)? = null,
     onCloseAnimationFinished: () -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     val inspectionMode = LocalInspectionMode.current
     val pageColor = COUITheme.colorScheme.backgroundWithCard.copy(alpha = 1f)
-    // The only backdrop source on this page. Null when blur is disabled by the user or the
-    // runtime cannot support it, which is what every material surface below degrades on.
+    // Two sources with separate jobs. The static one feeds card/button material and popups; the
+    // content one records the laid-out page so the fixed chrome can blur what scrolls behind it.
+    // Both are null when blur is off or unsupported, which is what every consumer degrades on.
     val backdrop = if (inspectionMode) null else rememberCouiBlurBackdrop(useBlur)
+    val contentBackdrop = if (inspectionMode) null else rememberCouiBlurBackdrop(useBlur)
     val currentOnCloseAnimationFinished by rememberUpdatedState(onCloseAnimationFinished)
     // Start transparent at runtime for symmetric enter fade; previews start opaque.
     val uiAlpha = remember { Animatable(if (inspectionMode) 1f else 0f) }
@@ -167,9 +190,9 @@ fun CouiPositionFullScreen(
                         },
                     ),
             ) {
-                // Backing sibling: the opaque page colour plus a static colour wash, and the only
-                // thing recorded into the backdrop. The foreground never samples itself, and the
-                // module log or progress text can update without re-recording the source.
+                // Static material source: the opaque page colour plus a static colour wash. Kept
+                // apart from the content recording so material surfaces never sample themselves,
+                // and so progress or log updates do not re-record it.
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -179,26 +202,79 @@ fun CouiPositionFullScreen(
                 }
 
                 ProvideCouiMaterialBackdrop(backdrop) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            // Only the top and the sides are inset here. The bottom is left to the
-                            // page: scrolling content must be able to run under the navigation bar
-                            // (that is what makes it feel immersive) and only the action row needs to
-                            // be lifted above it.
-                            .windowInsetsPadding(
-                                WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
-                            ),
-                    ) {
-                        FullScreenTopBar(
-                            title = title,
-                            onBack = onBack,
-                            backEnabled = backEnabled && !isClosing,
-                            endAction = endAction,
-                            endActionKey = endActionKey,
-                        )
+                    Box(Modifier.fillMaxSize()) {
+                        val density = LocalDensity.current
+                        var fixedTopHeightPx by remember { mutableIntStateOf(0) }
+                        val fixedTopHeight = with(density) { fixedTopHeightPx.toDp() }
                         val bottomBarReservedPadding =
                             FullScreenBottomBarHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                        // Without a content source there is nothing to blur, so the viewport stops
+                        // at the fixed regions exactly as it did before and no band is drawn.
+                        val topBleed = if (contentBackdrop != null) FullScreenTopBleed else 0.dp
+                        val bottomBleed = if (contentBackdrop != null) bottomBarReservedPadding else 0.dp
+                        val viewportTopInset = (fixedTopHeight - topBleed).coerceAtLeast(0.dp)
+
+                        // Recorded content. The wash is repeated here so the sampled layer carries
+                        // the same base colour as the page instead of transparent margins.
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .then(contentBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier),
+                        ) {
+                            FullScreenBackgroundWash(base = pageColor)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .windowInsetsPadding(
+                                        WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal),
+                                    )
+                                    .padding(
+                                        top = viewportTopInset,
+                                        bottom = (bottomBarReservedPadding - bottomBleed).coerceAtLeast(0.dp),
+                                    ),
+                            ) {
+                                CompositionLocalProvider(
+                                    LocalFullScreenTopBleed provides topBleed,
+                                    LocalFullScreenBottomBleed provides bottomBleed,
+                                ) {
+                                    content()
+                                }
+                            }
+                        }
+
+                        // Progressive band anchored on the bottom edge of the fixed top chrome.
+                        if (contentBackdrop != null) {
+                            CouiProgressiveEdgeBand(
+                                backdrop = contentBackdrop,
+                                fromTop = true,
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .fillMaxWidth()
+                                    .padding(top = viewportTopInset)
+                                    .height(topBleed),
+                            )
+                        }
+
+                        // Fixed chrome: one bar and one identity block, never part of a page change.
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .fillMaxWidth()
+                                .onSizeChanged { fixedTopHeightPx = it.height }
+                                .windowInsetsPadding(
+                                    WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+                                ),
+                        ) {
+                            FullScreenTopBar(
+                                title = title,
+                                onBack = onBack,
+                                backEnabled = backEnabled && !isClosing,
+                                endAction = endAction,
+                                endActionKey = endActionKey,
+                            )
+                            fixedHeader?.invoke()
+                        }
+
                         val lastBottomBar = remember { FullScreenSlotRef(bottomBar) }
                         if (bottomBar != null) {
                             lastBottomBar.value = bottomBar
@@ -208,51 +284,55 @@ fun CouiPositionFullScreen(
                             animationSpec = tween(durationMillis = if (bottomBar != null) 180 else 120),
                             label = "FullScreenBottomBarAlpha",
                         )
-                        Box(Modifier.fillMaxWidth().weight(1f)) {
-                            CompositionLocalProvider(
-                                LocalFullScreenBottomBarPadding provides bottomBarReservedPadding,
-                            ) {
-                                content()
-                            }
-                            // Overlaid rather than stacked in the Column so toggling sub-pages never
-                            // changes content height or shifts the page vertically mid-transition.
-                            if (bottomBarAlpha > 0.01f) {
-                                val bottomBarActive = bottomBar != null && !isClosing
-                                Box(
-                                    Modifier
+                        if (bottomBarAlpha > 0.01f) {
+                            // The band stays on the fixed boundary and only fades; the buttons keep
+                            // their own slide so the sampled region never drifts with them.
+                            if (contentBackdrop != null) {
+                                CouiProgressiveEdgeBand(
+                                    backdrop = contentBackdrop,
+                                    fromTop = false,
+                                    modifier = Modifier
                                         .align(Alignment.BottomCenter)
                                         .fillMaxWidth()
-                                        .graphicsLayer {
-                                            alpha = bottomBarAlpha
-                                            translationY = (1f - bottomBarAlpha) * 16.dp.toPx()
-                                            compositingStrategy = if (bottomBarAlpha < 1f) {
-                                                CompositingStrategy.Offscreen
-                                            } else {
-                                                CompositingStrategy.Auto
-                                            }
+                                        .height(bottomBarReservedPadding)
+                                        .graphicsLayer { alpha = bottomBarAlpha },
+                                )
+                            }
+                            val bottomBarActive = bottomBar != null && !isClosing
+                            Box(
+                                Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .fillMaxWidth()
+                                    .graphicsLayer {
+                                        alpha = bottomBarAlpha
+                                        translationY = (1f - bottomBarAlpha) * 16.dp.toPx()
+                                        compositingStrategy = if (bottomBarAlpha < 1f) {
+                                            CompositingStrategy.Offscreen
+                                        } else {
+                                            CompositingStrategy.Auto
                                         }
-                                        .then(
-                                            if (!bottomBarActive) {
-                                                Modifier
-                                                    .clearAndSetSemantics { }
-                                                    .pointerInput(Unit) {
-                                                        awaitPointerEventScope {
-                                                            while (true) {
-                                                                awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
-                                                            }
+                                    }
+                                    .then(
+                                        if (!bottomBarActive) {
+                                            Modifier
+                                                .clearAndSetSemantics { }
+                                                .pointerInput(Unit) {
+                                                    awaitPointerEventScope {
+                                                        while (true) {
+                                                            awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
                                                         }
                                                     }
-                                            } else {
-                                                Modifier
-                                            },
-                                        )
-                                        .windowInsetsPadding(
-                                            WindowInsets.navigationBars.only(WindowInsetsSides.Bottom),
-                                        )
-                                        .height(FullScreenBottomBarHeight),
-                                ) {
-                                    lastBottomBar.value?.invoke()
-                                }
+                                                }
+                                        } else {
+                                            Modifier
+                                        },
+                                    )
+                                    .windowInsetsPadding(
+                                        WindowInsets.navigationBars.only(WindowInsetsSides.Bottom),
+                                    )
+                                    .height(FullScreenBottomBarHeight),
+                            ) {
+                                lastBottomBar.value?.invoke()
                             }
                         }
                     }

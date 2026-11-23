@@ -88,14 +88,18 @@ fun CouiFullScreenPermissionContent(
         permissions.partition { isSensitivePermission(context, it, inspectionMode) }
     }
 
-    // The shell leaves the bottom edge alone so the list can run under the navigation bar while
-    // scrolling; the tail padding keeps the last row readable once it settles.
+    // The shell clips the viewport a band's height short of the top chrome and leaves the bottom
+    // edge alone, so both safe distances live in the scroll content: the list can run behind the
+    // bar while scrolling, and the last row still settles clear of the navigation bar.
     val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     Column(
         modifier = modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
-            .padding(top = 4.dp, bottom = bottomInset + 20.dp),
+            .padding(
+                top = LocalFullScreenTopBleed.current + 4.dp,
+                bottom = bottomInset + 20.dp,
+            ),
     ) {
         if (sensitive.isNotEmpty()) {
             PermissionSectionTitle(
