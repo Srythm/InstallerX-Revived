@@ -45,6 +45,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -66,6 +67,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -120,6 +122,7 @@ import com.rosan.installer.ui.page.main.widget.chip.NoticeModel
 import com.rosan.installer.ui.theme.CouiProgressiveEdgeBand
 import com.rosan.installer.ui.theme.InstallerTheme.useCouiMonet
 import com.rosan.installer.ui.theme.colorOsSpring
+import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
 import com.rosan.installer.ui.util.KeyEventBlocker
 import com.rosan.installer.util.help
 import io.github.suqi8.coui.kmp.basic.Button
@@ -141,9 +144,6 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 internal class FullScreenSlotRef<T>(var value: T)
 
-/** Overlap the prepare list keeps behind its own top band, below the identity block. */
-private val BodyTopBandHeight = 24.dp
-
 /** Fades the list out at its viewport top so neither the clip edge nor the blur band leaves a line. */
 private fun Modifier.fadeTopEdge(heightPx: Float): Modifier = this
     .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
@@ -159,6 +159,46 @@ private fun Modifier.fadeTopEdge(heightPx: Float): Modifier = this
             blendMode = BlendMode.DstIn,
         )
     }
+
+/**
+ * A page slot's own top blur region: the body is recorded and faded at its viewport top, and a
+ * tinted band covers the chrome above it. Per-slot sources keep a single writer during pushes, and
+ * keeping the region inside the slot lets the identity block draw above the band while still
+ * pushing with the page.
+ */
+@Composable
+private fun TopBlurRegion(
+    useBlur: Boolean,
+    active: Boolean,
+    bodyTopInset: Dp,
+    overlap: Dp,
+    bandHeight: Dp,
+    body: @Composable () -> Unit,
+) {
+    val backdrop = rememberCouiBlurBackdrop(useBlur && active)
+    val overlapPx = with(LocalDensity.current) { overlap.toPx() }
+    Box(Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = bodyTopInset)
+                .then(if (backdrop != null) Modifier.layerBackdrop(backdrop) else Modifier)
+                .then(if (backdrop != null) Modifier.fadeTopEdge(overlapPx) else Modifier),
+        ) {
+            body()
+        }
+        if (backdrop != null) {
+            CouiProgressiveEdgeBand(
+                backdrop = backdrop,
+                fromTop = true,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .height(bandHeight),
+            )
+        }
+    }
+}
 
 @Composable
 private fun TransitionSlotGuard(
@@ -645,9 +685,7 @@ internal fun CouiFullScreenInstallerContent(
 ) {
     val stage = page.stage
     val isMain = page.subPage == FullScreenSubPage.Main
-    // Sub-pages and batch results scroll behind the bar; the prepare page keeps its identity block
-    // fixed below the bar, so it must not run under the top band.
-    val topOverlap = !isMain || stage is InstallerStage.InstallCompleted
+    val barHeight = LocalFullScreenTopBleed.current
 
     val title = when (page.subPage) {
         FullScreenSubPage.Permissions -> stringResource(R.string.permission_list)
@@ -788,7 +826,6 @@ internal fun CouiFullScreenInstallerContent(
         endAction = topEndAction,
         endActionKey = topEndActionKey,
         useBlur = useBlur,
-        topOverlap = topOverlap,
         bottomBar = if (usesShellBottomBar) {
             {
                 FullScreenActionRow(
@@ -858,31 +895,65 @@ internal fun CouiFullScreenInstallerContent(
                             val (frozenHeader, frozenBody) = frozenHeaderSlot.value
                             TransitionSlotGuard(isActive = slotHasHeader == hasHeader) {
                                 if (slotHasHeader) {
-                                    // The identity block stays inside the page so it pushes with it,
-                                    // exactly as released. The shell already stops this page's
-                                    // viewport at the bar, so no extra top reserve is needed here.
-                                    Column(Modifier.fillMaxSize()) {
-                                        frozenHeader?.let { header ->
-                                            CouiFullScreenAppHeader(
-                                                appInfo = header.appInfo,
-                                                versionLine = header.versionLine,
-                                                onIconClick = header.onIconClick,
-                                            )
+                                    // The identity block pushes with the page, as released, but draws
+                                    // above the slot's band so the band blurs only the list behind it.
+                                    var headerHeightPx by remember { mutableIntStateOf(0) }
+                                    val headerHeight = with(LocalDensity.current) { headerHeightPx.toDp() }
+                                    Box(Modifier.fillMaxSize()) {
+                                        TopBlurRegion(
+                                            useBlur = useBlur,
+                                            active = slotHasHeader == hasHeader,
+                                            bodyTopInset = barHeight,
+                                            overlap = headerHeight,
+                                            bandHeight = barHeight + headerHeight,
+                                        ) {
+                                            CompositionLocalProvider(
+                                                LocalFullScreenTopBleed provides headerHeight,
+                                            ) {
+                                                FullScreenStageBody(
+                                                    snapshot = frozenBody,
+                                                    prepareScrollState = prepareScrollState,
+                                                    onOpenPermissions = { onAction(InstallerViewAction.ShowCouiPermissionList) },
+                                                    onOpenInstallOptions = onOpenInstallOptions,
+                                                    onOpenSplitChoice = onOpenSplitChoice,
+                                                    onOpenLsposed = onOpenLsposed,
+                                                    onToggleUninstallFlag = onToggleUninstallFlag,
+                                                    choiceContent = choiceContent,
+                                                    errorSuggestionsContent = errorSuggestionsContent,
+                                                )
+                                            }
                                         }
-                                        Box(Modifier.fillMaxWidth().weight(1f)) {
-                                            FullScreenStageBody(
-                                                snapshot = frozenBody,
-                                                prepareScrollState = prepareScrollState,
-                                                onOpenPermissions = { onAction(InstallerViewAction.ShowCouiPermissionList) },
-                                                onOpenInstallOptions = onOpenInstallOptions,
-                                                onOpenSplitChoice = onOpenSplitChoice,
-                                                onOpenLsposed = onOpenLsposed,
-                                                onToggleUninstallFlag = onToggleUninstallFlag,
-                                                choiceContent = choiceContent,
-                                                errorSuggestionsContent = errorSuggestionsContent,
-                                                recordBody = slotHasHeader == hasHeader,
-                                            )
+                                        Column(Modifier.fillMaxWidth().padding(top = barHeight)) {
+                                            Box(Modifier.onSizeChanged { headerHeightPx = it.height }) {
+                                                frozenHeader?.let { header ->
+                                                    CouiFullScreenAppHeader(
+                                                        appInfo = header.appInfo,
+                                                        versionLine = header.versionLine,
+                                                        onIconClick = header.onIconClick,
+                                                    )
+                                                }
+                                            }
                                         }
+                                    }
+                                } else if (frozenBody.page.stage is InstallerStage.InstallCompleted) {
+                                    TopBlurRegion(
+                                        useBlur = useBlur,
+                                        active = slotHasHeader == hasHeader,
+                                        bodyTopInset = 0.dp,
+                                        overlap = barHeight,
+                                        bandHeight = barHeight,
+                                    ) {
+                                        FullScreenStageBody(
+                                            snapshot = frozenBody,
+                                            prepareScrollState = prepareScrollState,
+                                            onOpenPermissions = { onAction(InstallerViewAction.ShowCouiPermissionList) },
+                                            onOpenInstallOptions = onOpenInstallOptions,
+                                            onOpenSplitChoice = onOpenSplitChoice,
+                                            onOpenLsposed = onOpenLsposed,
+                                            onToggleUninstallFlag = onToggleUninstallFlag,
+                                            choiceContent = choiceContent,
+                                            errorSuggestionsContent = errorSuggestionsContent,
+                                        )
                                     }
                                 } else {
                                     Box(Modifier.fillMaxSize()) {
@@ -903,18 +974,42 @@ internal fun CouiFullScreenInstallerContent(
                         }
                     }
 
-                    FullScreenSubPage.Permissions -> CouiFullScreenPermissionContent(slotPermissions)
-
-                    FullScreenSubPage.Settings -> Box(
-                        Modifier.fillMaxSize().padding(horizontal = FullScreenHorizontalPadding),
+                    FullScreenSubPage.Permissions -> TopBlurRegion(
+                        useBlur = useBlur,
+                        active = subPage == page.subPage,
+                        bodyTopInset = 0.dp,
+                        overlap = barHeight,
+                        bandHeight = barHeight,
                     ) {
-                        settingsContent()
+                        CouiFullScreenPermissionContent(slotPermissions)
                     }
 
-                    FullScreenSubPage.ExtendedMenu -> Box(
-                        Modifier.fillMaxSize().padding(horizontal = FullScreenHorizontalPadding),
+                    FullScreenSubPage.Settings -> TopBlurRegion(
+                        useBlur = useBlur,
+                        active = subPage == page.subPage,
+                        bodyTopInset = 0.dp,
+                        overlap = barHeight,
+                        bandHeight = barHeight,
                     ) {
-                        extendedMenuContent()
+                        Box(
+                            Modifier.fillMaxSize().padding(horizontal = FullScreenHorizontalPadding),
+                        ) {
+                            settingsContent()
+                        }
+                    }
+
+                    FullScreenSubPage.ExtendedMenu -> TopBlurRegion(
+                        useBlur = useBlur,
+                        active = subPage == page.subPage,
+                        bodyTopInset = 0.dp,
+                        overlap = barHeight,
+                        bandHeight = barHeight,
+                    ) {
+                        Box(
+                            Modifier.fillMaxSize().padding(horizontal = FullScreenHorizontalPadding),
+                        ) {
+                            extendedMenuContent()
+                        }
                     }
                 }
             }
@@ -1051,7 +1146,6 @@ private fun FullScreenStageBody(
     onToggleUninstallFlag: (Int, Boolean) -> Unit,
     choiceContent: @Composable () -> Unit,
     errorSuggestionsContent: @Composable (Throwable) -> Unit,
-    recordBody: Boolean = false,
 ) {
     val activeBucket = stageBucketOf(snapshot.page.stage)
 
@@ -1083,7 +1177,6 @@ private fun FullScreenStageBody(
                 onToggleUninstallFlag = onToggleUninstallFlag,
                 choiceContent = choiceContent,
                 errorSuggestionsContent = errorSuggestionsContent,
-                recordBody = recordBody && slotBucket == activeBucket,
             )
         }
     }
@@ -1100,14 +1193,10 @@ private fun StageBodyContent(
     onToggleUninstallFlag: (Int, Boolean) -> Unit,
     choiceContent: @Composable () -> Unit,
     errorSuggestionsContent: @Composable (Throwable) -> Unit,
-    recordBody: Boolean = false,
 ) {
     val page = snapshot.page
     val topBleed = LocalFullScreenTopBleed.current
     val bottomBleed = LocalFullScreenBottomBleed.current
-    val bodyBackdrop = LocalFullScreenBodyBackdrop.current
-    val bodyBand = if (recordBody && bodyBackdrop != null) BodyTopBandHeight else 0.dp
-    val bodyBandPx = with(LocalDensity.current) { bodyBand.toPx() }
     // Prepare and batch results scroll, so their safe distance goes into the scroll content and the
     // viewport can run behind the fixed chrome. Every other body keeps its layout reserved, which
     // is what keeps the centred status marks from moving.
@@ -1120,59 +1209,31 @@ private fun StageBodyContent(
     }
     Box(modifier = bodyModifier) {
         when (val stage = page.stage) {
-            is InstallerStage.InstallPrepare -> Box(Modifier.fillMaxSize()) {
-                // Only the list is recorded; the band below is a sibling, so it never samples
-                // itself, and the identity block above stays out of this source entirely.
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .then(
-                            if (bodyBand > 0.dp && bodyBackdrop != null) {
-                                Modifier.layerBackdrop(bodyBackdrop)
-                            } else {
-                                Modifier
-                            },
-                        ),
-                ) {
-                    CouiFullScreenPrepareContent(
-                        entity = snapshot.entity,
-                        sourceLabel = snapshot.sourceLabel,
-                        permissionCount = snapshot.permissions.size,
-                        sensitivePermissionCount = snapshot.sensitivePermissionCount,
-                        onOpenPermissions = onOpenPermissions,
-                        modifier = if (bodyBand > 0.dp) Modifier.fadeTopEdge(bodyBandPx) else Modifier,
-                        scrollState = prepareScrollState,
-                        notices = snapshot.notices,
-                        installedAppInfo = snapshot.installedAppInfo,
-                        installedModuleInfo = snapshot.installedModuleInfo,
-                        totalSelectedSize = snapshot.totalSelectedSize,
-                        selectedEntityCount = snapshot.selectedEntityCount,
-                        displaySdk = snapshot.displaySdk,
-                        displaySize = snapshot.displaySize,
-                        hideIdenticalComparisons = snapshot.hideIdenticalComparisons,
-                        showOppoSpecial = snapshot.showOppoSpecial,
-                        labShowFilePath = snapshot.labShowFilePath,
-                        labShowInstallInitiator = snapshot.labShowInstallInitiator,
-                        isSplitUpdateMode = snapshot.isSplitUpdateMode,
-                        isInvalidSplitInstall = snapshot.isInvalidSplitInstall,
-                        onOpenInstallOptions = if (snapshot.canOpenInstallOptions) onOpenInstallOptions else null,
-                        onOpenSplitChoice = if (snapshot.canOpenSplitChoice) onOpenSplitChoice else null,
-                        contentTopPadding = topBleed + bodyBand,
-                        contentBottomPadding = bottomBleed + 20.dp,
-                    )
-                }
-                if (bodyBand > 0.dp && bodyBackdrop != null) {
-                    CouiProgressiveEdgeBand(
-                        backdrop = bodyBackdrop,
-                        fromTop = true,
-                        tinted = false,
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .fillMaxWidth()
-                            .height(bodyBand),
-                    )
-                }
-            }
+            is InstallerStage.InstallPrepare -> CouiFullScreenPrepareContent(
+                entity = snapshot.entity,
+                sourceLabel = snapshot.sourceLabel,
+                permissionCount = snapshot.permissions.size,
+                sensitivePermissionCount = snapshot.sensitivePermissionCount,
+                onOpenPermissions = onOpenPermissions,
+                scrollState = prepareScrollState,
+                notices = snapshot.notices,
+                installedAppInfo = snapshot.installedAppInfo,
+                installedModuleInfo = snapshot.installedModuleInfo,
+                totalSelectedSize = snapshot.totalSelectedSize,
+                selectedEntityCount = snapshot.selectedEntityCount,
+                displaySdk = snapshot.displaySdk,
+                displaySize = snapshot.displaySize,
+                hideIdenticalComparisons = snapshot.hideIdenticalComparisons,
+                showOppoSpecial = snapshot.showOppoSpecial,
+                labShowFilePath = snapshot.labShowFilePath,
+                labShowInstallInitiator = snapshot.labShowInstallInitiator,
+                isSplitUpdateMode = snapshot.isSplitUpdateMode,
+                isInvalidSplitInstall = snapshot.isInvalidSplitInstall,
+                onOpenInstallOptions = if (snapshot.canOpenInstallOptions) onOpenInstallOptions else null,
+                onOpenSplitChoice = if (snapshot.canOpenSplitChoice) onOpenSplitChoice else null,
+                contentTopPadding = topBleed,
+                contentBottomPadding = bottomBleed + 20.dp,
+            )
 
             is InstallerStage.InstallChoice -> Box(
                 modifier = Modifier

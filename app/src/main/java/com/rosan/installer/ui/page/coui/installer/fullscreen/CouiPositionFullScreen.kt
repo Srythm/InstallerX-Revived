@@ -71,13 +71,11 @@ import com.rosan.installer.ui.theme.CouiProgressiveEdgeBand
 import com.rosan.installer.ui.theme.ProvideCouiMaterialBackdrop
 import com.rosan.installer.ui.theme.colorOsSpring
 import com.rosan.installer.ui.theme.rememberCouiBlurBackdrop
-import com.rosan.installer.ui.theme.rememberCouiSurfaceBackdrop
 import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.IconButton
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.effect.LocalCOUIMaterialEffectEnabled
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 /** Reserved even when installing has no actions, so the status mark never moves. */
@@ -92,17 +90,14 @@ val FullScreenTopBarHeight = 56.dp
 internal val LocalFullScreenActionsEnabled = staticCompositionLocalOf { true }
 
 /**
- * Top space a page must reserve for the fixed chrome, which is also the height of the progressive
- * band above it. Scrolling pages put it in their content padding so the list can run behind the
- * chrome; fixed pages put it in their outer padding. Zero when there is no content blur to sample.
+ * Height of the fixed top bar including the status bar inset. Pages that scroll behind the chrome
+ * reserve it in their scroll content and draw their own band over it; fixed pages reserve it as
+ * outer padding. A page with an identity block overrides it with the block's height below the bar.
  */
 internal val LocalFullScreenTopBleed = staticCompositionLocalOf { 0.dp }
 
-/** Bottom counterpart of [LocalFullScreenTopBleed], sized by the reserved action row. */
+/** Bottom counterpart of the top reserve, sized by the reserved action row. */
 internal val LocalFullScreenBottomBleed = staticCompositionLocalOf { 0.dp }
-
-/** Source recording just the scrolling body, for a band on the body's own top edge. */
-internal val LocalFullScreenBodyBackdrop = staticCompositionLocalOf<LayerBackdrop?> { null }
 
 /**
  * The full-screen installer surface.
@@ -111,10 +106,6 @@ internal val LocalFullScreenBodyBackdrop = staticCompositionLocalOf<LayerBackdro
  * letting each page draw its own bar put two sets of icon buttons on the same pixels during a
  * push, which reads as the buttons flashing grey. Only [content] moves between pages, and it is
  * the only thing recorded into the content blur source.
- *
- * [topOverlap] lets a page run its content behind the bar so the top band has real content to
- * blur. Pages with a fixed identity block leave it false: the block is recorded too, and a band
- * over it would blur the very information it is meant to keep readable.
  *
  * The ViewModel owns teardown; this shell notifies [onCloseAnimationFinished] when the exit fade
  * finishes (with a ViewModel fallback timeout if the callback never arrives).
@@ -129,7 +120,6 @@ fun CouiPositionFullScreen(
     endAction: (@Composable () -> Unit)? = null,
     endActionKey: Any? = endAction != null,
     useBlur: Boolean = false,
-    topOverlap: Boolean = false,
     bottomBar: (@Composable () -> Unit)? = null,
     onCloseAnimationFinished: () -> Unit = {},
     content: @Composable () -> Unit,
@@ -141,10 +131,6 @@ fun CouiPositionFullScreen(
     // Both are null when blur is off or unsupported, which is what every consumer degrades on.
     val backdrop = if (inspectionMode) null else rememberCouiBlurBackdrop(useBlur)
     val contentBackdrop = if (inspectionMode) null else rememberCouiBlurBackdrop(useBlur)
-    // Records only the scrolling body of pages with a fixed identity block, so a band on the body's
-    // top edge blurs the list without ever sampling the block above it. No opaque fill: the list
-    // fades out at its top edge, and a fill would survive that fade as a flat colour band.
-    val bodyBackdrop = if (inspectionMode) null else rememberCouiSurfaceBackdrop(useBlur)
     val currentOnCloseAnimationFinished by rememberUpdatedState(onCloseAnimationFinished)
     // Start transparent at runtime for symmetric enter fade; previews start opaque.
     val uiAlpha = remember { Animatable(if (inspectionMode) 1f else 0f) }
@@ -215,15 +201,13 @@ fun CouiPositionFullScreen(
                         val fixedTopHeight = with(density) { fixedTopHeightPx.toDp() }
                         val bottomBarReservedPadding =
                             FullScreenBottomBarHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                        // Only pages whose content actually scrolls behind the bar get the overlap
-                        // and the band. A page with a fixed identity block must not: the block is
-                        // part of the recording and would be blurred by its own band.
-                        val topBleed = if (contentBackdrop != null && topOverlap) fixedTopHeight else 0.dp
+                        // Pages own their top overlap and band; the shell only reports the bar
+                        // height and keeps the bottom reserve. Without a content source the bottom
+                        // viewport stops at the action row exactly as released.
                         val bottomBleed = if (contentBackdrop != null) bottomBarReservedPadding else 0.dp
-                        val viewportTopInset = (fixedTopHeight - topBleed).coerceAtLeast(0.dp)
 
-                        // Recorded content. The wash is repeated here so the sampled layer carries
-                        // the same base colour as the page instead of transparent margins.
+                        // Recorded content for the bottom band. The wash is repeated here so the
+                        // sampled layer carries the same base colour as the page.
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -237,30 +221,16 @@ fun CouiPositionFullScreen(
                                         WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal),
                                     )
                                     .padding(
-                                        top = viewportTopInset,
                                         bottom = (bottomBarReservedPadding - bottomBleed).coerceAtLeast(0.dp),
                                     ),
                             ) {
                                 CompositionLocalProvider(
-                                    LocalFullScreenTopBleed provides topBleed,
+                                    LocalFullScreenTopBleed provides fixedTopHeight,
                                     LocalFullScreenBottomBleed provides bottomBleed,
-                                    LocalFullScreenBodyBackdrop provides bodyBackdrop,
                                 ) {
                                     content()
                                 }
                             }
-                        }
-
-                        // Progressive band over the whole fixed top chrome, clear at its bottom edge.
-                        if (contentBackdrop != null && topOverlap) {
-                            CouiProgressiveEdgeBand(
-                                backdrop = contentBackdrop,
-                                fromTop = true,
-                                modifier = Modifier
-                                    .align(Alignment.TopCenter)
-                                    .fillMaxWidth()
-                                    .height(topBleed),
-                            )
                         }
 
                         // Fixed chrome: one bar, never part of a page change. Its height is stable,

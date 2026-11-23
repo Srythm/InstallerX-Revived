@@ -241,9 +241,6 @@ fun BoxScope.CouiProgressiveTopBarGlow(
  *
  * @param fromTop True when the fixed region is above the band's clear end (top chrome), false when
  *   it is below (action row).
- * @param tinted Whether to paint the theme sheet over the blur. Leave false when the recorded
- *   content already fades out at the band's strong end: a flat sheet there would read as a colour
- *   band against the page wash.
  */
 @Composable
 fun CouiProgressiveEdgeBand(
@@ -252,7 +249,6 @@ fun CouiProgressiveEdgeBand(
     modifier: Modifier = Modifier,
     baseColor: Color = COUITheme.colorScheme.backgroundWithCard,
     isDark: Boolean = COUITheme.isDark,
-    tinted: Boolean = true,
 ) {
     val blurRadiusDp = with(LocalDensity.current) { TopBarGlowBlurRadiusPx / density }
 
@@ -297,7 +293,7 @@ fun CouiProgressiveEdgeBand(
                     curve = 3f,
                 ),
             )
-            .then(if (tinted) Modifier.background(sheet) else Modifier),
+            .background(sheet),
     )
 }
 
