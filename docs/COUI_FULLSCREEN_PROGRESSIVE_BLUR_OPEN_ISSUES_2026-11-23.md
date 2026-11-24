@@ -4,7 +4,7 @@
 - 源码基线：`main` @ `e3e0ce4b`（tag `26.11.1`，versionCode 1721）
 - 工作分支：`feat/coui-fullscreen-progressive-blur`，未合 main；本轮动画修复提交 `8df262f3`（取代失效的 `c7271f0b`），后续文档更新不改变该基线。
 - 文档性质：问题清单与待决事项；不是功能说明，也不替代 `COUI_FULLSCREEN_PROGRESSIVE_BLUR_REPORT_2026-11-23.md` 的适配方案。
-- 验证状态：`./gradlew spotlessApply` 通过；CI `manual-build.yml`（Preview/debug）多次通过，动画修复最终 run `45184368115`、同页展开 run `45361904550`、分组与下拉菜单 run `45366699121` 通过；**未跑单元测试、无真机自动化验收**。本机无 Android SDK，编译验证只能走 CI。
+- 验证状态：`./gradlew spotlessApply` 通过；CI `manual-build.yml`（Preview/debug）多次通过，动画修复最终 run `45184368115`、同页展开 run `45361904550`、分组与下拉菜单 run `45366699121`、菜单定宽与条目过渡 run `45370120203` 通过；**未跑单元测试、无真机自动化验收**。本机无 Android SDK，编译验证只能走 CI。
 
 ## 1. 已落地且编译验证通过的部分
 
@@ -52,10 +52,12 @@
 
 ### 2.6 右上角“安装器设置”改为 COUI 下拉菜单（已实现，待真机复核）
 
-- `cebf582e`：准备页右上角不再跳转 `FullScreenSubPage.Settings`。图标按钮改用 COUI `OverlayIconDropdownMenu`（`io.github.suqi8.coui.kmp.menu`，`OverlayDropdownMenu` 家族的图标触发版本），菜单锚定在该按钮上，选项即原设置页的开关：
+- `cebf582e`：准备页右上角不再跳转 `FullScreenSubPage.Settings`。图标按钮改为弹出 COUI 下拉菜单（`OverlayDropdownMenu` 家族），菜单锚定在该按钮上，选项即原设置页的开关：
   - 第一组：显示 SDK 版本、显示大小、安装后删除；OPPO/OnePlus 设备追加“显示 OEM 特殊信息”。
   - 第二组：显示文件路径、显示安装发起者。
-- 每项以 `DropdownItem.selected` 表示开启状态，点击原地切换；`collapseOnSelection = false`，允许连续调多项，点外部或再点图标关闭。
+- 每项以 `DropdownItem.selected` 表示开启状态，点击原地切换；菜单不因选中而关闭，允许连续调多项，点外部或再点图标关闭。
+- `cebf582e` 先用官方 `OverlayIconDropdownMenu`；`31313145` 改为用同族底座自组：`OverlayListPopup(minWidth = 240.dp)` + `ListPopupColumn` + `DropdownImpl` + `DropdownGroupDivider`。原因是官方图标菜单不暴露宽度，而选中行才会画勾选列，会导致切换时菜单宽度跳动。现在每行都带 `stateIcon = COUIIcons.Basic.Check`，未选中行的 `submenuIndicatorColor` 设为透明——槽位仍占 24dp，勾不显示，最宽行不再随开关变化；面板由 `minWidth` 固定在 240dp（内容更宽的长文本语言下仍保持每语言恒定）。
+- 切换开关后，信息卡片的新增/移除条目改为带过渡：新增行从 0 高度展开并把下方行推开，移除行收缩淡出后才停止绘制（`AnimatedDetailRows`，`MutableTransitionState` 逐行持有）。分隔线改为每行顶部一条，避免最后一行退出后留下尾部横线。
 - 原设置页顶部的提示卡已移除，改为呼出菜单时弹一次 Toast，文案新增 `installer_temp_settings_toast`（中文“仅在本次会话中生效”，英文 “Only takes effect in this session”）。
 - `FullScreenSubPage.Settings` 枚举与 `settingsContent` 参数一并删除；半屏 COUI 的 `PrepareSettingsContent` 与 `installer_temp_settings_tip` 保持原样。
 - 弹窗宿主沿用外壳已有的 `CouiSheetPopupHost()`（`CouiPositionFullScreen` 根部），未新增宿主。
@@ -88,7 +90,7 @@
 
 ## 5. 建议的下一步顺序
 
-1. 真机验收 run 45366699121 的 APK：准备页几何/渐进、子页进入与返回的纯横向推送、头部向左退出/左侧返回、权限与安装选项按 COUI 可展开分组展开/收起、分包子页、右上角设置下拉菜单与呼出时的 Toast、深色与关模糊降级。
+1. 真机验收 run 45370120203 的 APK：准备页几何/渐进、子页进入与返回的纯横向推送、头部向左退出/左侧返回、权限与安装选项按 COUI 可展开分组展开/收起、分包子页、右上角设置下拉菜单的定宽与呼出 Toast、切换开关时信息条目的展开/收起过渡、深色与关模糊降级。
 2. 就 §2.4 的底部遮罩强度给出结论；如需改动，只动遮罩 stops，不动采样/带几何。
 3. 决定 §4.1 pin 合回 main 的时机（独立提交，不携带模糊功能）。
 4. 补跑 `testUnstableDebugUnitTest` 与性能测量，再决定 squash 与合并 main。
