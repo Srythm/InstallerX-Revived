@@ -125,13 +125,20 @@ import io.github.suqi8.coui.kmp.basic.Button
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
 import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.CircularProgressIndicator
+import io.github.suqi8.coui.kmp.basic.DropdownDefaults
 import io.github.suqi8.coui.kmp.basic.DropdownEntry
+import io.github.suqi8.coui.kmp.basic.DropdownGroupDivider
+import io.github.suqi8.coui.kmp.basic.DropdownImpl
 import io.github.suqi8.coui.kmp.basic.DropdownItem
 import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.IconButton
+import io.github.suqi8.coui.kmp.basic.ListPopupColumn
+import io.github.suqi8.coui.kmp.basic.PopupPositionProvider
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
-import io.github.suqi8.coui.kmp.menu.OverlayIconDropdownMenu
+import io.github.suqi8.coui.kmp.icon.COUIIcons
+import io.github.suqi8.coui.kmp.icon.basic.Check
+import io.github.suqi8.coui.kmp.overlay.OverlayListPopup
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import java.text.NumberFormat
 import kotlinx.coroutines.Dispatchers
@@ -365,7 +372,7 @@ fun CouiFullScreenInstaller(
     val oemSpecialLabel = stringResource(R.string.installer_show_oem_special)
     val showFilePathLabel = stringResource(R.string.lab_show_apk_path)
     val showInitiatorLabel = stringResource(R.string.lab_show_install_initiator)
-    val prepareSettingsEntries = listOf(
+    val baseSettingsEntries = listOf(
         DropdownEntry(
             items = buildList {
                 add(
@@ -425,6 +432,11 @@ fun CouiFullScreenInstaller(
             ),
         ),
     )
+    // Every row reserves the trailing check slot, so the menu keeps one width whichever switches
+    // are on; an unselected row paints its tick transparent (see FullScreenSettingsMenu).
+    val prepareSettingsEntries = baseSettingsEntries.map { entry ->
+        entry.copy(items = entry.items.map { item -> item.copy(stateIcon = COUIIcons.Basic.Check) })
+    }
 
     val topEndActionKey: Any? = when {
         isClosing || activeSnapshot.page.subPage != FullScreenSubPage.Main -> null
@@ -954,29 +966,68 @@ private fun FullScreenSubPageLayout(
 }
 
 /**
- * The prepare page's overflow: a COUI icon dropdown menu anchored to the top-bar button.
+ * The prepare page's overflow: a COUI dropdown menu anchored to the top-bar button.
  *
- * The menu holds the session-scoped prepare settings as checkable rows, so the former settings
- * sub page is gone. Its temporary-settings note is shown once, as a toast, when the menu opens.
+ * Composed from the same COUI pieces as `OverlayIconDropdownMenu` (`OverlayListPopup` plus
+ * `DropdownImpl`) because that wrapper does not expose a minimum width, and this menu has to keep
+ * one width while its rows change their selected state. Every row reserves the trailing check slot
+ * in [prepareSettingsEntries], so the widest row never depends on which switches are on, and
+ * [FullScreenSettingsMenuWidth] holds the panel itself at a comfortable, steady size.
+ *
+ * The session-scoped settings used to live on their own sub page; its temporary-settings note is
+ * now a toast, shown once each time the menu opens.
  */
 @Composable
 private fun FullScreenSettingsMenu(entries: List<DropdownEntry>) {
     val context = LocalContext.current
-    OverlayIconDropdownMenu(
-        entries = entries,
-        collapseOnSelection = false,
-        onExpandedChange = { expanded ->
-            if (expanded) context.toast(R.string.installer_temp_settings_toast)
-        },
-    ) {
-        Icon(
-            imageVector = AppCOUIIcons.More,
-            contentDescription = stringResource(R.string.installer_settings),
-            tint = COUITheme.colorScheme.labelPrimary,
-            modifier = Modifier.size(24.dp),
-        )
+    var expanded by remember { mutableStateOf(false) }
+    val baseColors = DropdownDefaults.dropdownColors()
+    // An unselected row still lays out the 24dp state slot; only its tick is invisible.
+    val dropdownColors = remember(baseColors) {
+        baseColors.copy(submenuIndicatorColor = Color.Transparent)
+    }
+
+    Box {
+        IconButton(onClick = { expanded = !expanded }) {
+            Icon(
+                imageVector = AppCOUIIcons.More,
+                contentDescription = stringResource(R.string.installer_settings),
+                tint = COUITheme.colorScheme.labelPrimary,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+        OverlayListPopup(
+            show = expanded,
+            alignment = PopupPositionProvider.Align.End,
+            minWidth = FullScreenSettingsMenuWidth,
+            onDismissRequest = { expanded = false },
+        ) {
+            ListPopupColumn {
+                entries.forEachIndexed { entryIndex, entry ->
+                    entry.items.forEachIndexed { itemIndex, item ->
+                        DropdownImpl(
+                            item = item,
+                            optionSize = entry.items.size,
+                            isSelected = item.selected,
+                            index = itemIndex,
+                            dropdownColors = dropdownColors,
+                            onSelectedIndexChange = { item.onClick?.invoke() },
+                        )
+                    }
+                    if (entryIndex != entries.lastIndex) {
+                        DropdownGroupDivider()
+                    }
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(expanded) {
+        if (expanded) context.toast(R.string.installer_temp_settings_toast)
     }
 }
+
+private val FullScreenSettingsMenuWidth = 240.dp
 
 private data class HeaderDisplayData(
     val appInfo: AppInfoState,

@@ -5,6 +5,13 @@ package com.rosan.installer.ui.page.coui.installer.fullscreen
 import android.content.ClipData
 import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,7 +24,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -350,12 +360,7 @@ fun CouiFullScreenPrepareContent(
         if (details.isNotEmpty()) {
             SectionTitle(stringResource(R.string.installer_detail_title))
             CouiSettingsCard(Modifier.fillMaxWidth().padding(horizontal = FullScreenHorizontalPadding)) {
-                details.forEachIndexed { index, entry ->
-                    DetailRow(entry = entry)
-                    if (index != details.lastIndex) {
-                        HorizontalDivider(Modifier.padding(start = 16.dp))
-                    }
-                }
+                AnimatedDetailRows(entries = details)
             }
         }
 
@@ -461,5 +466,79 @@ private fun DetailRow(entry: DetailEntry) {
         )
     }
 }
+
+/**
+ * The rows of the details card, animated as they come and go.
+ *
+ * The list is rebuilt from the live config on every change, so a row that leaves would drop out of
+ * composition in one frame. Each row keeps its own [MutableTransitionState] and its place in the
+ * column until its exit has played; a row that arrives expands from zero height and pushes the rows
+ * below it down smoothly instead of appearing at full size.
+ *
+ * Rows are identified by their label, which is stable for the lifetime of one locale.
+ */
+@Composable
+private fun AnimatedDetailRows(entries: List<DetailEntry>) {
+    val rows = remember {
+        entries.mapTo(mutableStateListOf<DetailRowState>()) { DetailRowState(it.label, it, initiallyVisible = true) }
+    }
+
+    // Runs after composition: refresh what stayed, admit what arrived, release what left. Writing
+    // the same content back is a no-op, so the pass settles after one extra composition.
+    SideEffect {
+        entries.forEach { entry ->
+            rows.firstOrNull { it.key == entry.label }?.let { row ->
+                if (!row.entry.sameContentAs(entry)) row.entry = entry
+            }
+        }
+        entries.forEachIndexed { index, entry ->
+            if (rows.none { it.key == entry.label }) {
+                val row = DetailRowState(entry.label, entry, initiallyVisible = false)
+                rows.add(index.coerceIn(0, rows.size), row)
+                row.visibility.targetState = true
+            }
+        }
+        rows.forEach { row ->
+            if (entries.none { it.label == row.key }) {
+                row.visibility.targetState = false
+            }
+        }
+    }
+
+    Column {
+        rows.forEachIndexed { index, row ->
+            key(row.key) {
+                AnimatedVisibility(
+                    visibleState = row.visibility,
+                    enter = fadeIn(tween(durationMillis = 180)) +
+                        expandVertically(tween(durationMillis = 240)),
+                    exit = fadeOut(tween(durationMillis = 120)) +
+                        shrinkVertically(tween(durationMillis = 180)),
+                ) {
+                    Column {
+                        // Top dividers: a row that leaves takes its own hairline with it, so the
+                        // card never ends on a trailing line.
+                        if (index > 0) {
+                            HorizontalDivider(Modifier.padding(start = 16.dp))
+                        }
+                        DetailRow(entry = row.entry)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private class DetailRowState(
+    val key: String,
+    entry: DetailEntry,
+    initiallyVisible: Boolean,
+) {
+    var entry by mutableStateOf(entry)
+    val visibility = MutableTransitionState(initiallyVisible)
+}
+
+/** Compares what a row draws; the click lambda is replaced with the entry and has no visual weight. */
+private fun DetailEntry.sameContentAs(other: DetailEntry): Boolean = label == other.label && value == other.value && valueColor == other.valueColor
 
 private fun String.toShortFingerprint(): String = if (length <= 14) this else "${take(6)}…${takeLast(4)}"
