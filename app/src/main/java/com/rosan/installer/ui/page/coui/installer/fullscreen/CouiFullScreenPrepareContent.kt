@@ -5,13 +5,6 @@ package com.rosan.installer.ui.page.coui.installer.fullscreen
 import android.content.ClipData
 import android.os.Build
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,9 +24,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.toClipEntry
@@ -50,17 +41,17 @@ import com.rosan.installer.domain.engine.model.packageinfo.AppEntity
 import com.rosan.installer.domain.engine.model.packageinfo.InstalledAppInfo
 import com.rosan.installer.domain.engine.model.packageinfo.InstalledModuleInfo
 import com.rosan.installer.domain.engine.model.source.DataType
-import com.rosan.installer.ui.icons.AppCOUIIcons
 import com.rosan.installer.ui.page.coui.widgets.CouiInfoChipGroup
 import com.rosan.installer.ui.page.coui.widgets.CouiInstallerTipCard
 import com.rosan.installer.ui.page.coui.widgets.CouiSettingsCard
 import com.rosan.installer.ui.page.main.widget.chip.NoticeModel
-import com.rosan.installer.ui.theme.colorOsSpring
 import com.rosan.installer.ui.util.formatSize
 import com.rosan.installer.util.toast
+import io.github.suqi8.coui.kmp.basic.ExpandableGroupContent
+import io.github.suqi8.coui.kmp.basic.ExpandableGroupHeader
 import io.github.suqi8.coui.kmp.basic.HorizontalDivider
-import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.Text
+import io.github.suqi8.coui.kmp.preference.ArrowPreference
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import kotlinx.coroutines.launch
 
@@ -69,15 +60,6 @@ private data class DetailEntry(
     val value: String,
     val valueColor: Color = Color.Unspecified,
     val onClick: (() -> Unit)? = null,
-)
-
-private data class NavigationEntry(
-    val icon: ImageVector,
-    val title: String,
-    val summary: String,
-    val onClick: () -> Unit,
-    val expanded: Boolean = false,
-    val expandedContent: (@Composable () -> Unit)? = null,
 )
 
 /** App/module/split details, notices, and navigation destinations for the full-screen prepare step. */
@@ -322,52 +304,19 @@ fun CouiFullScreenPrepareContent(
 
     val permissionCount = permissions.size
     val optionsContent = installOptionsContent
-    val navigationEntries = buildList {
-        if (permissionCount > 0) {
-            add(
-                NavigationEntry(
-                    icon = AppCOUIIcons.Info,
-                    title = stringResource(R.string.permission_list),
-                    summary = if (sensitivePermissionCount > 0) {
-                        stringResource(
-                            R.string.installer_permission_entry_summary_sensitive,
-                            permissionCount,
-                            sensitivePermissionCount,
-                        )
-                    } else {
-                        stringResource(R.string.installer_permission_entry_summary, permissionCount)
-                    },
-                    onClick = { permissionsExpanded = !permissionsExpanded },
-                    expanded = permissionsExpanded,
-                    expandedContent = {
-                        CouiFullScreenPermissionContent(permissions = permissions, inline = true)
-                    },
-                ),
-            )
-        }
-        if (optionsContent != null) {
-            add(
-                NavigationEntry(
-                    icon = AppCOUIIcons.Tune,
-                    title = stringResource(R.string.config_label_install_options),
-                    summary = stringResource(R.string.config_label_install_options_desc),
-                    onClick = { installOptionsExpanded = !installOptionsExpanded },
-                    expanded = installOptionsExpanded,
-                    expandedContent = optionsContent,
-                ),
-            )
-        }
-        if (onOpenSplitChoice != null) {
-            add(
-                NavigationEntry(
-                    icon = AppCOUIIcons.Settings,
-                    title = stringResource(R.string.installer_select_split),
-                    summary = stringResource(R.string.installer_select_split_desc),
-                    onClick = onOpenSplitChoice,
-                ),
-            )
-        }
+    val permissionSummary = if (sensitivePermissionCount > 0) {
+        stringResource(
+            R.string.installer_permission_entry_summary_sensitive,
+            permissionCount,
+            sensitivePermissionCount,
+        )
+    } else {
+        stringResource(R.string.installer_permission_entry_summary, permissionCount)
     }
+    val showPermissions = permissionCount > 0
+    val showInstallOptions = optionsContent != null
+    val showSplitChoice = onOpenSplitChoice != null
+    val hasNavigation = showPermissions || showInstallOptions || showSplitChoice
 
     Column(
         modifier = modifier
@@ -410,31 +359,48 @@ fun CouiFullScreenPrepareContent(
             }
         }
 
-        if (navigationEntries.isNotEmpty()) {
+        if (hasNavigation) {
             Spacer(Modifier.size(12.dp))
             CouiSettingsCard(Modifier.fillMaxWidth().padding(horizontal = FullScreenHorizontalPadding)) {
-                navigationEntries.forEachIndexed { index, entry ->
-                    NavigationRow(
-                        entry = entry,
+                // COUI 17 expandable group: a BasicComponent header whose chevron turns over, and a
+                // placeholder that runs between zero and the children's height with matching alpha.
+                if (showPermissions) {
+                    ExpandableGroupHeader(
+                        title = stringResource(R.string.permission_list),
+                        summary = permissionSummary,
+                        expanded = permissionsExpanded,
+                        onExpandedChange = { permissionsExpanded = it },
                         enabled = actionsEnabled,
                     )
-                    entry.expandedContent?.let { expandedContent ->
-                        AnimatedVisibility(
-                            visible = entry.expanded,
-                            enter = fadeIn(tween(durationMillis = 160)) +
-                                expandVertically(colorOsSpring(responseSeconds = 0.28f)),
-                            exit = fadeOut(tween(durationMillis = 120)) +
-                                shrinkVertically(tween(durationMillis = 160)),
-                        ) {
-                            Column {
-                                HorizontalDivider(Modifier.padding(start = 52.dp))
-                                expandedContent()
-                            }
-                        }
+                    ExpandableGroupContent(expanded = permissionsExpanded) {
+                        CouiFullScreenPermissionContent(permissions = permissions, inline = true)
                     }
-                    if (index != navigationEntries.lastIndex) {
-                        HorizontalDivider(Modifier.padding(start = 52.dp))
+                }
+                if (showInstallOptions) {
+                    if (showPermissions) {
+                        HorizontalDivider(Modifier.padding(start = 16.dp))
                     }
+                    ExpandableGroupHeader(
+                        title = stringResource(R.string.config_label_install_options),
+                        summary = stringResource(R.string.config_label_install_options_desc),
+                        expanded = installOptionsExpanded,
+                        onExpandedChange = { installOptionsExpanded = it },
+                        enabled = actionsEnabled,
+                    )
+                    ExpandableGroupContent(expanded = installOptionsExpanded) {
+                        optionsContent?.invoke()
+                    }
+                }
+                if (showSplitChoice) {
+                    if (showPermissions || showInstallOptions) {
+                        HorizontalDivider(Modifier.padding(start = 16.dp))
+                    }
+                    ArrowPreference(
+                        title = stringResource(R.string.installer_select_split),
+                        summary = stringResource(R.string.installer_select_split_desc),
+                        enabled = actionsEnabled,
+                        onClick = onOpenSplitChoice,
+                    )
                 }
             }
         }
@@ -492,60 +458,6 @@ private fun DetailRow(entry: DetailEntry) {
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1.6f),
-        )
-    }
-}
-
-@Composable
-private fun NavigationRow(
-    entry: NavigationEntry,
-    enabled: Boolean,
-) {
-    val chevronRotation by animateFloatAsState(
-        targetValue = when {
-            entry.expandedContent == null -> 180f
-            entry.expanded -> 90f
-            else -> 270f
-        },
-        animationSpec = tween(durationMillis = 160),
-        label = "FullScreenNavigationChevron",
-    )
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = entry.onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = entry.icon,
-            contentDescription = null,
-            tint = COUITheme.colorScheme.primary,
-            modifier = Modifier.size(22.dp),
-        )
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = entry.title,
-                style = COUITheme.textStyles.headlineXS,
-                color = COUITheme.colorScheme.labelPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = entry.summary,
-                style = COUITheme.textStyles.bodyM,
-                color = COUITheme.colorScheme.labelSecondaryVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 2.dp),
-            )
-        }
-        Icon(
-            imageVector = AppCOUIIcons.Back,
-            contentDescription = null,
-            tint = COUITheme.colorScheme.labelTertiary,
-            modifier = Modifier.size(16.dp).rotate(chevronRotation),
         )
     }
 }

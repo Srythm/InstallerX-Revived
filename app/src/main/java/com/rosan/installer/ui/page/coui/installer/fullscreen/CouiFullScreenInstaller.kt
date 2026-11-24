@@ -77,6 +77,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
 import com.rosan.installer.core.bitmask.hasFlag
+import com.rosan.installer.core.device.model.Manufacturer
+import com.rosan.installer.core.env.DeviceConfig
 import com.rosan.installer.domain.archive.model.UnarchiveErrorAction
 import com.rosan.installer.domain.archive.model.UnarchiveStatus
 import com.rosan.installer.domain.device.provider.DeviceCapabilityProvider
@@ -104,7 +106,6 @@ import com.rosan.installer.ui.page.coui.installer.components.rememberCouiPrepare
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.CouiErrorSuggestions
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.InstallChoiceContent
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.InstallExtendedMenuContent
-import com.rosan.installer.ui.page.coui.installer.sheetcontent.PrepareSettingsContent
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.unarchiveErrorTitle
 import com.rosan.installer.ui.page.coui.widgets.CouiCheckboxWidget
 import com.rosan.installer.ui.page.coui.widgets.CouiErrorTextBlock
@@ -119,14 +120,18 @@ import com.rosan.installer.ui.theme.InstallerTheme.useCouiMonet
 import com.rosan.installer.ui.theme.colorOsSpring
 import com.rosan.installer.ui.util.KeyEventBlocker
 import com.rosan.installer.util.help
+import com.rosan.installer.util.toast
 import io.github.suqi8.coui.kmp.basic.Button
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
 import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.CircularProgressIndicator
+import io.github.suqi8.coui.kmp.basic.DropdownEntry
+import io.github.suqi8.coui.kmp.basic.DropdownItem
 import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.IconButton
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
+import io.github.suqi8.coui.kmp.menu.OverlayIconDropdownMenu
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import java.text.NumberFormat
 import kotlinx.coroutines.Dispatchers
@@ -168,7 +173,7 @@ private fun TransitionSlotGuard(
     }
 }
 
-internal enum class FullScreenSubPage { Main, Permissions, Settings, ExtendedMenu }
+internal enum class FullScreenSubPage { Main, Permissions, ExtendedMenu }
 
 internal data class FullScreenPage(
     val stage: InstallerStage,
@@ -260,11 +265,9 @@ fun CouiFullScreenInstaller(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val settings = uiState.viewSettings
     val config = uiState.config
-    val showSettings = uiState.showCouiSheetRightActionSettings
 
     val subPage = when {
         stage is InstallerStage.InstallExtendedMenu -> FullScreenSubPage.ExtendedMenu
-        stage is InstallerStage.InstallPrepare && showSettings -> FullScreenSubPage.Settings
         else -> FullScreenSubPage.Main
     }
     val rawInstall = (sessionProgress as? ProgressEntity.Installing)?.takeIf {
@@ -353,6 +356,76 @@ fun CouiFullScreenInstaller(
         if (!viewModel.isClosingFullscreen.value) viewModel.dispatch(it)
     }
 
+    // The prepare step's temporary settings live in the top-bar menu instead of a sub page.
+    val isOemVendor = DeviceConfig.currentManufacturer == Manufacturer.OPPO ||
+        DeviceConfig.currentManufacturer == Manufacturer.ONEPLUS
+    val displaySdkLabel = stringResource(R.string.config_display_sdk_version)
+    val displaySizeLabel = stringResource(R.string.config_display_size)
+    val autoDeleteLabel = stringResource(R.string.config_auto_delete)
+    val oemSpecialLabel = stringResource(R.string.installer_show_oem_special)
+    val showFilePathLabel = stringResource(R.string.lab_show_apk_path)
+    val showInitiatorLabel = stringResource(R.string.lab_show_install_initiator)
+    val prepareSettingsEntries = listOf(
+        DropdownEntry(
+            items = buildList {
+                add(
+                    DropdownItem(
+                        text = displaySdkLabel,
+                        selected = config.displaySdk,
+                        onClick = { viewModel.updateConfig { it.copy(displaySdk = !it.displaySdk) } },
+                    ),
+                )
+                add(
+                    DropdownItem(
+                        text = displaySizeLabel,
+                        selected = config.displaySize,
+                        onClick = { viewModel.updateConfig { it.copy(displaySize = !it.displaySize) } },
+                    ),
+                )
+                add(
+                    DropdownItem(
+                        text = autoDeleteLabel,
+                        selected = config.autoDelete,
+                        onClick = { viewModel.updateConfig { it.copy(autoDelete = !it.autoDelete) } },
+                    ),
+                )
+                if (isOemVendor) {
+                    add(
+                        DropdownItem(
+                            text = oemSpecialLabel,
+                            selected = settings.showOPPOSpecial,
+                            onClick = {
+                                safeDispatch(
+                                    InstallerViewAction.SetTempShowOPPOSpecial(!settings.showOPPOSpecial),
+                                )
+                            },
+                        ),
+                    )
+                }
+            },
+        ),
+        DropdownEntry(
+            items = listOf(
+                DropdownItem(
+                    text = showFilePathLabel,
+                    selected = settings.labShowFilePath,
+                    onClick = {
+                        safeDispatch(InstallerViewAction.SetTempLabShowFilePath(!settings.labShowFilePath))
+                    },
+                ),
+                DropdownItem(
+                    text = showInitiatorLabel,
+                    selected = settings.labShowInstallInitiator,
+                    onClick = {
+                        safeDispatch(
+                            InstallerViewAction.SetTempLabShowInstallInitiator(!settings.labShowInstallInitiator),
+                        )
+                    },
+                ),
+            ),
+        ),
+    )
+
     val topEndActionKey: Any? = when {
         isClosing || activeSnapshot.page.subPage != FullScreenSubPage.Main -> null
 
@@ -372,14 +445,7 @@ fun CouiFullScreenInstaller(
 
         activeSnapshot.page.stage is InstallerStage.InstallPrepare -> {
             {
-                IconButton(onClick = { safeDispatch(InstallerViewAction.ShowCouiSheetRightActionSettings) }) {
-                    Icon(
-                        imageVector = AppCOUIIcons.More,
-                        contentDescription = stringResource(R.string.installer_settings),
-                        tint = COUITheme.colorScheme.labelPrimary,
-                        modifier = Modifier.size(24.dp),
-                    )
-                }
+                FullScreenSettingsMenu(entries = prepareSettingsEntries)
             }
         }
 
@@ -539,13 +605,6 @@ fun CouiFullScreenInstaller(
                 inline = inline,
             )
         },
-        settingsContent = {
-            PrepareSettingsContent(
-                viewModel = viewModel,
-                backHandlerEnabled = false,
-                contentTopPadding = LocalFullScreenTopBleed.current,
-            )
-        },
         errorSuggestionsContent = { err ->
             if (settings.showSmartSuggestion) {
                 CouiErrorSuggestions(error = err, viewModel = viewModel)
@@ -616,7 +675,6 @@ internal fun CouiFullScreenInstallerContent(
     topEndActionKey: Any? = topEndAction != null,
     choiceContent: @Composable () -> Unit = {},
     extendedMenuContent: @Composable (Boolean) -> Unit = {},
-    settingsContent: @Composable () -> Unit = {},
     errorSuggestionsContent: @Composable (Throwable) -> Unit = {},
 ) {
     val stage = page.stage
@@ -624,8 +682,6 @@ internal fun CouiFullScreenInstallerContent(
 
     val title = when (page.subPage) {
         FullScreenSubPage.Permissions -> stringResource(R.string.permission_list)
-
-        FullScreenSubPage.Settings -> stringResource(R.string.installer_settings)
 
         FullScreenSubPage.ExtendedMenu -> stringResource(R.string.config_label_install_options)
 
@@ -686,8 +742,6 @@ internal fun CouiFullScreenInstallerContent(
         !backEnabled -> ({})
 
         page.subPage == FullScreenSubPage.Permissions -> ({ onAction(InstallerViewAction.HideCouiPermissionList) })
-
-        page.subPage == FullScreenSubPage.Settings -> ({ onAction(InstallerViewAction.HideCouiSheetRightActionSettings) })
 
         page.subPage == FullScreenSubPage.ExtendedMenu -> ({ onAction(InstallerViewAction.InstallPrepare) })
 
@@ -862,12 +916,6 @@ internal fun CouiFullScreenInstallerContent(
 
                         FullScreenSubPage.Permissions -> CouiFullScreenPermissionContent(slotPermissions)
 
-                        FullScreenSubPage.Settings -> Box(
-                            Modifier.fillMaxSize().padding(horizontal = FullScreenHorizontalPadding),
-                        ) {
-                            settingsContent()
-                        }
-
                         FullScreenSubPage.ExtendedMenu -> Box(
                             Modifier.fillMaxSize().padding(horizontal = FullScreenHorizontalPadding),
                         ) {
@@ -902,6 +950,31 @@ private fun FullScreenSubPageLayout(
         ) {
             content()
         }
+    }
+}
+
+/**
+ * The prepare page's overflow: a COUI icon dropdown menu anchored to the top-bar button.
+ *
+ * The menu holds the session-scoped prepare settings as checkable rows, so the former settings
+ * sub page is gone. Its temporary-settings note is shown once, as a toast, when the menu opens.
+ */
+@Composable
+private fun FullScreenSettingsMenu(entries: List<DropdownEntry>) {
+    val context = LocalContext.current
+    OverlayIconDropdownMenu(
+        entries = entries,
+        collapseOnSelection = false,
+        onExpandedChange = { expanded ->
+            if (expanded) context.toast(R.string.installer_temp_settings_toast)
+        },
+    ) {
+        Icon(
+            imageVector = AppCOUIIcons.More,
+            contentDescription = stringResource(R.string.installer_settings),
+            tint = COUITheme.colorScheme.labelPrimary,
+            modifier = Modifier.size(24.dp),
+        )
     }
 }
 
