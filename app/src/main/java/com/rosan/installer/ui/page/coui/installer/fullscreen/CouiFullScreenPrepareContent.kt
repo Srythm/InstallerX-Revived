@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -489,6 +490,8 @@ private fun AnimatedDetailRows(entries: List<DetailEntry>) {
         entries.forEach { entry ->
             rows.firstOrNull { it.key == entry.label }?.let { row ->
                 if (!row.entry.sameContentAs(entry)) row.entry = entry
+                // A row that left earlier is still held at zero height; bring it back in place.
+                if (!row.visibility.targetState) row.visibility.targetState = true
             }
         }
         entries.forEachIndexed { index, entry ->
