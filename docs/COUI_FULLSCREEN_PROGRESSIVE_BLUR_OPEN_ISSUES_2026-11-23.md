@@ -4,7 +4,7 @@
 - 源码基线：`main` @ `e3e0ce4b`（tag `26.11.1`，versionCode 1721）
 - 工作分支：`feat/coui-fullscreen-progressive-blur`，未合 main；本轮动画修复提交 `8df262f3`（取代失效的 `c7271f0b`），后续文档更新不改变该基线。
 - 文档性质：问题清单与待决事项；不是功能说明，也不替代 `COUI_FULLSCREEN_PROGRESSIVE_BLUR_REPORT_2026-11-23.md` 的适配方案。
-- 验证状态：`./gradlew spotlessApply` 通过；CI `manual-build.yml`（Preview/debug）多次通过，动画修复最终 run `45184368115`、同页展开 run `45361904550`、分组与下拉菜单 run `45366699121`、菜单定宽与条目过渡 run `45370120203` 通过；**未跑单元测试、无真机自动化验收**。本机无 Android SDK，编译验证只能走 CI。
+- 验证状态：`./gradlew spotlessApply` 通过；CI `manual-build.yml`（Preview/debug）多次通过，动画修复最终 run `45184368115`、同页展开 run `45361904550`、分组与下拉菜单 run `45366699121`、菜单定宽与条目过渡 run `45370120203`、菜单右对齐 run `45373399590` 通过；**未跑单元测试、无真机自动化验收**。本机无 Android SDK，编译验证只能走 CI。
 
 ## 1. 已落地且编译验证通过的部分
 
@@ -61,6 +61,7 @@
 - 原设置页顶部的提示卡已移除，改为呼出菜单时弹一次 Toast，文案新增 `installer_temp_settings_toast`（中文“仅在本次会话中生效”，英文 “Only takes effect in this session”）。
 - `FullScreenSubPage.Settings` 枚举与 `settingsContent` 参数一并删除；半屏 COUI 的 `PrepareSettingsContent` 与 `installer_temp_settings_tip` 保持原样。
 - 弹窗宿主沿用外壳已有的 `CouiSheetPopupHost()`（`CouiPositionFullScreen` 根部），未新增宿主。
+- `264e0c4e` 修正菜单水平位置：COUI 默认的 `ListPopupDefaults.DropdownPositionProvider` 不读取 `alignment`，始终把菜单按锚点水平居中，240dp 面板挂在 40dp 按钮上时右缘会短约一个面板宽的四分之一。现在改用 `FullScreenSettingsMenuPositionProvider`（右缘对齐按钮右缘，保留 8dp 锚点间距、下方放不下则上方、最后夹进窗口）。窗口矩形被响应式边距内缩 16dp，而顶栏按钮位于 8dp 尾部内边距内，因此夹取上限同时取 `anchorBounds.right`，否则右缘仍会差 8dp。
 
 ## 3. 未验证项（验收缺口）
 
@@ -90,7 +91,7 @@
 
 ## 5. 建议的下一步顺序
 
-1. 真机验收 run 45370120203 的 APK：准备页几何/渐进、子页进入与返回的纯横向推送、头部向左退出/左侧返回、权限与安装选项按 COUI 可展开分组展开/收起、分包子页、右上角设置下拉菜单的定宽与呼出 Toast、切换开关时信息条目的展开/收起过渡、深色与关模糊降级。
+1. 真机验收 run 45373399590 的 APK：准备页几何/渐进、子页进入与返回的纯横向推送、头部向左退出/左侧返回、权限与安装选项按 COUI 可展开分组展开/收起、分包子页、右上角设置下拉菜单的定宽、右缘与按钮对齐、呼出 Toast、切换开关时信息条目的展开/收起过渡、深色与关模糊降级。
 2. 就 §2.4 的底部遮罩强度给出结论；如需改动，只动遮罩 stops，不动采样/带几何。
 3. 决定 §4.1 pin 合回 main 的时机（独立提交，不携带模糊功能）。
 4. 补跑 `testUnstableDebugUnitTest` 与性能测量，再决定 squash 与合并 main。
