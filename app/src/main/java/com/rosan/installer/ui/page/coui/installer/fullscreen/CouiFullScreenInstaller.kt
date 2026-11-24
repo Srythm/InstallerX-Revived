@@ -1011,9 +1011,14 @@ private fun FullScreenSettingsMenu(entries: List<DropdownEntry>) {
             onDismissRequest = { expanded = false },
         ) {
             // The width is set on the content itself instead of through the popup's `minWidth`
-            // constraint: a Box that asks for this width cannot come out narrower, whatever the
-            // popup host does with its minimum constraints.
-            Box(Modifier.width(FullScreenSettingsMenuWidth)) {
+            // constraint, and the minimum is propagated: `ListPopupColumn` sizes its rows from
+            // `constraints.minWidth`, so without propagation the panel would be this wide while the
+            // rows stayed at their text width, leaving the trailing check and the selected row's
+            // highlight stranded in the middle of the panel.
+            Box(
+                modifier = Modifier.width(FullScreenSettingsMenuWidth),
+                propagateMinConstraints = true,
+            ) {
                 ListPopupColumn {
                     entries.forEachIndexed { entryIndex, entry ->
                         entry.items.forEachIndexed { itemIndex, item ->
