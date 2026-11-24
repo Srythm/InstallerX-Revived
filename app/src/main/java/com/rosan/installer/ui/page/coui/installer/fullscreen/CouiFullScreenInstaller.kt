@@ -142,27 +142,29 @@ private fun TransitionSlotGuard(
     isActive: Boolean,
     content: @Composable () -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .then(
-                if (!isActive) {
-                    Modifier
-                        .clearAndSetSemantics { }
-                        .pointerInput(Unit) {
-                            awaitPointerEventScope {
-                                while (true) {
-                                    awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+    CompositionLocalProvider(LocalFullScreenActionsEnabled provides isActive) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (!isActive) {
+                        Modifier
+                            .clearAndSetSemantics { }
+                            .pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+                                    }
                                 }
                             }
-                        }
-                } else {
-                    Modifier
-                },
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        content()
+                    } else {
+                        Modifier
+                    },
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            content()
+        }
     }
 }
 
@@ -259,12 +261,10 @@ fun CouiFullScreenInstaller(
     val settings = uiState.viewSettings
     val config = uiState.config
     val showSettings = uiState.showCouiSheetRightActionSettings
-    val showPermissions = uiState.showCouiPermissionList
 
     val subPage = when {
         stage is InstallerStage.InstallExtendedMenu -> FullScreenSubPage.ExtendedMenu
         stage is InstallerStage.InstallPrepare && showSettings -> FullScreenSubPage.Settings
-        stage is InstallerStage.InstallPrepare && showPermissions -> FullScreenSubPage.Permissions
         else -> FullScreenSubPage.Main
     }
     val rawInstall = (sessionProgress as? ProgressEntity.Installing)?.takeIf {
@@ -504,7 +504,6 @@ fun CouiFullScreenInstaller(
                 }
             }
         },
-        onOpenInstallOptions = { safeDispatch(InstallerViewAction.InstallExtendedMenu) },
         onOpenSplitChoice = { safeDispatch(InstallerViewAction.InstallChoice) },
         onRequestUnknownSourcePermission = { safeDispatch(InstallerViewAction.RequestUnknownSourcePermission) },
         onApproveSession = { id, granted -> safeDispatch(InstallerViewAction.ApproveSession(id, granted)) },
@@ -531,12 +530,13 @@ fun CouiFullScreenInstaller(
                 contentTopPadding = LocalFullScreenTopBleed.current,
             )
         },
-        extendedMenuContent = {
+        extendedMenuContent = { inline ->
             InstallExtendedMenuContent(
                 viewModel = viewModel,
                 backHandlerEnabled = false,
                 showBackButton = false,
-                contentTopPadding = LocalFullScreenTopBleed.current,
+                contentTopPadding = if (inline) 0.dp else LocalFullScreenTopBleed.current,
+                inline = inline,
             )
         },
         settingsContent = {
@@ -603,7 +603,6 @@ internal fun CouiFullScreenInstallerContent(
     onInstall: () -> Unit = {},
     onOpenApp: () -> Unit = {},
     onOpenLsposed: () -> Unit = {},
-    onOpenInstallOptions: () -> Unit = {},
     onOpenSplitChoice: () -> Unit = {},
     onRequestUnknownSourcePermission: () -> Unit = {},
     onApproveSession: (Int, Boolean) -> Unit = { _, _ -> },
@@ -616,7 +615,7 @@ internal fun CouiFullScreenInstallerContent(
     topEndAction: (@Composable () -> Unit)? = null,
     topEndActionKey: Any? = topEndAction != null,
     choiceContent: @Composable () -> Unit = {},
-    extendedMenuContent: @Composable () -> Unit = {},
+    extendedMenuContent: @Composable (Boolean) -> Unit = {},
     settingsContent: @Composable () -> Unit = {},
     errorSuggestionsContent: @Composable (Throwable) -> Unit = {},
 ) {
@@ -853,12 +852,11 @@ internal fun CouiFullScreenInstallerContent(
                         FullScreenSubPage.Main -> FullScreenStageBody(
                             snapshot = slotBodySnapshot,
                             prepareScrollState = prepareScrollState,
-                            onOpenPermissions = { onAction(InstallerViewAction.ShowCouiPermissionList) },
-                            onOpenInstallOptions = onOpenInstallOptions,
                             onOpenSplitChoice = onOpenSplitChoice,
                             onOpenLsposed = onOpenLsposed,
                             onToggleUninstallFlag = onToggleUninstallFlag,
                             choiceContent = choiceContent,
+                            extendedMenuContent = extendedMenuContent,
                             errorSuggestionsContent = errorSuggestionsContent,
                         )
 
@@ -873,7 +871,7 @@ internal fun CouiFullScreenInstallerContent(
                         FullScreenSubPage.ExtendedMenu -> Box(
                             Modifier.fillMaxSize().padding(horizontal = FullScreenHorizontalPadding),
                         ) {
-                            extendedMenuContent()
+                            extendedMenuContent(false)
                         }
                     }
                 }
@@ -1029,12 +1027,11 @@ private fun stageBucketOf(stage: InstallerStage): StageBucket = when (stage) {
 private fun FullScreenStageBody(
     snapshot: StageBodySnapshot,
     prepareScrollState: ScrollState,
-    onOpenPermissions: () -> Unit,
-    onOpenInstallOptions: () -> Unit,
     onOpenSplitChoice: () -> Unit,
     onOpenLsposed: () -> Unit,
     onToggleUninstallFlag: (Int, Boolean) -> Unit,
     choiceContent: @Composable () -> Unit,
+    extendedMenuContent: @Composable (Boolean) -> Unit,
     errorSuggestionsContent: @Composable (Throwable) -> Unit,
 ) {
     val activeBucket = stageBucketOf(snapshot.page.stage)
@@ -1060,12 +1057,11 @@ private fun FullScreenStageBody(
             StageBodyContent(
                 snapshot = frozenSnapshot.value,
                 prepareScrollState = prepareScrollState,
-                onOpenPermissions = onOpenPermissions,
-                onOpenInstallOptions = onOpenInstallOptions,
                 onOpenSplitChoice = onOpenSplitChoice,
                 onOpenLsposed = onOpenLsposed,
                 onToggleUninstallFlag = onToggleUninstallFlag,
                 choiceContent = choiceContent,
+                extendedMenuContent = extendedMenuContent,
                 errorSuggestionsContent = errorSuggestionsContent,
             )
         }
@@ -1076,12 +1072,11 @@ private fun FullScreenStageBody(
 private fun StageBodyContent(
     snapshot: StageBodySnapshot,
     prepareScrollState: ScrollState,
-    onOpenPermissions: () -> Unit,
-    onOpenInstallOptions: () -> Unit,
     onOpenSplitChoice: () -> Unit,
     onOpenLsposed: () -> Unit,
     onToggleUninstallFlag: (Int, Boolean) -> Unit,
     choiceContent: @Composable () -> Unit,
+    extendedMenuContent: @Composable (Boolean) -> Unit,
     errorSuggestionsContent: @Composable (Throwable) -> Unit,
 ) {
     val page = snapshot.page
@@ -1102,9 +1097,8 @@ private fun StageBodyContent(
             is InstallerStage.InstallPrepare -> CouiFullScreenPrepareContent(
                 entity = snapshot.entity,
                 sourceLabel = snapshot.sourceLabel,
-                permissionCount = snapshot.permissions.size,
+                permissions = snapshot.permissions,
                 sensitivePermissionCount = snapshot.sensitivePermissionCount,
-                onOpenPermissions = onOpenPermissions,
                 scrollState = prepareScrollState,
                 notices = snapshot.notices,
                 installedAppInfo = snapshot.installedAppInfo,
@@ -1119,7 +1113,11 @@ private fun StageBodyContent(
                 labShowInstallInitiator = snapshot.labShowInstallInitiator,
                 isSplitUpdateMode = snapshot.isSplitUpdateMode,
                 isInvalidSplitInstall = snapshot.isInvalidSplitInstall,
-                onOpenInstallOptions = if (snapshot.canOpenInstallOptions) onOpenInstallOptions else null,
+                installOptionsContent = if (snapshot.canOpenInstallOptions) {
+                    { extendedMenuContent(true) }
+                } else {
+                    null
+                },
                 onOpenSplitChoice = if (snapshot.canOpenSplitChoice) onOpenSplitChoice else null,
                 contentTopPadding = topBleed,
                 contentBottomPadding = bottomBleed + 20.dp,

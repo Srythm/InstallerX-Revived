@@ -55,6 +55,7 @@ fun InstallExtendedMenuContent(
     backHandlerEnabled: Boolean = true,
     showBackButton: Boolean = true,
     contentTopPadding: Dp = 0.dp,
+    inline: Boolean = false,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -138,6 +139,22 @@ fun InstallExtendedMenuContent(
         viewModel.dispatch(InstallerViewAction.InstallPrepare)
     }
 
+    if (inline) {
+        ExtendedMenuLazyList(
+            entities = menuEntities,
+            viewModel = viewModel,
+            installFlags = installFlags,
+            managedPackages = managedPackages,
+            selectedInstallerPackageName = selectedInstallerPackageName,
+            installerMode = installerMode,
+            defaultInstallerFromSettings = defaultInstallerFromSettings,
+            availableUsers = availableUsers,
+            selectedUserId = selectedUserId,
+            inline = true,
+        )
+        return
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -164,6 +181,7 @@ fun InstallExtendedMenuContent(
                 defaultInstallerFromSettings = defaultInstallerFromSettings,
                 availableUsers = availableUsers,
                 selectedUserId = selectedUserId,
+                inline = false,
             )
         }
 
@@ -198,131 +216,143 @@ private fun ExtendedMenuLazyList(
     defaultInstallerFromSettings: String?,
     availableUsers: Map<Int, String>,
     selectedUserId: Int,
+    inline: Boolean,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = couiSheetCardColors(),
-    ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .scrollEndHaptic()
-                .overScrollVertical(),
-            overscrollEffect = null,
+    val itemContent: @Composable (ExtendedMenuEntity) -> Unit = { item ->
+        val option = item.menuItem.action
+        val isSelected = option?.let { (installFlags and it.value) != 0 } ?: false
+
+        when (item.action) {
+            is InstallExtendedMenuAction.InstallOption -> {
+                CouiSwitchWidget(
+                    title = stringResource(item.menuItem.nameResourceId),
+                    description = item.menuItem.descriptionResourceId?.let { stringResource(it) },
+                    checked = isSelected,
+                    onCheckedChange = { checked ->
+                        option?.let { opt ->
+                            viewModel.toggleInstallFlag(opt.value, checked)
+                        }
+                    },
+                )
+            }
+
+            is InstallExtendedMenuAction.CustomizeInstallerMode -> {
+                val modeSelf = stringResource(R.string.config_installer_mode_self)
+                val modeInitiator = stringResource(R.string.config_installer_mode_initiator)
+                val installerFollowSettingsText = stringResource(id = R.string.config_follow_settings)
+
+                val unifiedEntries = remember(modeSelf, modeInitiator, installerFollowSettingsText, managedPackages) {
+                    val list = mutableListOf(
+                        DropdownItem(text = modeSelf),
+                        DropdownItem(text = modeInitiator),
+                        DropdownItem(text = installerFollowSettingsText),
+                    )
+                    managedPackages.forEach { pkg ->
+                        list.add(DropdownItem(text = pkg.name))
+                    }
+                    list
+                }
+
+                val selectedUnifiedIndex =
+                    remember(installerMode, selectedInstallerPackageName, defaultInstallerFromSettings, managedPackages) {
+                        when (installerMode) {
+                            InstallerMode.Self -> 0
+
+                            InstallerMode.Initiator -> 1
+
+                            InstallerMode.Custom -> {
+                                if (selectedInstallerPackageName == defaultInstallerFromSettings ||
+                                    selectedInstallerPackageName == null
+                                ) {
+                                    2 // Follow Profile
+                                } else {
+                                    val pkgIndex = managedPackages.indexOfFirst {
+                                        it.packageName ==
+                                            selectedInstallerPackageName
+                                    }
+                                    if (pkgIndex != -1) 3 + pkgIndex else 2
+                                }
+                            }
+                        }
+                    }
+
+                WindowSpinnerPreference(
+                    title = stringResource(R.string.config_declare_installer),
+                    items = unifiedEntries,
+                    selectedIndex = selectedUnifiedIndex,
+                    onSelectedIndexChange = { newIndex ->
+                        when (newIndex) {
+                            0 -> viewModel.dispatch(InstallerViewAction.SetInstallerMode(InstallerMode.Self))
+
+                            1 -> viewModel.dispatch(InstallerViewAction.SetInstallerMode(InstallerMode.Initiator))
+
+                            2 -> {
+                                viewModel.dispatch(InstallerViewAction.SetInstallerMode(InstallerMode.Custom))
+                                viewModel.dispatch(SetInstaller(defaultInstallerFromSettings))
+                            }
+
+                            else -> {
+                                viewModel.dispatch(InstallerViewAction.SetInstallerMode(InstallerMode.Custom))
+                                managedPackages.getOrNull(newIndex - 3)?.let {
+                                    viewModel.dispatch(SetInstaller(it.packageName))
+                                }
+                            }
+                        }
+                    },
+                )
+            }
+
+            is InstallExtendedMenuAction.CustomizeUser -> {
+                val userEntries = remember(availableUsers) {
+                    // Ensure consistent order, e.g., sort by ID
+                    availableUsers.entries.sortedBy { it.key }.map { (id, name) ->
+                        DropdownItem(text = "$name ($id)")
+                    }
+                }
+                val userKeysSorted = remember(availableUsers) {
+                    availableUsers.keys.sorted()
+                }
+                val selectedUserIndex = remember(selectedUserId, userKeysSorted) {
+                    userKeysSorted.indexOf(selectedUserId).coerceAtLeast(0)
+                }
+
+                WindowSpinnerPreference(
+                    title = stringResource(R.string.config_target_user),
+                    items = userEntries,
+                    selectedIndex = selectedUserIndex,
+                    onSelectedIndexChange = { newIndex ->
+                        userKeysSorted.getOrNull(newIndex)?.let { userId ->
+                            viewModel.dispatch(SetTargetUser(userId))
+                        }
+                    },
+                )
+            }
+
+            else -> Unit
+        }
+    }
+
+    if (inline) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            items(entities, key = { it.menuItem.nameResourceId }) { item ->
-                val option = item.menuItem.action
-                val isSelected = option?.let { (installFlags and it.value) != 0 } ?: false
-
-                when (item.action) {
-                    is InstallExtendedMenuAction.InstallOption -> {
-                        CouiSwitchWidget(
-                            title = stringResource(item.menuItem.nameResourceId),
-                            description = item.menuItem.descriptionResourceId?.let { stringResource(it) },
-                            checked = isSelected,
-                            onCheckedChange = { checked ->
-                                option?.let { opt ->
-                                    viewModel.toggleInstallFlag(opt.value, checked)
-                                }
-                            },
-                        )
-                    }
-
-                    is InstallExtendedMenuAction.CustomizeInstallerMode -> {
-                        val modeSelf = stringResource(R.string.config_installer_mode_self)
-                        val modeInitiator = stringResource(R.string.config_installer_mode_initiator)
-                        val installerFollowSettingsText = stringResource(id = R.string.config_follow_settings)
-
-                        val unifiedEntries = remember(modeSelf, modeInitiator, installerFollowSettingsText, managedPackages) {
-                            val list = mutableListOf(
-                                DropdownItem(text = modeSelf),
-                                DropdownItem(text = modeInitiator),
-                                DropdownItem(text = installerFollowSettingsText),
-                            )
-                            managedPackages.forEach { pkg ->
-                                list.add(DropdownItem(text = pkg.name))
-                            }
-                            list
-                        }
-
-                        val selectedUnifiedIndex =
-                            remember(installerMode, selectedInstallerPackageName, defaultInstallerFromSettings, managedPackages) {
-                                when (installerMode) {
-                                    InstallerMode.Self -> 0
-
-                                    InstallerMode.Initiator -> 1
-
-                                    InstallerMode.Custom -> {
-                                        if (selectedInstallerPackageName == defaultInstallerFromSettings ||
-                                            selectedInstallerPackageName == null
-                                        ) {
-                                            2 // Follow Profile
-                                        } else {
-                                            val pkgIndex = managedPackages.indexOfFirst {
-                                                it.packageName ==
-                                                    selectedInstallerPackageName
-                                            }
-                                            if (pkgIndex != -1) 3 + pkgIndex else 2
-                                        }
-                                    }
-                                }
-                            }
-
-                        WindowSpinnerPreference(
-                            title = stringResource(R.string.config_declare_installer),
-                            items = unifiedEntries,
-                            selectedIndex = selectedUnifiedIndex,
-                            onSelectedIndexChange = { newIndex ->
-                                when (newIndex) {
-                                    0 -> viewModel.dispatch(InstallerViewAction.SetInstallerMode(InstallerMode.Self))
-
-                                    1 -> viewModel.dispatch(InstallerViewAction.SetInstallerMode(InstallerMode.Initiator))
-
-                                    2 -> {
-                                        viewModel.dispatch(InstallerViewAction.SetInstallerMode(InstallerMode.Custom))
-                                        viewModel.dispatch(SetInstaller(defaultInstallerFromSettings))
-                                    }
-
-                                    else -> {
-                                        viewModel.dispatch(InstallerViewAction.SetInstallerMode(InstallerMode.Custom))
-                                        managedPackages.getOrNull(newIndex - 3)?.let {
-                                            viewModel.dispatch(SetInstaller(it.packageName))
-                                        }
-                                    }
-                                }
-                            },
-                        )
-                    }
-
-                    is InstallExtendedMenuAction.CustomizeUser -> {
-                        val userEntries = remember(availableUsers) {
-                            // Ensure consistent order, e.g., sort by ID
-                            availableUsers.entries.sortedBy { it.key }.map { (id, name) ->
-                                DropdownItem(text = "$name ($id)")
-                            }
-                        }
-                        val userKeysSorted = remember(availableUsers) {
-                            availableUsers.keys.sorted()
-                        }
-                        val selectedUserIndex = remember(selectedUserId, userKeysSorted) {
-                            userKeysSorted.indexOf(selectedUserId).coerceAtLeast(0)
-                        }
-
-                        WindowSpinnerPreference(
-                            title = stringResource(R.string.config_target_user),
-                            items = userEntries,
-                            selectedIndex = selectedUserIndex,
-                            onSelectedIndexChange = { newIndex ->
-                                userKeysSorted.getOrNull(newIndex)?.let { userId ->
-                                    viewModel.dispatch(SetTargetUser(userId))
-                                }
-                            },
-                        )
-                    }
-
-                    else -> Unit
-                }
+            entities.forEach { item -> itemContent(item) }
+        }
+    } else {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = couiSheetCardColors(),
+        ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .scrollEndHaptic()
+                    .overScrollVertical(),
+                overscrollEffect = null,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(entities, key = { it.menuItem.nameResourceId }) { item -> itemContent(item) }
             }
         }
     }

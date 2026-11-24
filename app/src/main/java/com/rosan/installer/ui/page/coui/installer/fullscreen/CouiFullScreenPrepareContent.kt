@@ -4,6 +4,14 @@ package com.rosan.installer.ui.page.coui.installer.fullscreen
 
 import android.content.ClipData
 import android.os.Build
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,7 +24,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -43,6 +55,7 @@ import com.rosan.installer.ui.page.coui.widgets.CouiInfoChipGroup
 import com.rosan.installer.ui.page.coui.widgets.CouiInstallerTipCard
 import com.rosan.installer.ui.page.coui.widgets.CouiSettingsCard
 import com.rosan.installer.ui.page.main.widget.chip.NoticeModel
+import com.rosan.installer.ui.theme.colorOsSpring
 import com.rosan.installer.ui.util.formatSize
 import com.rosan.installer.util.toast
 import io.github.suqi8.coui.kmp.basic.HorizontalDivider
@@ -63,6 +76,8 @@ private data class NavigationEntry(
     val title: String,
     val summary: String,
     val onClick: () -> Unit,
+    val expanded: Boolean = false,
+    val expandedContent: (@Composable () -> Unit)? = null,
 )
 
 /** App/module/split details, notices, and navigation destinations for the full-screen prepare step. */
@@ -70,9 +85,8 @@ private data class NavigationEntry(
 fun CouiFullScreenPrepareContent(
     entity: AppEntity?,
     sourceLabel: String?,
-    permissionCount: Int,
+    permissions: List<String>,
     sensitivePermissionCount: Int,
-    onOpenPermissions: () -> Unit,
     modifier: Modifier = Modifier,
     scrollState: ScrollState = rememberScrollState(),
     notices: List<NoticeModel> = emptyList(),
@@ -88,7 +102,7 @@ fun CouiFullScreenPrepareContent(
     labShowInstallInitiator: Boolean = true,
     isSplitUpdateMode: Boolean = false,
     isInvalidSplitInstall: Boolean = false,
-    onOpenInstallOptions: (() -> Unit)? = null,
+    installOptionsContent: (@Composable () -> Unit)? = null,
     onOpenSplitChoice: (() -> Unit)? = null,
     contentTopPadding: Dp = 0.dp,
     contentBottomPadding: Dp = 20.dp,
@@ -97,6 +111,13 @@ fun CouiFullScreenPrepareContent(
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val actionsEnabled = LocalFullScreenActionsEnabled.current
+    var permissionsExpanded by rememberSaveable { mutableStateOf(false) }
+    var installOptionsExpanded by rememberSaveable { mutableStateOf(false) }
+
+    BackHandler(enabled = actionsEnabled && (permissionsExpanded || installOptionsExpanded)) {
+        permissionsExpanded = false
+        installOptionsExpanded = false
+    }
 
     val isOppoOrOnePlus = DeviceConfig.currentManufacturer == Manufacturer.OPPO ||
         DeviceConfig.currentManufacturer == Manufacturer.ONEPLUS
@@ -299,6 +320,8 @@ fun CouiFullScreenPrepareContent(
         }
     }
 
+    val permissionCount = permissions.size
+    val optionsContent = installOptionsContent
     val navigationEntries = buildList {
         if (permissionCount > 0) {
             add(
@@ -314,17 +337,23 @@ fun CouiFullScreenPrepareContent(
                     } else {
                         stringResource(R.string.installer_permission_entry_summary, permissionCount)
                     },
-                    onClick = onOpenPermissions,
+                    onClick = { permissionsExpanded = !permissionsExpanded },
+                    expanded = permissionsExpanded,
+                    expandedContent = {
+                        CouiFullScreenPermissionContent(permissions = permissions, inline = true)
+                    },
                 ),
             )
         }
-        if (onOpenInstallOptions != null) {
+        if (optionsContent != null) {
             add(
                 NavigationEntry(
                     icon = AppCOUIIcons.Tune,
                     title = stringResource(R.string.config_label_install_options),
                     summary = stringResource(R.string.config_label_install_options_desc),
-                    onClick = onOpenInstallOptions,
+                    onClick = { installOptionsExpanded = !installOptionsExpanded },
+                    expanded = installOptionsExpanded,
+                    expandedContent = optionsContent,
                 ),
             )
         }
@@ -389,6 +418,20 @@ fun CouiFullScreenPrepareContent(
                         entry = entry,
                         enabled = actionsEnabled,
                     )
+                    entry.expandedContent?.let { expandedContent ->
+                        AnimatedVisibility(
+                            visible = entry.expanded,
+                            enter = fadeIn(tween(durationMillis = 160)) +
+                                expandVertically(colorOsSpring(responseSeconds = 0.28f)),
+                            exit = fadeOut(tween(durationMillis = 120)) +
+                                shrinkVertically(tween(durationMillis = 160)),
+                        ) {
+                            Column {
+                                HorizontalDivider(Modifier.padding(start = 52.dp))
+                                expandedContent()
+                            }
+                        }
+                    }
                     if (index != navigationEntries.lastIndex) {
                         HorizontalDivider(Modifier.padding(start = 52.dp))
                     }
@@ -458,6 +501,15 @@ private fun NavigationRow(
     entry: NavigationEntry,
     enabled: Boolean,
 ) {
+    val chevronRotation by animateFloatAsState(
+        targetValue = when {
+            entry.expandedContent == null -> 180f
+            entry.expanded -> 90f
+            else -> 270f
+        },
+        animationSpec = tween(durationMillis = 160),
+        label = "FullScreenNavigationChevron",
+    )
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -493,7 +545,7 @@ private fun NavigationRow(
             imageVector = AppCOUIIcons.Back,
             contentDescription = null,
             tint = COUITheme.colorScheme.labelTertiary,
-            modifier = Modifier.size(16.dp).rotate(180f),
+            modifier = Modifier.size(16.dp).rotate(chevronRotation),
         )
     }
 }
