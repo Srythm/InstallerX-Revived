@@ -1,10 +1,10 @@
 # COUI 全屏渐进式模糊：当前问题与待决事项
 
-- 日期：2026-11-23（2026-11-24 更新同页展开）
+- 日期：2026-11-23（2026-11-24 更新同页展开、COUI 可展开分组与设置下拉菜单）
 - 源码基线：`main` @ `e3e0ce4b`（tag `26.11.1`，versionCode 1721）
 - 工作分支：`feat/coui-fullscreen-progressive-blur`，未合 main；本轮动画修复提交 `8df262f3`（取代失效的 `c7271f0b`），后续文档更新不改变该基线。
 - 文档性质：问题清单与待决事项；不是功能说明，也不替代 `COUI_FULLSCREEN_PROGRESSIVE_BLUR_REPORT_2026-11-23.md` 的适配方案。
-- 验证状态：`./gradlew spotlessApply` 通过；CI `manual-build.yml`（Preview/debug）多次通过，动画修复最终 run `45184368115`、同页展开 run `45361904550` 通过；**未跑单元测试、无真机自动化验收**。本机无 Android SDK，编译验证只能走 CI。
+- 验证状态：`./gradlew spotlessApply` 通过；CI `manual-build.yml`（Preview/debug）多次通过，动画修复最终 run `45184368115`、同页展开 run `45361904550`、分组与下拉菜单 run `45366699121` 通过；**未跑单元测试、无真机自动化验收**。本机无 Android SDK，编译验证只能走 CI。
 
 ## 1. 已落地且编译验证通过的部分
 
@@ -13,7 +13,7 @@
 | 内容采样源 + 覆盖式外壳 | `CouiPositionFullScreen.kt` | 已落地；静态源供材质/弹出层，内容源供上下渐进带 |
 | 顶部渐进带（状态栏＋顶栏＋头部整段，带主题遮罩） | `CouiPositionFullScreen.kt`、`Backdrop.kt CouiProgressiveEdgeBand` | 已落地；观感以 2dc8a1a7 为基准恢复 |
 | 底部渐进带（仅有操作栏的页面） | `CouiPositionFullScreen.kt` | 已落地；无按钮页面不绘制 |
-| 留白下沉（准备/临时设置/批量结果） | 各 content 文件 | 已落地；居中状态页保留预留布局 |
+| 留白下沉（准备/批量结果） | 各 content 文件 | 已落地；居中状态页保留预留布局 |
 | 文案「最低 SDK」、准备页黑色行标题 `headlineXS` | `strings.xml` ×2、`CouiFullScreenPrepareContent.kt` | 已落地 |
 | miuix pin `5ff41ba9 → d82b40fa` | `gradle/libs.versions.toml` | 仅在本分支（`f82db3d4`） |
 
@@ -34,7 +34,7 @@
 ### 2.3 部分页面顶部仍为静态材质（设计内限制）
 
 - 模块日志、确认页、分包选择页、进度/完成/错误页、卸载/归档恢复：保留预留布局与居中语义（`StageBodyContent` 的 `else -> padding(top = topBleed, bottom = bottomBleed)`），顶部静态材质。
-- 准备页顶部为真实渐进（正文滚过顶栏+头部后方）；临时设置页顶部为真实渐进；准备页与批量结果底部为真实渐进。
+- 准备页顶部为真实渐进（正文滚过顶栏+头部后方）；准备页与批量结果底部为真实渐进。
 - 权限列表与安装选项已不再作为独立子页；其内容并入准备页滚动后，顶部渐进改由准备页采样路径覆盖，详见 §2.5。
 
 ### 2.4 底部带在按钮区不透明度偏高（观感待复核）
@@ -43,16 +43,27 @@
 
 ### 2.5 权限列表与安装选项改为同页展开（已实现，待真机复核）
 
-- `33668ff4`：准备页的“权限列表”和“安装选项”不再派发子页动作，改为在当前 `CouiSettingsCard` 内展开；箭头在向下／向上之间动画，展开区使用 `expandVertically` / `shrinkVertically`。
+- `33668ff4`：准备页的“权限列表”和“安装选项”不再派发子页动作，改为在当前 `CouiSettingsCard` 内展开。
+- `cebf582e`：展开区改用 COUI 自带的可展开分组 —— `ExpandableGroupHeader` + `ExpandableGroupContent`。头部是 COUI 的 `BasicComponent` 行（标题、摘要、可翻转箭头），展开区以 400ms 高度+透明度动画生长（曲线为 COUI `COUIMoveEaseInterpolator`），不再使用自定义 `AnimatedVisibility`。为与示例一致，三个入口不再带前置图标。
+- 分包选择改用 COUI `ArrowPreference`，保持同一张卡片内的行高、字号与箭头样式一致；行为仍是跳转 `FullScreenSubPage.ExtendedMenu` 之外的原有子页路径。
 - 权限内容新增 `inline = true`：复用原有分组与权限行，但不创建第二套垂直滚动，也不嵌套 `Card`。安装选项同样新增 `inline = true`，内嵌使用普通 `Column`，独立页仍保留原 `LazyColumn` 与卡片样式。
-- 分包选择仍跳转原 `FullScreenSubPage`；顶部设置的子页行为未变。
-- 展开时按系统返回只收起展开区；`TransitionSlotGuard` 现在会把 `LocalFullScreenActionsEnabled` 设为非激活，避免旧主页在转场期间抢返回键。
-- 验证：`spotlessApply` 通过；CI run `45361904550` Preview/debug 组装成功。**展开高度、长权限列表、深色与大字体下的观感未真机复核。**
+- 展开时按系统返回只收起展开区；`TransitionSlotGuard` 会把 `LocalFullScreenActionsEnabled` 设为非激活，避免旧主页在转场期间抢返回键。
+- 验证：`spotlessApply` 通过；CI run `45361904550`（同页展开）与 `45366699121`（可展开分组 + 设置下拉菜单）Preview/debug 组装成功。**展开高度、长权限列表、深色与大字体下的观感未真机复核。**
+
+### 2.6 右上角“安装器设置”改为 COUI 下拉菜单（已实现，待真机复核）
+
+- `cebf582e`：准备页右上角不再跳转 `FullScreenSubPage.Settings`。图标按钮改用 COUI `OverlayIconDropdownMenu`（`io.github.suqi8.coui.kmp.menu`，`OverlayDropdownMenu` 家族的图标触发版本），菜单锚定在该按钮上，选项即原设置页的开关：
+  - 第一组：显示 SDK 版本、显示大小、安装后删除；OPPO/OnePlus 设备追加“显示 OEM 特殊信息”。
+  - 第二组：显示文件路径、显示安装发起者。
+- 每项以 `DropdownItem.selected` 表示开启状态，点击原地切换；`collapseOnSelection = false`，允许连续调多项，点外部或再点图标关闭。
+- 原设置页顶部的提示卡已移除，改为呼出菜单时弹一次 Toast，文案新增 `installer_temp_settings_toast`（中文“仅在本次会话中生效”，英文 “Only takes effect in this session”）。
+- `FullScreenSubPage.Settings` 枚举与 `settingsContent` 参数一并删除；半屏 COUI 的 `PrepareSettingsContent` 与 `installer_temp_settings_tip` 保持原样。
+- 弹窗宿主沿用外壳已有的 `CouiSheetPopupHost()`（`CouiPositionFullScreen` 根部），未新增宿主。
 
 ## 3. 未验证项（验收缺口）
 
 - 真机矩阵：浅色/深色/AMOLED/动态色/临时主题色；手势/三键导航；横屏与平板；大字体与显示缩放；API 26–32 与关模糊降级；Compose 预览。
-- 行为回归：全屏关闭 220ms 时序与 ViewModel 1000ms 兜底、退出/过渡冻结快照、顶栏按钮 `SizeTransform(clip=false)`、装饰层不吞点击、半屏与 Material 3 家族、原 COUI 设置页、卸载与归档恢复、连续新安装与通知重入。
+- 行为回归：全屏关闭 220ms 时序与 ViewModel 1000ms 兜底、退出/过渡冻结快照、顶栏按钮 `SizeTransform(clip=false)`、装饰层不吞点击、半屏与 Material 3 家族、半屏 COUI 设置页（全屏侧已改为顶栏下拉菜单）、卸载与归档恢复、连续新安装与通知重入。
 - 性能：内容源进入滚动/日志录制链路后的帧耗时分位数、卡顿帧、图层内存；长权限列表、高频模块日志、批量结果、页面交叉淡入淡出；60Hz 与高刷设备。**没有任何实测数字，不应引用改善幅度。**
 - 单元测试：`testUnstableDebugUnitTest` 未在本分支跑过（CI manual-build 只组装）。既有 `InstallerFullscreenCloseTest`、`CouiFullScreenStateTest` 可作为回归入口。
 - 无 `app/src/androidTest`；不存在设备截图/录屏验收。
@@ -77,7 +88,7 @@
 
 ## 5. 建议的下一步顺序
 
-1. 真机验收 run 45361904550 的 APK：准备页几何/渐进、子页进入与返回的纯横向推送、头部向左退出/左侧返回、权限与安装选项展开/收起、分包子页、深色与关模糊降级。
+1. 真机验收 run 45366699121 的 APK：准备页几何/渐进、子页进入与返回的纯横向推送、头部向左退出/左侧返回、权限与安装选项按 COUI 可展开分组展开/收起、分包子页、右上角设置下拉菜单与呼出时的 Toast、深色与关模糊降级。
 2. 就 §2.4 的底部遮罩强度给出结论；如需改动，只动遮罩 stops，不动采样/带几何。
 3. 决定 §4.1 pin 合回 main 的时机（独立提交，不携带模糊功能）。
 4. 补跑 `testUnstableDebugUnitTest` 与性能测量，再决定 squash 与合并 main。
