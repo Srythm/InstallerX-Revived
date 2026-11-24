@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -974,10 +975,12 @@ private fun FullScreenSubPageLayout(
  * The prepare page's overflow: a COUI dropdown menu anchored to the top-bar button.
  *
  * Composed from the same COUI pieces as `OverlayIconDropdownMenu` (`OverlayListPopup` plus
- * `DropdownImpl`) because that wrapper does not expose a minimum width, and this menu has to keep
- * one width while its rows change their selected state. Every row reserves the trailing check slot
- * in [prepareSettingsEntries], so the widest row never depends on which switches are on, and
- * [FullScreenSettingsMenuWidth] holds the panel itself at a comfortable, steady size.
+ * `DropdownImpl`) because that wrapper exposes neither a width nor the position provider, and this
+ * menu has to keep one width while its rows change their selected state and to line its trailing
+ * edge up with the button. Every row reserves the trailing check slot in [prepareSettingsEntries],
+ * so the widest row never depends on which switches are on, and the width is requested by the
+ * content itself ([FullScreenSettingsMenuWidth]) rather than through the popup's minimum-size
+ * constraint.
  *
  * The session-scoped settings used to live on their own sub page; its temporary-settings note is
  * now a toast, shown once each time the menu opens.
@@ -1005,23 +1008,27 @@ private fun FullScreenSettingsMenu(entries: List<DropdownEntry>) {
             show = expanded,
             alignment = PopupPositionProvider.Align.End,
             popupPositionProvider = FullScreenSettingsMenuPositionProvider,
-            minWidth = FullScreenSettingsMenuWidth,
             onDismissRequest = { expanded = false },
         ) {
-            ListPopupColumn {
-                entries.forEachIndexed { entryIndex, entry ->
-                    entry.items.forEachIndexed { itemIndex, item ->
-                        DropdownImpl(
-                            item = item,
-                            optionSize = entry.items.size,
-                            isSelected = item.selected,
-                            index = itemIndex,
-                            dropdownColors = dropdownColors,
-                            onSelectedIndexChange = { item.onClick?.invoke() },
-                        )
-                    }
-                    if (entryIndex != entries.lastIndex) {
-                        DropdownGroupDivider()
+            // The width is set on the content itself instead of through the popup's `minWidth`
+            // constraint: a Box that asks for this width cannot come out narrower, whatever the
+            // popup host does with its minimum constraints.
+            Box(Modifier.width(FullScreenSettingsMenuWidth)) {
+                ListPopupColumn {
+                    entries.forEachIndexed { entryIndex, entry ->
+                        entry.items.forEachIndexed { itemIndex, item ->
+                            DropdownImpl(
+                                item = item,
+                                optionSize = entry.items.size,
+                                isSelected = item.selected,
+                                index = itemIndex,
+                                dropdownColors = dropdownColors,
+                                onSelectedIndexChange = { item.onClick?.invoke() },
+                            )
+                        }
+                        if (entryIndex != entries.lastIndex) {
+                            DropdownGroupDivider()
+                        }
                     }
                 }
             }
