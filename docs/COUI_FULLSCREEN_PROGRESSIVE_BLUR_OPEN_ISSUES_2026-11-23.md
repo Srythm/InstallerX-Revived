@@ -1,10 +1,10 @@
 # COUI 全屏渐进式模糊：当前问题与待决事项
 
-- 日期：2026-11-23
+- 日期：2026-11-23（2026-11-24 更新同页展开）
 - 源码基线：`main` @ `e3e0ce4b`（tag `26.11.1`，versionCode 1721）
 - 工作分支：`feat/coui-fullscreen-progressive-blur`，未合 main；本轮动画修复提交 `8df262f3`（取代失效的 `c7271f0b`），后续文档更新不改变该基线。
 - 文档性质：问题清单与待决事项；不是功能说明，也不替代 `COUI_FULLSCREEN_PROGRESSIVE_BLUR_REPORT_2026-11-23.md` 的适配方案。
-- 验证状态：`./gradlew spotlessApply` 通过；CI `manual-build.yml`（Preview/debug）多次通过，动画修复最终 run `45184368115` 通过；**未跑单元测试、无真机自动化验收**。本机无 Android SDK，编译验证只能走 CI。
+- 验证状态：`./gradlew spotlessApply` 通过；CI `manual-build.yml`（Preview/debug）多次通过，动画修复最终 run `45184368115`、同页展开 run `45361904550` 通过；**未跑单元测试、无真机自动化验收**。本机无 Android SDK，编译验证只能走 CI。
 
 ## 1. 已落地且编译验证通过的部分
 
@@ -13,7 +13,7 @@
 | 内容采样源 + 覆盖式外壳 | `CouiPositionFullScreen.kt` | 已落地；静态源供材质/弹出层，内容源供上下渐进带 |
 | 顶部渐进带（状态栏＋顶栏＋头部整段，带主题遮罩） | `CouiPositionFullScreen.kt`、`Backdrop.kt CouiProgressiveEdgeBand` | 已落地；观感以 2dc8a1a7 为基准恢复 |
 | 底部渐进带（仅有操作栏的页面） | `CouiPositionFullScreen.kt` | 已落地；无按钮页面不绘制 |
-| 留白下沉（准备/权限/临时设置/批量结果） | 各 content 文件 | 已落地；居中状态页保留预留布局 |
+| 留白下沉（准备/临时设置/批量结果） | 各 content 文件 | 已落地；居中状态页保留预留布局 |
 | 文案「最低 SDK」、准备页黑色行标题 `headlineXS` | `strings.xml` ×2、`CouiFullScreenPrepareContent.kt` | 已落地 |
 | miuix pin `5ff41ba9 → d82b40fa` | `gradle/libs.versions.toml` | 仅在本分支（`f82db3d4`） |
 
@@ -33,13 +33,21 @@
 
 ### 2.3 部分页面顶部仍为静态材质（设计内限制）
 
-- 安装选项页：卡片整体从顶栏下缘开始，列表视口不伸到栏后，顶部带只采样背景 → 无真实内容渐进；卡片圆角保留。
 - 模块日志、确认页、分包选择页、进度/完成/错误页、卸载/归档恢复：保留预留布局与居中语义（`StageBodyContent` 的 `else -> padding(top = topBleed, bottom = bottomBleed)`），顶部静态材质。
-- 准备页顶部为真实渐进（正文滚过顶栏+头部后方）；权限页、临时设置页顶部为真实渐进；准备页与批量结果底部为真实渐进。
+- 准备页顶部为真实渐进（正文滚过顶栏+头部后方）；临时设置页顶部为真实渐进；准备页与批量结果底部为真实渐进。
+- 权限列表与安装选项已不再作为独立子页；其内容并入准备页滚动后，顶部渐进改由准备页采样路径覆盖，详见 §2.5。
 
 ### 2.4 底部带在按钮区不透明度偏高（观感待复核）
 
 底部带遮罩沿用顶部带的镜像 stops（浅色 `0 → 0.7@0.4 → 1`，深色 `0 → 0.4`，见 `Backdrop.kt` `CouiProgressiveEdgeBand`）。操作按钮位于带的不透明端附近，视觉上接近一条实色底栏。用户曾要求「无按钮页面去掉遮罩」（已实现：底部带以 `bottomBar != null` 为门），但有按钮页面的遮罩强度是否合适未确认。
+
+### 2.5 权限列表与安装选项改为同页展开（已实现，待真机复核）
+
+- `33668ff4`：准备页的“权限列表”和“安装选项”不再派发子页动作，改为在当前 `CouiSettingsCard` 内展开；箭头在向下／向上之间动画，展开区使用 `expandVertically` / `shrinkVertically`。
+- 权限内容新增 `inline = true`：复用原有分组与权限行，但不创建第二套垂直滚动，也不嵌套 `Card`。安装选项同样新增 `inline = true`，内嵌使用普通 `Column`，独立页仍保留原 `LazyColumn` 与卡片样式。
+- 分包选择仍跳转原 `FullScreenSubPage`；顶部设置的子页行为未变。
+- 展开时按系统返回只收起展开区；`TransitionSlotGuard` 现在会把 `LocalFullScreenActionsEnabled` 设为非激活，避免旧主页在转场期间抢返回键。
+- 验证：`spotlessApply` 通过；CI run `45361904550` Preview/debug 组装成功。**展开高度、长权限列表、深色与大字体下的观感未真机复核。**
 
 ## 3. 未验证项（验收缺口）
 
@@ -69,7 +77,7 @@
 
 ## 5. 建议的下一步顺序
 
-1. 真机验收 run 45184368115 的 APK：准备页几何/渐进、子页进入与返回的纯横向推送、头部向左退出/左侧返回、选项页卡片、权限页字重、深色与关模糊降级。
+1. 真机验收 run 45361904550 的 APK：准备页几何/渐进、子页进入与返回的纯横向推送、头部向左退出/左侧返回、权限与安装选项展开/收起、分包子页、深色与关模糊降级。
 2. 就 §2.4 的底部遮罩强度给出结论；如需改动，只动遮罩 stops，不动采样/带几何。
 3. 决定 §4.1 pin 合回 main 的时机（独立提交，不携带模糊功能）。
 4. 补跑 `testUnstableDebugUnitTest` 与性能测量，再决定 squash 与合并 main。
