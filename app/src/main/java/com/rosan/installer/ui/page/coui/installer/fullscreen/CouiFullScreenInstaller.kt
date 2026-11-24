@@ -73,6 +73,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
@@ -133,6 +137,7 @@ import io.github.suqi8.coui.kmp.basic.DropdownItem
 import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.IconButton
 import io.github.suqi8.coui.kmp.basic.ListPopupColumn
+import io.github.suqi8.coui.kmp.basic.ListPopupDefaults
 import io.github.suqi8.coui.kmp.basic.PopupPositionProvider
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
@@ -999,6 +1004,7 @@ private fun FullScreenSettingsMenu(entries: List<DropdownEntry>) {
         OverlayListPopup(
             show = expanded,
             alignment = PopupPositionProvider.Align.End,
+            popupPositionProvider = FullScreenSettingsMenuPositionProvider,
             minWidth = FullScreenSettingsMenuWidth,
             onDismissRequest = { expanded = false },
         ) {
@@ -1028,6 +1034,54 @@ private fun FullScreenSettingsMenu(entries: List<DropdownEntry>) {
 }
 
 private val FullScreenSettingsMenuWidth = 240.dp
+
+/**
+ * Puts the panel's trailing edge on the button's trailing edge, which is how a COUI action-bar
+ * context menu hangs off its trigger.
+ *
+ * [ListPopupDefaults.DropdownPositionProvider] cannot do this: it ignores
+ * [PopupPositionProvider.Align] and always centres the menu on the anchor, so a 240dp panel on a
+ * 40dp button sits about a quarter of its width short of the button's right edge. Everything else
+ * follows the same COUI rules as that provider — the 8dp anchor gap, below the button when it fits,
+ * above it otherwise, then clamped into the window.
+ *
+ * The window rect is shrunk by the responsive grid margin (16dp on a compact phone) while the bar's
+ * buttons sit in its 8dp trailing padding, so the clamp also honours the anchor's own edge; without
+ * that the panel would stop a further 8dp short of the button it hangs off.
+ */
+private val FullScreenSettingsMenuPositionProvider = object : PopupPositionProvider {
+    private val margins = PaddingValues(vertical = ListPopupDefaults.AnchorGap)
+
+    override fun calculatePosition(
+        anchorBounds: IntRect,
+        windowBounds: IntRect,
+        layoutDirection: LayoutDirection,
+        popupContentSize: IntSize,
+        popupMargin: IntRect,
+        alignment: PopupPositionProvider.Align,
+    ): IntOffset {
+        val available = IntRect(
+            left = windowBounds.left + popupMargin.left,
+            top = windowBounds.top,
+            right = windowBounds.right - popupMargin.right,
+            bottom = windowBounds.bottom,
+        )
+        val maxX = maxOf(available.left, maxOf(available.right, anchorBounds.right) - popupContentSize.width)
+        val x = (anchorBounds.right - popupContentSize.width - popupMargin.right).coerceIn(available.left, maxX)
+
+        val below = anchorBounds.bottom + popupMargin.bottom
+        val above = anchorBounds.top - popupMargin.top
+        val restingY = when {
+            available.bottom - below >= popupContentSize.height -> below
+            above - available.top >= popupContentSize.height -> above - popupContentSize.height
+            else -> available.top
+        }
+        val maxY = maxOf(available.top, available.bottom - popupContentSize.height)
+        return IntOffset(x, restingY.coerceIn(available.top, maxY))
+    }
+
+    override fun getMargins(): PaddingValues = margins
+}
 
 private data class HeaderDisplayData(
     val appInfo: AppInfoState,
