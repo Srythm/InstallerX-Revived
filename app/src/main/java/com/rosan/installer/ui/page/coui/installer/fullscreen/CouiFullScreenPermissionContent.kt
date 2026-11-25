@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.dp
 import com.rosan.installer.R
 import com.rosan.installer.util.pm.getBestPermissionLabel
 import io.github.suqi8.coui.kmp.basic.Card
-import io.github.suqi8.coui.kmp.basic.HorizontalDivider
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.theme.COUITheme
 
@@ -165,8 +164,10 @@ private fun PermissionRows(
 ) {
     val context = LocalContext.current
 
+    // Rows are separated by vertical padding alone: COUI's permission list carries no hairline
+    // between entries, and the section titles already delimit the sensitive/normal groups.
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-        permissions.forEachIndexed { index, permission ->
+        permissions.forEach { permission ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -196,9 +197,6 @@ private fun PermissionRows(
                         color = COUITheme.colorScheme.error,
                     )
                 }
-            }
-            if (index != permissions.lastIndex) {
-                HorizontalDivider()
             }
         }
     }

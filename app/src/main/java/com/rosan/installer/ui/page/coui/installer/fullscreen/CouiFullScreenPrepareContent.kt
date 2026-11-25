@@ -384,7 +384,7 @@ fun CouiFullScreenPrepareContent(
                 }
                 if (showInstallOptions) {
                     if (showPermissions) {
-                        HorizontalDivider(Modifier.padding(start = 16.dp))
+                        HorizontalDivider(Modifier.fillMaxWidth().padding(horizontal = 16.dp))
                     }
                     ExpandableGroupHeader(
                         title = stringResource(R.string.config_label_install_options),
@@ -399,7 +399,7 @@ fun CouiFullScreenPrepareContent(
                 }
                 if (showSplitChoice) {
                     if (showPermissions || showInstallOptions) {
-                        HorizontalDivider(Modifier.padding(start = 16.dp))
+                        HorizontalDivider(Modifier.fillMaxWidth().padding(horizontal = 16.dp))
                     }
                     ArrowPreference(
                         title = stringResource(R.string.installer_select_split),
@@ -526,7 +526,7 @@ private fun AnimatedDetailRows(entries: List<DetailEntry>) {
                         // Top dividers: a row that leaves takes its own hairline with it, so the
                         // card never ends on a trailing line.
                         if (index > 0) {
-                            HorizontalDivider(Modifier.padding(start = 16.dp))
+                            HorizontalDivider(Modifier.fillMaxWidth().padding(horizontal = 16.dp))
                         }
                         DetailRow(entry = row.entry)
                     }
