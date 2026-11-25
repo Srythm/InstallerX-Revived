@@ -4,7 +4,7 @@
 - 源码基线：`main` @ `e3e0ce4b`（tag `26.11.1`，versionCode 1721）
 - 工作分支：`feat/coui-fullscreen-progressive-blur`，未合 main；本轮动画修复提交 `8df262f3`（取代失效的 `c7271f0b`），后续文档更新不改变该基线。
 - 文档性质：问题清单与待决事项；不是功能说明，也不替代 `COUI_FULLSCREEN_PROGRESSIVE_BLUR_REPORT_2026-11-23.md` 的适配方案。
-- 验证状态：`./gradlew spotlessApply` 通过；CI `manual-build.yml`（Preview/debug）多次通过，动画修复最终 run `45184368115`、同页展开 run `45361904550`、分组与下拉菜单 run `45366699121`、菜单定宽与条目过渡 run `45370120203`、菜单右对齐 run `45373399590`、菜单宽度由内容固定 run `45378598067`、行撑满面板 run `45380923974` 通过；**未跑单元测试、无真机自动化验收**。本机无 Android SDK，编译验证只能走 CI。
+- 验证状态：`./gradlew spotlessApply` 通过；CI `manual-build.yml`（Preview/debug）多次通过，动画修复最终 run `45184368115`、同页展开 run `45361904550`、分组与下拉菜单 run `45366699121`、菜单定宽与条目过渡 run `45370120203`、菜单右对齐 run `45373399590`、菜单宽度由内容固定 run `45378598067`、行撑满面板 run `45380923974` 通过；2026-11-25 Branch CI run `45615000396`（attempt 2）的单元测试与 Unstable Release 构建通过，Preview/debug run `45616845562` 通过；**无真机自动化验收**。本机无 Android SDK，编译验证只能走 CI。
 
 ## 1. 已落地且编译验证通过的部分
 
@@ -66,22 +66,22 @@
 - `223e0956` 修正“面板右侧无内容”：`ListPopupColumn` 用 `constraints.minWidth` 决定列宽，而 `Box` 默认不向下传递最小约束，于是面板被撑到 240dp、列却只有文字宽度，勾选与选中高亮停在面板中间。改为 `Box(width = 240.dp, propagateMinConstraints = true)` 后行宽 = 面板宽，勾选落到行尾。
 - 同轮实测（用户 2026-11-24 截图，1264×2780，密度≈3.4）：面板右缘 ≈1219px，按“顶栏 8dp + 动作槽 8dp”推算的按钮右缘 ≈1210px，差值在软边误差内，说明右对齐与 240dp 定宽均已生效；问题只剩行未撑满。
 
-### 2.7 2026-11-25 代码审查的三项缺陷（已修复，仅格式检查）
+### 2.7 2026-11-25 代码审查的三项缺陷（已修复，CI 通过，待真机复核）
 
 审查对象为 `2de00733`，三项问题均由源码直接证实：
 
-- `abd9f727`：`cebf582e` 删除 `FullScreenSubPage.Settings` 后，`CouiFullScreenStateTest` 仍引用该枚举值，`testUnstableDebugUnitTest` 会在 Kotlin 编译阶段失败并阻断 PR 检查。测试改为验证 Main、Permissions、ExtendedMenu 与不同安装阶段之间的 key 区分。**测试尚未实际运行。**
+- `abd9f727`：`cebf582e` 删除 `FullScreenSubPage.Settings` 后，`CouiFullScreenStateTest` 仍引用该枚举值，`testUnstableDebugUnitTest` 会在 Kotlin 编译阶段失败并阻断 PR 检查。测试改为验证 Main、Permissions、ExtendedMenu 与不同安装阶段之间的 key 区分。此前本分支三次 Branch CI（`45373396014`、`45378591890`、`45380923301`）均因该问题在单元测试作业失败；修复后 run `45615000396`（attempt 2）单元测试作业 `BUILD SUCCESSFUL`，Gradle 日志未给出用例数。
 - `5e7b2cd3`：外壳无条件预留「70dp + 导航栏高度」，但 `InstallChoice`、`Permissions`、`ExtendedMenu` 没有外壳操作栏，这三页会被额外压缩一段，关模糊时还与页面自身的导航栏留白叠加。预留值改为以 `bottomBar` 是否存在为准。这三页原本就自行处理导航栏（`navigationBarsPadding()` 或 `bottomInset`），不会因此压到导航栏上。
   - 已知取舍：预留值随 `bottomBar` 立即切换。进入无操作栏页面时，新页面从第一帧起就是正确几何；正在退出的准备页底部内边距会在退场过程中变小。若列表已滚到底，可能在退场瞬间位移。未做“等底栏淡出后再释放预留”，因为那会让已经就位的新页面在淡出结束时跳动。**真机未复核。**
 - `9b2a30b3`：`AnimatedDetailRows` 用可见 `entries` 的下标插入仍含退场行的 `rows`，前面有隐藏行时新行位置错误（关「显示大小」「显示 SDK」后开「显示文件路径」，路径行排到「架构」之前）。新行改为插在其可见前驱之后。未补充顺序单元测试，列表状态仍封装在 composable 内。
-- 验证：三次修改前后 `./gradlew spotlessCheck --no-configuration-cache` 均为 `BUILD SUCCESSFUL`，`git diff --check` 无输出。**未运行 `testUnstableDebugUnitTest`，未组装 APK**（本机无 Android SDK）。
+- 验证：三次修改前后 `./gradlew spotlessCheck --no-configuration-cache` 均为 `BUILD SUCCESSFUL`，`git diff --check` 无输出。推送后 CI（`ec5a6a10`）：Branch CI run `45615000396` 的格式检查、单元测试、Unstable Release 构建通过（attempt 1 的单元测试作业因 runner 解析不到 KSP 插件 `2.3.13` 在配置阶段失败，重跑后通过，非代码问题）；Preview/debug run `45616845562` 通过。**三项修复的真机表现均未复核。**
 
 ## 3. 未验证项（验收缺口）
 
 - 真机矩阵：浅色/深色/AMOLED/动态色/临时主题色；手势/三键导航；横屏与平板；大字体与显示缩放；API 26–32 与关模糊降级；Compose 预览。
 - 行为回归：全屏关闭 220ms 时序与 ViewModel 1000ms 兜底、退出/过渡冻结快照、顶栏按钮 `SizeTransform(clip=false)`、装饰层不吞点击、半屏与 Material 3 家族、半屏 COUI 设置页（全屏侧已改为顶栏下拉菜单）、卸载与归档恢复、连续新安装与通知重入。
 - 性能：内容源进入滚动/日志录制链路后的帧耗时分位数、卡顿帧、图层内存；长权限列表、高频模块日志、批量结果、页面交叉淡入淡出；60Hz 与高刷设备。**没有任何实测数字，不应引用改善幅度。**
-- 单元测试：`testUnstableDebugUnitTest` 未在本分支跑过（CI manual-build 只组装）。既有 `InstallerFullscreenCloseTest`、`CouiFullScreenStateTest` 可作为回归入口；后者引用已删除枚举值的问题已在 §2.7 修正，但修正后的测试同样未运行。
+- 单元测试：`testUnstableDebugUnitTest` 未在本分支跑过（CI manual-build 只组装）。既有 `InstallerFullscreenCloseTest`、`CouiFullScreenStateTest` 可作为回归入口；后者引用已删除枚举值的问题已在 §2.7 修正，并通过 Branch CI run `45615000396`。性能测量仍未做。
 - 无 `app/src/androidTest`；不存在设备截图/录屏验收。
 
 ## 4. 仓库级待决事项
@@ -107,4 +107,4 @@
 1. 真机验收 run 45380923974 的 APK：准备页几何/渐进、子页进入与返回的纯横向推送、头部向左退出/左侧返回、权限与安装选项按 COUI 可展开分组展开/收起、分包子页、右上角设置下拉菜单的定宽、右缘与按钮对齐、呼出 Toast、切换开关时信息条目的展开/收起过渡、深色与关模糊降级。
 2. 就 §2.4 的底部遮罩强度给出结论；如需改动，只动遮罩 stops，不动采样/带几何。
 3. 决定 §4.1 pin 合回 main 的时机（独立提交，不携带模糊功能）。
-4. 补跑 `testUnstableDebugUnitTest` 与性能测量，再决定 squash 与合并 main。§2.7 的三项修复目前只过了格式检查，需先经 CI 的单元测试与 Preview/debug 组装确认。
+4. 补跑 `testUnstableDebugUnitTest` 与性能测量，再决定 squash 与合并 main。§2.7 的三项修复已通过 CI 单元测试与 Preview/debug 组装，仍需真机复核；性能测量未做。
