@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -42,9 +43,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -61,17 +64,26 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
 import com.rosan.installer.core.bitmask.hasFlag
+import com.rosan.installer.core.device.model.Manufacturer
+import com.rosan.installer.core.env.DeviceConfig
 import com.rosan.installer.domain.archive.model.UnarchiveErrorAction
 import com.rosan.installer.domain.archive.model.UnarchiveStatus
 import com.rosan.installer.domain.device.provider.DeviceCapabilityProvider
@@ -99,7 +111,6 @@ import com.rosan.installer.ui.page.coui.installer.components.rememberCouiPrepare
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.CouiErrorSuggestions
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.InstallChoiceContent
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.InstallExtendedMenuContent
-import com.rosan.installer.ui.page.coui.installer.sheetcontent.PrepareSettingsContent
 import com.rosan.installer.ui.page.coui.installer.sheetcontent.unarchiveErrorTitle
 import com.rosan.installer.ui.page.coui.widgets.CouiCheckboxWidget
 import com.rosan.installer.ui.page.coui.widgets.CouiErrorTextBlock
@@ -114,14 +125,26 @@ import com.rosan.installer.ui.theme.InstallerTheme.useCouiMonet
 import com.rosan.installer.ui.theme.colorOsSpring
 import com.rosan.installer.ui.util.KeyEventBlocker
 import com.rosan.installer.util.help
+import com.rosan.installer.util.toast
 import io.github.suqi8.coui.kmp.basic.Button
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
 import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.CircularProgressIndicator
+import io.github.suqi8.coui.kmp.basic.DropdownDefaults
+import io.github.suqi8.coui.kmp.basic.DropdownEntry
+import io.github.suqi8.coui.kmp.basic.DropdownGroupDivider
+import io.github.suqi8.coui.kmp.basic.DropdownImpl
+import io.github.suqi8.coui.kmp.basic.DropdownItem
 import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.IconButton
+import io.github.suqi8.coui.kmp.basic.ListPopupColumn
+import io.github.suqi8.coui.kmp.basic.ListPopupDefaults
+import io.github.suqi8.coui.kmp.basic.PopupPositionProvider
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
+import io.github.suqi8.coui.kmp.icon.COUIIcons
+import io.github.suqi8.coui.kmp.icon.basic.Check
+import io.github.suqi8.coui.kmp.overlay.OverlayListPopup
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import java.text.NumberFormat
 import kotlinx.coroutines.Dispatchers
@@ -137,31 +160,33 @@ private fun TransitionSlotGuard(
     isActive: Boolean,
     content: @Composable () -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .then(
-                if (!isActive) {
-                    Modifier
-                        .clearAndSetSemantics { }
-                        .pointerInput(Unit) {
-                            awaitPointerEventScope {
-                                while (true) {
-                                    awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+    CompositionLocalProvider(LocalFullScreenActionsEnabled provides isActive) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (!isActive) {
+                        Modifier
+                            .clearAndSetSemantics { }
+                            .pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+                                    }
                                 }
                             }
-                        }
-                } else {
-                    Modifier
-                },
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        content()
+                    } else {
+                        Modifier
+                    },
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            content()
+        }
     }
 }
 
-internal enum class FullScreenSubPage { Main, Permissions, Settings, ExtendedMenu }
+internal enum class FullScreenSubPage { Main, Permissions, ExtendedMenu }
 
 internal data class FullScreenPage(
     val stage: InstallerStage,
@@ -253,13 +278,9 @@ fun CouiFullScreenInstaller(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val settings = uiState.viewSettings
     val config = uiState.config
-    val showSettings = uiState.showCouiSheetRightActionSettings
-    val showPermissions = uiState.showCouiPermissionList
 
     val subPage = when {
         stage is InstallerStage.InstallExtendedMenu -> FullScreenSubPage.ExtendedMenu
-        stage is InstallerStage.InstallPrepare && showSettings -> FullScreenSubPage.Settings
-        stage is InstallerStage.InstallPrepare && showPermissions -> FullScreenSubPage.Permissions
         else -> FullScreenSubPage.Main
     }
     val rawInstall = (sessionProgress as? ProgressEntity.Installing)?.takeIf {
@@ -348,6 +369,81 @@ fun CouiFullScreenInstaller(
         if (!viewModel.isClosingFullscreen.value) viewModel.dispatch(it)
     }
 
+    // The prepare step's temporary settings live in the top-bar menu instead of a sub page.
+    val isOemVendor = DeviceConfig.currentManufacturer == Manufacturer.OPPO ||
+        DeviceConfig.currentManufacturer == Manufacturer.ONEPLUS
+    val displaySdkLabel = stringResource(R.string.config_display_sdk_version)
+    val displaySizeLabel = stringResource(R.string.config_display_size)
+    val autoDeleteLabel = stringResource(R.string.config_auto_delete)
+    val oemSpecialLabel = stringResource(R.string.installer_show_oem_special)
+    val showFilePathLabel = stringResource(R.string.lab_show_apk_path)
+    val showInitiatorLabel = stringResource(R.string.lab_show_install_initiator)
+    val baseSettingsEntries = listOf(
+        DropdownEntry(
+            items = buildList {
+                add(
+                    DropdownItem(
+                        text = displaySdkLabel,
+                        selected = config.displaySdk,
+                        onClick = { viewModel.updateConfig { it.copy(displaySdk = !it.displaySdk) } },
+                    ),
+                )
+                add(
+                    DropdownItem(
+                        text = displaySizeLabel,
+                        selected = config.displaySize,
+                        onClick = { viewModel.updateConfig { it.copy(displaySize = !it.displaySize) } },
+                    ),
+                )
+                add(
+                    DropdownItem(
+                        text = autoDeleteLabel,
+                        selected = config.autoDelete,
+                        onClick = { viewModel.updateConfig { it.copy(autoDelete = !it.autoDelete) } },
+                    ),
+                )
+                if (isOemVendor) {
+                    add(
+                        DropdownItem(
+                            text = oemSpecialLabel,
+                            selected = settings.showOPPOSpecial,
+                            onClick = {
+                                safeDispatch(
+                                    InstallerViewAction.SetTempShowOPPOSpecial(!settings.showOPPOSpecial),
+                                )
+                            },
+                        ),
+                    )
+                }
+            },
+        ),
+        DropdownEntry(
+            items = listOf(
+                DropdownItem(
+                    text = showFilePathLabel,
+                    selected = settings.labShowFilePath,
+                    onClick = {
+                        safeDispatch(InstallerViewAction.SetTempLabShowFilePath(!settings.labShowFilePath))
+                    },
+                ),
+                DropdownItem(
+                    text = showInitiatorLabel,
+                    selected = settings.labShowInstallInitiator,
+                    onClick = {
+                        safeDispatch(
+                            InstallerViewAction.SetTempLabShowInstallInitiator(!settings.labShowInstallInitiator),
+                        )
+                    },
+                ),
+            ),
+        ),
+    )
+    // Every row reserves the trailing check slot, so the menu keeps one width whichever switches
+    // are on; an unselected row paints its tick transparent (see FullScreenSettingsMenu).
+    val prepareSettingsEntries = baseSettingsEntries.map { entry ->
+        entry.copy(items = entry.items.map { item -> item.copy(stateIcon = COUIIcons.Basic.Check) })
+    }
+
     val topEndActionKey: Any? = when {
         isClosing || activeSnapshot.page.subPage != FullScreenSubPage.Main -> null
 
@@ -367,14 +463,7 @@ fun CouiFullScreenInstaller(
 
         activeSnapshot.page.stage is InstallerStage.InstallPrepare -> {
             {
-                IconButton(onClick = { safeDispatch(InstallerViewAction.ShowCouiSheetRightActionSettings) }) {
-                    Icon(
-                        imageVector = AppCOUIIcons.More,
-                        contentDescription = stringResource(R.string.installer_settings),
-                        tint = COUITheme.colorScheme.labelPrimary,
-                        modifier = Modifier.size(24.dp),
-                    )
-                }
+                FullScreenSettingsMenu(entries = prepareSettingsEntries)
             }
         }
 
@@ -499,7 +588,6 @@ fun CouiFullScreenInstaller(
                 }
             }
         },
-        onOpenInstallOptions = { safeDispatch(InstallerViewAction.InstallExtendedMenu) },
         onOpenSplitChoice = { safeDispatch(InstallerViewAction.InstallChoice) },
         onRequestUnknownSourcePermission = { safeDispatch(InstallerViewAction.RequestUnknownSourcePermission) },
         onApproveSession = { id, granted -> safeDispatch(InstallerViewAction.ApproveSession(id, granted)) },
@@ -523,19 +611,16 @@ fun CouiFullScreenInstaller(
                 onSelectMixedModuleType = onSelectMixedModuleType,
                 onBackToTypeChoice = onBackToTypeChoice,
                 onCancel = safeClose,
+                contentTopPadding = LocalFullScreenTopBleed.current,
             )
         },
-        extendedMenuContent = {
+        extendedMenuContent = { inline ->
             InstallExtendedMenuContent(
                 viewModel = viewModel,
                 backHandlerEnabled = false,
                 showBackButton = false,
-            )
-        },
-        settingsContent = {
-            PrepareSettingsContent(
-                viewModel = viewModel,
-                backHandlerEnabled = false,
+                contentTopPadding = if (inline) 0.dp else LocalFullScreenTopBleed.current,
+                inline = inline,
             )
         },
         errorSuggestionsContent = { err ->
@@ -595,7 +680,6 @@ internal fun CouiFullScreenInstallerContent(
     onInstall: () -> Unit = {},
     onOpenApp: () -> Unit = {},
     onOpenLsposed: () -> Unit = {},
-    onOpenInstallOptions: () -> Unit = {},
     onOpenSplitChoice: () -> Unit = {},
     onRequestUnknownSourcePermission: () -> Unit = {},
     onApproveSession: (Int, Boolean) -> Unit = { _, _ -> },
@@ -608,8 +692,7 @@ internal fun CouiFullScreenInstallerContent(
     topEndAction: (@Composable () -> Unit)? = null,
     topEndActionKey: Any? = topEndAction != null,
     choiceContent: @Composable () -> Unit = {},
-    extendedMenuContent: @Composable () -> Unit = {},
-    settingsContent: @Composable () -> Unit = {},
+    extendedMenuContent: @Composable (Boolean) -> Unit = {},
     errorSuggestionsContent: @Composable (Throwable) -> Unit = {},
 ) {
     val stage = page.stage
@@ -617,8 +700,6 @@ internal fun CouiFullScreenInstallerContent(
 
     val title = when (page.subPage) {
         FullScreenSubPage.Permissions -> stringResource(R.string.permission_list)
-
-        FullScreenSubPage.Settings -> stringResource(R.string.installer_settings)
 
         FullScreenSubPage.ExtendedMenu -> stringResource(R.string.config_label_install_options)
 
@@ -679,8 +760,6 @@ internal fun CouiFullScreenInstallerContent(
         !backEnabled -> ({})
 
         page.subPage == FullScreenSubPage.Permissions -> ({ onAction(InstallerViewAction.HideCouiPermissionList) })
-
-        page.subPage == FullScreenSubPage.Settings -> ({ onAction(InstallerViewAction.HideCouiSheetRightActionSettings) })
 
         page.subPage == FullScreenSubPage.ExtendedMenu -> ({ onAction(InstallerViewAction.InstallPrepare) })
 
@@ -745,6 +824,8 @@ internal fun CouiFullScreenInstallerContent(
         uninstallInfo = uninstallInfo,
         uninstallFlags = uninstallFlags,
     )
+    var fixedHeaderHeightPx by remember { mutableIntStateOf(0) }
+    val fixedHeaderHeight = with(LocalDensity.current) { fixedHeaderHeightPx.toDp() }
 
     CouiPositionFullScreen(
         title = title,
@@ -754,6 +835,43 @@ internal fun CouiFullScreenInstallerContent(
         endAction = topEndAction,
         endActionKey = topEndActionKey,
         useBlur = useBlur,
+        fixedHeader = { headerMeasureModifier ->
+            // The whole header rides the page push: it leaves to, and returns from, the left edge.
+            // A stage change inside Main keeps its own cross-fade, so progress pages do not slide.
+            // Page slots below own stable top insets, so this exit cannot drag the body viewport.
+            val hasHeader = headerData != null
+            AnimatedVisibility(
+                visible = page.subPage == FullScreenSubPage.Main,
+                enter = fadeIn(tween(durationMillis = 220)) +
+                    slideInHorizontally(colorOsSpring(responseSeconds = 0.32f)) { -it / 4 },
+                exit = fadeOut(tween(durationMillis = 160)) +
+                    slideOutHorizontally(tween(durationMillis = 160)) { -it / 4 },
+            ) {
+                AnimatedContent(
+                    targetState = hasHeader,
+                    contentKey = { it },
+                    transitionSpec = {
+                        fadeIn(tween(durationMillis = 220)) togetherWith
+                            fadeOut(tween(durationMillis = 180))
+                    },
+                    label = "FullScreenHeaderMode",
+                ) { slotHasHeader ->
+                    val frozenHeader = remember { FullScreenSlotRef(headerData) }
+                    if (slotHasHeader == hasHeader && headerData != null) {
+                        frozenHeader.value = headerData
+                    }
+                    val header = frozenHeader.value
+                    if (slotHasHeader && header != null) {
+                        CouiFullScreenAppHeader(
+                            appInfo = header.appInfo,
+                            versionLine = header.versionLine,
+                            modifier = headerMeasureModifier.onSizeChanged { fixedHeaderHeightPx = it.height },
+                            onIconClick = header.onIconClick,
+                        )
+                    }
+                }
+            }
+        },
         bottomBar = if (usesShellBottomBar) {
             {
                 FullScreenActionRow(
@@ -797,90 +915,184 @@ internal fun CouiFullScreenInstallerContent(
                 frozenSubPage.value = Triple(headerData, liveBodySnapshot, permissions)
             }
             val (slotHeaderData, slotBodySnapshot, slotPermissions) = frozenSubPage.value
-            TransitionSlotGuard(isActive = subPage == page.subPage) {
-                when (subPage) {
-                    FullScreenSubPage.Main -> {
-                        val hasHeader = slotHeaderData != null
-                        AnimatedContent(
-                            targetState = hasHeader,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clipToBounds(),
-                            contentAlignment = Alignment.Center,
-                            contentKey = { it },
-                            transitionSpec = {
-                                fadeIn(tween(durationMillis = 220)) togetherWith
-                                    fadeOut(tween(durationMillis = 180))
-                            },
-                            label = "FullScreenHeaderMode",
-                        ) { slotHasHeader ->
-                            val frozenHeaderSlot = remember {
-                                FullScreenSlotRef(Pair(slotHeaderData, slotBodySnapshot))
-                            }
-                            if (slotHasHeader == hasHeader) {
-                                frozenHeaderSlot.value = Pair(slotHeaderData, slotBodySnapshot)
-                            }
-                            val (frozenHeader, frozenBody) = frozenHeaderSlot.value
-                            TransitionSlotGuard(isActive = slotHasHeader == hasHeader) {
-                                if (slotHasHeader) {
-                                    Column(Modifier.fillMaxSize()) {
-                                        frozenHeader?.let { header ->
-                                            CouiFullScreenAppHeader(
-                                                appInfo = header.appInfo,
-                                                versionLine = header.versionLine,
-                                                onIconClick = header.onIconClick,
-                                            )
-                                        }
-                                        Box(Modifier.fillMaxWidth().weight(1f)) {
-                                            FullScreenStageBody(
-                                                snapshot = frozenBody,
-                                                prepareScrollState = prepareScrollState,
-                                                onOpenPermissions = { onAction(InstallerViewAction.ShowCouiPermissionList) },
-                                                onOpenInstallOptions = onOpenInstallOptions,
-                                                onOpenSplitChoice = onOpenSplitChoice,
-                                                onOpenLsposed = onOpenLsposed,
-                                                onToggleUninstallFlag = onToggleUninstallFlag,
-                                                choiceContent = choiceContent,
-                                                errorSuggestionsContent = errorSuggestionsContent,
-                                            )
-                                        }
-                                    }
-                                } else {
-                                    Box(Modifier.fillMaxSize()) {
-                                        FullScreenStageBody(
-                                            snapshot = frozenBody,
-                                            prepareScrollState = prepareScrollState,
-                                            onOpenPermissions = { onAction(InstallerViewAction.ShowCouiPermissionList) },
-                                            onOpenInstallOptions = onOpenInstallOptions,
-                                            onOpenSplitChoice = onOpenSplitChoice,
-                                            onOpenLsposed = onOpenLsposed,
-                                            onToggleUninstallFlag = onToggleUninstallFlag,
-                                            choiceContent = choiceContent,
-                                            errorSuggestionsContent = errorSuggestionsContent,
-                                        )
-                                    }
-                                }
-                            }
+            FullScreenSubPageLayout(
+                hasHeader = subPage == FullScreenSubPage.Main && slotHeaderData != null,
+                fixedHeaderHeight = fixedHeaderHeight,
+            ) {
+                TransitionSlotGuard(isActive = subPage == page.subPage) {
+                    when (subPage) {
+                        FullScreenSubPage.Main -> FullScreenStageBody(
+                            snapshot = slotBodySnapshot,
+                            prepareScrollState = prepareScrollState,
+                            onOpenSplitChoice = onOpenSplitChoice,
+                            onOpenLsposed = onOpenLsposed,
+                            onToggleUninstallFlag = onToggleUninstallFlag,
+                            choiceContent = choiceContent,
+                            extendedMenuContent = extendedMenuContent,
+                            errorSuggestionsContent = errorSuggestionsContent,
+                        )
+
+                        FullScreenSubPage.Permissions -> CouiFullScreenPermissionContent(slotPermissions)
+
+                        FullScreenSubPage.ExtendedMenu -> Box(
+                            Modifier.fillMaxSize().padding(horizontal = FullScreenHorizontalPadding),
+                        ) {
+                            extendedMenuContent(false)
                         }
-                    }
-
-                    FullScreenSubPage.Permissions -> CouiFullScreenPermissionContent(slotPermissions)
-
-                    FullScreenSubPage.Settings -> Box(
-                        Modifier.fillMaxSize().padding(horizontal = FullScreenHorizontalPadding),
-                    ) {
-                        settingsContent()
-                    }
-
-                    FullScreenSubPage.ExtendedMenu -> Box(
-                        Modifier.fillMaxSize().padding(horizontal = FullScreenHorizontalPadding),
-                    ) {
-                        extendedMenuContent()
                     }
                 }
             }
         }
     }
+}
+
+/**
+ * Keeps each outgoing/incoming page at one vertical geometry for its whole horizontal transition.
+ * With blur, the viewport reaches the screen edge and the page reserves its own top bleed. Without
+ * it, the viewport starts below the chrome as before, so transparent content cannot scroll behind
+ * the unmasked header. The shell still owns the single shared content backdrop and top band.
+ */
+@Composable
+private fun FullScreenSubPageLayout(
+    hasHeader: Boolean,
+    fixedHeaderHeight: Dp,
+    content: @Composable () -> Unit,
+) {
+    val topInset = LocalFullScreenTopBarBleed.current + if (hasHeader) fixedHeaderHeight else 0.dp
+    val contentBlurEnabled = LocalFullScreenContentBlurEnabled.current
+    Box(
+        Modifier.fillMaxSize().padding(top = if (contentBlurEnabled) 0.dp else topInset),
+    ) {
+        CompositionLocalProvider(
+            LocalFullScreenTopBleed provides if (contentBlurEnabled) topInset else 0.dp,
+        ) {
+            content()
+        }
+    }
+}
+
+/**
+ * The prepare page's overflow: a COUI dropdown menu anchored to the top-bar button.
+ *
+ * Composed from the same COUI pieces as `OverlayIconDropdownMenu` (`OverlayListPopup` plus
+ * `DropdownImpl`) because that wrapper exposes neither a width nor the position provider, and this
+ * menu has to keep one width while its rows change their selected state and to line its trailing
+ * edge up with the button. Every row reserves the trailing check slot in [prepareSettingsEntries],
+ * so the widest row never depends on which switches are on, and the width is requested by the
+ * content itself ([FullScreenSettingsMenuWidth]) rather than through the popup's minimum-size
+ * constraint.
+ *
+ * The session-scoped settings used to live on their own sub page; its temporary-settings note is
+ * now a toast, shown once each time the menu opens.
+ */
+@Composable
+private fun FullScreenSettingsMenu(entries: List<DropdownEntry>) {
+    val context = LocalContext.current
+    var expanded by remember { mutableStateOf(false) }
+    val baseColors = DropdownDefaults.dropdownColors()
+    // An unselected row still lays out the 24dp state slot; only its tick is invisible.
+    val dropdownColors = remember(baseColors) {
+        baseColors.copy(submenuIndicatorColor = Color.Transparent)
+    }
+
+    Box {
+        IconButton(onClick = { expanded = !expanded }) {
+            Icon(
+                imageVector = AppCOUIIcons.More,
+                contentDescription = stringResource(R.string.installer_settings),
+                tint = COUITheme.colorScheme.labelPrimary,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+        OverlayListPopup(
+            show = expanded,
+            alignment = PopupPositionProvider.Align.End,
+            popupPositionProvider = FullScreenSettingsMenuPositionProvider,
+            onDismissRequest = { expanded = false },
+        ) {
+            // The width is set on the content itself instead of through the popup's `minWidth`
+            // constraint, and the minimum is propagated: `ListPopupColumn` sizes its rows from
+            // `constraints.minWidth`, so without propagation the panel would be this wide while the
+            // rows stayed at their text width, leaving the trailing check and the selected row's
+            // highlight stranded in the middle of the panel.
+            Box(
+                modifier = Modifier.width(FullScreenSettingsMenuWidth),
+                propagateMinConstraints = true,
+            ) {
+                ListPopupColumn {
+                    entries.forEachIndexed { entryIndex, entry ->
+                        entry.items.forEachIndexed { itemIndex, item ->
+                            DropdownImpl(
+                                item = item,
+                                optionSize = entry.items.size,
+                                isSelected = item.selected,
+                                index = itemIndex,
+                                dropdownColors = dropdownColors,
+                                onSelectedIndexChange = { item.onClick?.invoke() },
+                            )
+                        }
+                        if (entryIndex != entries.lastIndex) {
+                            DropdownGroupDivider()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(expanded) {
+        if (expanded) context.toast(R.string.installer_temp_settings_toast)
+    }
+}
+
+private val FullScreenSettingsMenuWidth = 240.dp
+
+/**
+ * Puts the panel's trailing edge on the button's trailing edge, which is how a COUI action-bar
+ * context menu hangs off its trigger.
+ *
+ * [ListPopupDefaults.DropdownPositionProvider] cannot do this: it ignores
+ * [PopupPositionProvider.Align] and always centres the menu on the anchor, so a 240dp panel on a
+ * 40dp button sits about a quarter of its width short of the button's right edge. Everything else
+ * follows the same COUI rules as that provider — the 8dp anchor gap, below the button when it fits,
+ * above it otherwise, then clamped into the window.
+ *
+ * The window rect is shrunk by the responsive grid margin (16dp on a compact phone) while the bar's
+ * buttons sit in its 8dp trailing padding, so the clamp also honours the anchor's own edge; without
+ * that the panel would stop a further 8dp short of the button it hangs off.
+ */
+private val FullScreenSettingsMenuPositionProvider = object : PopupPositionProvider {
+    private val margins = PaddingValues(vertical = ListPopupDefaults.AnchorGap)
+
+    override fun calculatePosition(
+        anchorBounds: IntRect,
+        windowBounds: IntRect,
+        layoutDirection: LayoutDirection,
+        popupContentSize: IntSize,
+        popupMargin: IntRect,
+        alignment: PopupPositionProvider.Align,
+    ): IntOffset {
+        val available = IntRect(
+            left = windowBounds.left + popupMargin.left,
+            top = windowBounds.top,
+            right = windowBounds.right - popupMargin.right,
+            bottom = windowBounds.bottom,
+        )
+        val maxX = maxOf(available.left, maxOf(available.right, anchorBounds.right) - popupContentSize.width)
+        val x = (anchorBounds.right - popupContentSize.width - popupMargin.right).coerceIn(available.left, maxX)
+
+        val below = anchorBounds.bottom + popupMargin.bottom
+        val above = anchorBounds.top - popupMargin.top
+        val restingY = when {
+            available.bottom - below >= popupContentSize.height -> below
+            above - available.top >= popupContentSize.height -> above - popupContentSize.height
+            else -> available.top
+        }
+        val maxY = maxOf(available.top, available.bottom - popupContentSize.height)
+        return IntOffset(x, restingY.coerceIn(available.top, maxY))
+    }
+
+    override fun getMargins(): PaddingValues = margins
 }
 
 private data class HeaderDisplayData(
@@ -1005,12 +1217,11 @@ private fun stageBucketOf(stage: InstallerStage): StageBucket = when (stage) {
 private fun FullScreenStageBody(
     snapshot: StageBodySnapshot,
     prepareScrollState: ScrollState,
-    onOpenPermissions: () -> Unit,
-    onOpenInstallOptions: () -> Unit,
     onOpenSplitChoice: () -> Unit,
     onOpenLsposed: () -> Unit,
     onToggleUninstallFlag: (Int, Boolean) -> Unit,
     choiceContent: @Composable () -> Unit,
+    extendedMenuContent: @Composable (Boolean) -> Unit,
     errorSuggestionsContent: @Composable (Throwable) -> Unit,
 ) {
     val activeBucket = stageBucketOf(snapshot.page.stage)
@@ -1036,12 +1247,11 @@ private fun FullScreenStageBody(
             StageBodyContent(
                 snapshot = frozenSnapshot.value,
                 prepareScrollState = prepareScrollState,
-                onOpenPermissions = onOpenPermissions,
-                onOpenInstallOptions = onOpenInstallOptions,
                 onOpenSplitChoice = onOpenSplitChoice,
                 onOpenLsposed = onOpenLsposed,
                 onToggleUninstallFlag = onToggleUninstallFlag,
                 choiceContent = choiceContent,
+                extendedMenuContent = extendedMenuContent,
                 errorSuggestionsContent = errorSuggestionsContent,
             )
         }
@@ -1052,30 +1262,33 @@ private fun FullScreenStageBody(
 private fun StageBodyContent(
     snapshot: StageBodySnapshot,
     prepareScrollState: ScrollState,
-    onOpenPermissions: () -> Unit,
-    onOpenInstallOptions: () -> Unit,
     onOpenSplitChoice: () -> Unit,
     onOpenLsposed: () -> Unit,
     onToggleUninstallFlag: (Int, Boolean) -> Unit,
     choiceContent: @Composable () -> Unit,
+    extendedMenuContent: @Composable (Boolean) -> Unit,
     errorSuggestionsContent: @Composable (Throwable) -> Unit,
 ) {
     val page = snapshot.page
-    val bodyModifier = if (page.stage is InstallerStage.InstallChoice) {
-        Modifier.fillMaxSize()
-    } else {
-        Modifier
-            .fillMaxSize()
-            .padding(bottom = LocalFullScreenBottomBarPadding.current)
+    val topBleed = LocalFullScreenTopBleed.current
+    val bottomBleed = LocalFullScreenBottomBleed.current
+    // Prepare and batch results scroll, so their safe distance goes into the scroll content and the
+    // viewport can run behind the fixed chrome. Every other body keeps its layout reserved, which
+    // is what keeps the centred status marks from moving.
+    val scrollsUnderChrome = page.stage is InstallerStage.InstallPrepare ||
+        page.stage is InstallerStage.InstallCompleted
+    val bodyModifier = when {
+        page.stage is InstallerStage.InstallChoice -> Modifier.fillMaxSize()
+        scrollsUnderChrome -> Modifier.fillMaxSize()
+        else -> Modifier.fillMaxSize().padding(top = topBleed, bottom = bottomBleed)
     }
     Box(modifier = bodyModifier) {
         when (val stage = page.stage) {
             is InstallerStage.InstallPrepare -> CouiFullScreenPrepareContent(
                 entity = snapshot.entity,
                 sourceLabel = snapshot.sourceLabel,
-                permissionCount = snapshot.permissions.size,
+                permissions = snapshot.permissions,
                 sensitivePermissionCount = snapshot.sensitivePermissionCount,
-                onOpenPermissions = onOpenPermissions,
                 scrollState = prepareScrollState,
                 notices = snapshot.notices,
                 installedAppInfo = snapshot.installedAppInfo,
@@ -1090,8 +1303,14 @@ private fun StageBodyContent(
                 labShowInstallInitiator = snapshot.labShowInstallInitiator,
                 isSplitUpdateMode = snapshot.isSplitUpdateMode,
                 isInvalidSplitInstall = snapshot.isInvalidSplitInstall,
-                onOpenInstallOptions = if (snapshot.canOpenInstallOptions) onOpenInstallOptions else null,
+                installOptionsContent = if (snapshot.canOpenInstallOptions) {
+                    { extendedMenuContent(true) }
+                } else {
+                    null
+                },
                 onOpenSplitChoice = if (snapshot.canOpenSplitChoice) onOpenSplitChoice else null,
+                contentTopPadding = topBleed,
+                contentBottomPadding = bottomBleed + 20.dp,
             )
 
             is InstallerStage.InstallChoice -> Box(
@@ -1107,7 +1326,11 @@ private fun StageBodyContent(
 
             is InstallerStage.InstallingModule -> FullScreenModuleContent(stage)
 
-            is InstallerStage.InstallCompleted -> FullScreenResultsContent(stage.results)
+            is InstallerStage.InstallCompleted -> FullScreenResultsContent(
+                results = stage.results,
+                contentTopPadding = topBleed,
+                contentBottomPadding = bottomBleed,
+            )
 
             is InstallerStage.InstallFailed -> {
                 val errorTitle = stringResource(R.string.installer_install_failed)
@@ -1926,7 +2149,11 @@ private fun FullScreenModuleContent(stage: InstallerStage.InstallingModule) {
 }
 
 @Composable
-private fun FullScreenResultsContent(results: List<InstallResult>) {
+private fun FullScreenResultsContent(
+    results: List<InstallResult>,
+    contentTopPadding: Dp = 0.dp,
+    contentBottomPadding: Dp = 0.dp,
+) {
     val groupedResults = remember(results) {
         results
             .groupBy { it.entity.app.packageName }
@@ -1939,7 +2166,12 @@ private fun FullScreenResultsContent(results: List<InstallResult>) {
     val successes = groupedResults.count { it.success }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = FullScreenHorizontalPadding, vertical = 8.dp),
+        contentPadding = PaddingValues(
+            start = FullScreenHorizontalPadding,
+            end = FullScreenHorizontalPadding,
+            top = contentTopPadding + 8.dp,
+            bottom = contentBottomPadding + 8.dp,
+        ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {

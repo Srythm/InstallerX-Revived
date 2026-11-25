@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.dp
 import com.rosan.installer.R
 import com.rosan.installer.util.pm.getBestPermissionLabel
 import io.github.suqi8.coui.kmp.basic.Card
-import io.github.suqi8.coui.kmp.basic.HorizontalDivider
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.theme.COUITheme
 
@@ -81,6 +80,7 @@ internal fun rememberSensitivePermissionCount(permissions: List<String>): Int {
 fun CouiFullScreenPermissionContent(
     permissions: List<String>,
     modifier: Modifier = Modifier,
+    inline: Boolean = false,
 ) {
     val context = LocalContext.current
     val inspectionMode = LocalInspectionMode.current
@@ -88,27 +88,33 @@ fun CouiFullScreenPermissionContent(
         permissions.partition { isSensitivePermission(context, it, inspectionMode) }
     }
 
-    // The shell leaves the bottom edge alone so the list can run under the navigation bar while
-    // scrolling; the tail padding keeps the last row readable once it settles.
-    val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    Column(
-        modifier = modifier
+    // Inline content joins the prepare page's existing vertical scroll. The standalone mode keeps
+    // its own scrolling and chrome insets for previews and any direct full-screen use.
+    val contentModifier = if (inline) {
+        modifier.fillMaxWidth().padding(bottom = 8.dp)
+    } else {
+        val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
-            .padding(top = 4.dp, bottom = bottomInset + 20.dp),
-    ) {
+            .padding(
+                top = LocalFullScreenTopBleed.current + 4.dp,
+                bottom = bottomInset + 20.dp,
+            )
+    }
+    Column(modifier = contentModifier) {
         if (sensitive.isNotEmpty()) {
             PermissionSectionTitle(
                 text = stringResource(R.string.installer_permission_section_sensitive, sensitive.size),
             )
-            PermissionCard(permissions = sensitive, isSensitive = true)
+            PermissionCard(permissions = sensitive, isSensitive = true, inline = inline)
         }
 
         if (normal.isNotEmpty()) {
             PermissionSectionTitle(
                 text = stringResource(R.string.installer_permission_section_normal, normal.size),
             )
-            PermissionCard(permissions = normal, isSensitive = false)
+            PermissionCard(permissions = normal, isSensitive = false, inline = inline)
         }
 
         if (permissions.isEmpty()) {
@@ -136,48 +142,60 @@ private fun PermissionSectionTitle(text: String) {
 private fun PermissionCard(
     permissions: List<String>,
     isSensitive: Boolean,
+    inline: Boolean,
+) {
+    if (inline) {
+        PermissionRows(permissions = permissions, isSensitive = isSensitive)
+    } else {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = FullScreenHorizontalPadding),
+        ) {
+            PermissionRows(permissions = permissions, isSensitive = isSensitive)
+        }
+    }
+}
+
+@Composable
+private fun PermissionRows(
+    permissions: List<String>,
+    isSensitive: Boolean,
 ) {
     val context = LocalContext.current
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = FullScreenHorizontalPadding),
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-            permissions.forEachIndexed { index, permission ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+    // Rows are separated by vertical padding alone: COUI's permission list carries no hairline
+    // between entries, and the section titles already delimit the sensitive/normal groups.
+    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+        permissions.forEach { permission ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
-                    ) {
-                        Text(
-                            text = context.getBestPermissionLabel(permission),
-                            style = COUITheme.textStyles.bodyXL,
-                            color = COUITheme.colorScheme.labelPrimary,
-                        )
-                        Text(
-                            text = permission,
-                            style = COUITheme.textStyles.bodyS,
-                            color = COUITheme.colorScheme.labelSecondaryVariant,
-                        )
-                    }
-                    if (isSensitive) {
-                        Text(
-                            text = stringResource(R.string.installer_permission_requires_grant),
-                            style = COUITheme.textStyles.bodyS,
-                            color = COUITheme.colorScheme.error,
-                        )
-                    }
+                    Text(
+                        text = context.getBestPermissionLabel(permission),
+                        style = COUITheme.textStyles.headlineXS,
+                        color = COUITheme.colorScheme.labelPrimary,
+                    )
+                    Text(
+                        text = permission,
+                        style = COUITheme.textStyles.bodyS,
+                        color = COUITheme.colorScheme.labelSecondaryVariant,
+                    )
                 }
-                if (index != permissions.lastIndex) {
-                    HorizontalDivider()
+                if (isSensitive) {
+                    Text(
+                        text = stringResource(R.string.installer_permission_requires_grant),
+                        style = COUITheme.textStyles.bodyS,
+                        color = COUITheme.colorScheme.error,
+                    )
                 }
             }
         }

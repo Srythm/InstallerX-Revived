@@ -4,6 +4,14 @@ package com.rosan.installer.ui.page.coui.installer.fullscreen
 
 import android.content.ClipData
 import android.os.Build
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,18 +24,25 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.rosan.installer.R
 import com.rosan.installer.core.device.model.Manufacturer
@@ -37,16 +52,17 @@ import com.rosan.installer.domain.engine.model.packageinfo.AppEntity
 import com.rosan.installer.domain.engine.model.packageinfo.InstalledAppInfo
 import com.rosan.installer.domain.engine.model.packageinfo.InstalledModuleInfo
 import com.rosan.installer.domain.engine.model.source.DataType
-import com.rosan.installer.ui.icons.AppCOUIIcons
 import com.rosan.installer.ui.page.coui.widgets.CouiInfoChipGroup
 import com.rosan.installer.ui.page.coui.widgets.CouiInstallerTipCard
 import com.rosan.installer.ui.page.coui.widgets.CouiSettingsCard
 import com.rosan.installer.ui.page.main.widget.chip.NoticeModel
 import com.rosan.installer.ui.util.formatSize
 import com.rosan.installer.util.toast
+import io.github.suqi8.coui.kmp.basic.ExpandableGroupContent
+import io.github.suqi8.coui.kmp.basic.ExpandableGroupHeader
 import io.github.suqi8.coui.kmp.basic.HorizontalDivider
-import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.Text
+import io.github.suqi8.coui.kmp.preference.ArrowPreference
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import kotlinx.coroutines.launch
 
@@ -57,21 +73,13 @@ private data class DetailEntry(
     val onClick: (() -> Unit)? = null,
 )
 
-private data class NavigationEntry(
-    val icon: ImageVector,
-    val title: String,
-    val summary: String,
-    val onClick: () -> Unit,
-)
-
 /** App/module/split details, notices, and navigation destinations for the full-screen prepare step. */
 @Composable
 fun CouiFullScreenPrepareContent(
     entity: AppEntity?,
     sourceLabel: String?,
-    permissionCount: Int,
+    permissions: List<String>,
     sensitivePermissionCount: Int,
-    onOpenPermissions: () -> Unit,
     modifier: Modifier = Modifier,
     scrollState: ScrollState = rememberScrollState(),
     notices: List<NoticeModel> = emptyList(),
@@ -87,13 +95,22 @@ fun CouiFullScreenPrepareContent(
     labShowInstallInitiator: Boolean = true,
     isSplitUpdateMode: Boolean = false,
     isInvalidSplitInstall: Boolean = false,
-    onOpenInstallOptions: (() -> Unit)? = null,
+    installOptionsContent: (@Composable () -> Unit)? = null,
     onOpenSplitChoice: (() -> Unit)? = null,
+    contentTopPadding: Dp = 0.dp,
+    contentBottomPadding: Dp = 20.dp,
 ) {
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val actionsEnabled = LocalFullScreenActionsEnabled.current
+    var permissionsExpanded by rememberSaveable { mutableStateOf(false) }
+    var installOptionsExpanded by rememberSaveable { mutableStateOf(false) }
+
+    BackHandler(enabled = actionsEnabled && (permissionsExpanded || installOptionsExpanded)) {
+        permissionsExpanded = false
+        installOptionsExpanded = false
+    }
 
     val isOppoOrOnePlus = DeviceConfig.currentManufacturer == Manufacturer.OPPO ||
         DeviceConfig.currentManufacturer == Manufacturer.ONEPLUS
@@ -296,52 +313,27 @@ fun CouiFullScreenPrepareContent(
         }
     }
 
-    val navigationEntries = buildList {
-        if (permissionCount > 0) {
-            add(
-                NavigationEntry(
-                    icon = AppCOUIIcons.Info,
-                    title = stringResource(R.string.permission_list),
-                    summary = if (sensitivePermissionCount > 0) {
-                        stringResource(
-                            R.string.installer_permission_entry_summary_sensitive,
-                            permissionCount,
-                            sensitivePermissionCount,
-                        )
-                    } else {
-                        stringResource(R.string.installer_permission_entry_summary, permissionCount)
-                    },
-                    onClick = onOpenPermissions,
-                ),
-            )
-        }
-        if (onOpenInstallOptions != null) {
-            add(
-                NavigationEntry(
-                    icon = AppCOUIIcons.Tune,
-                    title = stringResource(R.string.config_label_install_options),
-                    summary = stringResource(R.string.config_label_install_options_desc),
-                    onClick = onOpenInstallOptions,
-                ),
-            )
-        }
-        if (onOpenSplitChoice != null) {
-            add(
-                NavigationEntry(
-                    icon = AppCOUIIcons.Settings,
-                    title = stringResource(R.string.installer_select_split),
-                    summary = stringResource(R.string.installer_select_split_desc),
-                    onClick = onOpenSplitChoice,
-                ),
-            )
-        }
+    val permissionCount = permissions.size
+    val optionsContent = installOptionsContent
+    val permissionSummary = if (sensitivePermissionCount > 0) {
+        stringResource(
+            R.string.installer_permission_entry_summary_sensitive,
+            permissionCount,
+            sensitivePermissionCount,
+        )
+    } else {
+        stringResource(R.string.installer_permission_entry_summary, permissionCount)
     }
+    val showPermissions = permissionCount > 0
+    val showInstallOptions = optionsContent != null
+    val showSplitChoice = onOpenSplitChoice != null
+    val hasNavigation = showPermissions || showInstallOptions || showSplitChoice
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .verticalScroll(scrollState)
-            .padding(bottom = 20.dp),
+            .padding(top = contentTopPadding, bottom = contentBottomPadding),
     ) {
         if (notices.isNotEmpty()) {
             CouiInfoChipGroup(
@@ -369,26 +361,52 @@ fun CouiFullScreenPrepareContent(
         if (details.isNotEmpty()) {
             SectionTitle(stringResource(R.string.installer_detail_title))
             CouiSettingsCard(Modifier.fillMaxWidth().padding(horizontal = FullScreenHorizontalPadding)) {
-                details.forEachIndexed { index, entry ->
-                    DetailRow(entry = entry)
-                    if (index != details.lastIndex) {
-                        HorizontalDivider(Modifier.padding(start = 16.dp))
-                    }
-                }
+                AnimatedDetailRows(entries = details)
             }
         }
 
-        if (navigationEntries.isNotEmpty()) {
+        if (hasNavigation) {
             Spacer(Modifier.size(12.dp))
             CouiSettingsCard(Modifier.fillMaxWidth().padding(horizontal = FullScreenHorizontalPadding)) {
-                navigationEntries.forEachIndexed { index, entry ->
-                    NavigationRow(
-                        entry = entry,
+                // COUI 17 expandable group: a BasicComponent header whose chevron turns over, and a
+                // placeholder that runs between zero and the children's height with matching alpha.
+                if (showPermissions) {
+                    ExpandableGroupHeader(
+                        title = stringResource(R.string.permission_list),
+                        summary = permissionSummary,
+                        expanded = permissionsExpanded,
+                        onExpandedChange = { permissionsExpanded = it },
                         enabled = actionsEnabled,
                     )
-                    if (index != navigationEntries.lastIndex) {
-                        HorizontalDivider(Modifier.padding(start = 52.dp))
+                    ExpandableGroupContent(expanded = permissionsExpanded) {
+                        CouiFullScreenPermissionContent(permissions = permissions, inline = true)
                     }
+                }
+                if (showInstallOptions) {
+                    if (showPermissions) {
+                        HorizontalDivider(Modifier.fillMaxWidth().padding(horizontal = 16.dp))
+                    }
+                    ExpandableGroupHeader(
+                        title = stringResource(R.string.config_label_install_options),
+                        summary = stringResource(R.string.config_label_install_options_desc),
+                        expanded = installOptionsExpanded,
+                        onExpandedChange = { installOptionsExpanded = it },
+                        enabled = actionsEnabled,
+                    )
+                    ExpandableGroupContent(expanded = installOptionsExpanded) {
+                        optionsContent?.invoke()
+                    }
+                }
+                if (showSplitChoice) {
+                    if (showPermissions || showInstallOptions) {
+                        HorizontalDivider(Modifier.fillMaxWidth().padding(horizontal = 16.dp))
+                    }
+                    ArrowPreference(
+                        title = stringResource(R.string.installer_select_split),
+                        summary = stringResource(R.string.installer_select_split_desc),
+                        enabled = actionsEnabled,
+                        onClick = onOpenSplitChoice,
+                    )
                 }
             }
         }
@@ -429,7 +447,7 @@ private fun DetailRow(entry: DetailEntry) {
     ) {
         Text(
             text = entry.label,
-            style = COUITheme.textStyles.bodyXL,
+            style = COUITheme.textStyles.headlineXS,
             color = COUITheme.colorScheme.labelPrimary,
             maxLines = 1,
             modifier = Modifier.weight(1f),
@@ -450,49 +468,84 @@ private fun DetailRow(entry: DetailEntry) {
     }
 }
 
+/**
+ * The rows of the details card, animated as they come and go.
+ *
+ * The list is rebuilt from the live config on every change, so a row that leaves would drop out of
+ * composition in one frame. Each row keeps its own [MutableTransitionState] and its place in the
+ * column until its exit has played; a row that arrives expands from zero height and pushes the rows
+ * below it down smoothly instead of appearing at full size.
+ *
+ * Rows are identified by their label, which is stable for the lifetime of one locale.
+ */
 @Composable
-private fun NavigationRow(
-    entry: NavigationEntry,
-    enabled: Boolean,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = entry.onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = entry.icon,
-            contentDescription = null,
-            tint = COUITheme.colorScheme.primary,
-            modifier = Modifier.size(22.dp),
-        )
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = entry.title,
-                style = COUITheme.textStyles.bodyXL,
-                color = COUITheme.colorScheme.labelPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = entry.summary,
-                style = COUITheme.textStyles.bodyM,
-                color = COUITheme.colorScheme.labelSecondaryVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 2.dp),
-            )
+private fun AnimatedDetailRows(entries: List<DetailEntry>) {
+    val rows = remember {
+        entries.mapTo(mutableStateListOf<DetailRowState>()) { DetailRowState(it.label, it, initiallyVisible = true) }
+    }
+
+    // Runs after composition: refresh what stayed, admit what arrived, release what left. Writing
+    // the same content back is a no-op, so the pass settles after one extra composition.
+    SideEffect {
+        entries.forEach { entry ->
+            rows.firstOrNull { it.key == entry.label }?.let { row ->
+                if (!row.entry.sameContentAs(entry)) row.entry = entry
+                // A row that left earlier is still held at zero height; bring it back in place.
+                if (!row.visibility.targetState) row.visibility.targetState = true
+            }
         }
-        Icon(
-            imageVector = AppCOUIIcons.Back,
-            contentDescription = null,
-            tint = COUITheme.colorScheme.labelTertiary,
-            modifier = Modifier.size(16.dp).rotate(180f),
-        )
+        entries.forEachIndexed { index, entry ->
+            if (rows.none { it.key == entry.label }) {
+                val row = DetailRowState(entry.label, entry, initiallyVisible = false)
+                // Rows that left are still listed while they shrink away, so the visible index is
+                // not the list index. The newcomer goes after the row above it among the visible.
+                val previous = if (index == 0) null else rows.firstOrNull { it.key == entries[index - 1].label }
+                val insertAt = if (previous == null) 0 else rows.indexOf(previous) + 1
+                rows.add(insertAt.coerceIn(0, rows.size), row)
+                row.visibility.targetState = true
+            }
+        }
+        rows.forEach { row ->
+            if (entries.none { it.label == row.key }) {
+                row.visibility.targetState = false
+            }
+        }
+    }
+
+    Column {
+        rows.forEachIndexed { index, row ->
+            key(row.key) {
+                AnimatedVisibility(
+                    visibleState = row.visibility,
+                    enter = fadeIn(tween(durationMillis = 180)) +
+                        expandVertically(tween(durationMillis = 240)),
+                    exit = fadeOut(tween(durationMillis = 120)) +
+                        shrinkVertically(tween(durationMillis = 180)),
+                ) {
+                    Column {
+                        // Top dividers: a row that leaves takes its own hairline with it, so the
+                        // card never ends on a trailing line.
+                        if (index > 0) {
+                            HorizontalDivider(Modifier.fillMaxWidth().padding(horizontal = 16.dp))
+                        }
+                        DetailRow(entry = row.entry)
+                    }
+                }
+            }
+        }
     }
 }
+
+private class DetailRowState(
+    val key: String,
+    entry: DetailEntry,
+    initiallyVisible: Boolean,
+) {
+    var entry by mutableStateOf(entry)
+    val visibility = MutableTransitionState(initiallyVisible)
+}
+
+/** Compares what a row draws; the click lambda is replaced with the entry and has no visual weight. */
+private fun DetailEntry.sameContentAs(other: DetailEntry): Boolean = label == other.label && value == other.value && valueColor == other.valueColor
 
 private fun String.toShortFingerprint(): String = if (length <= 14) this else "${take(6)}…${takeLast(4)}"

@@ -548,6 +548,7 @@
     <string name="installer_splits_invalid_tip">无法将所选分包添加至未安装应用</string>
     <string name="installer_splits_only_tip">仅选择了分包，将把这些分包添加到现有应用中</string>
     <string name="installer_temp_settings_tip">这些设置仅在本次会话中临时生效。如需永久保存，请前往设置</string>
+    <string name="installer_temp_settings_toast">仅在本次会话中生效</string>
     <string name="installer_install_app">安装应用</string>
     <string name="installer_install_module">安装模块</string>
     <string name="installer_install_confirm">安装确认</string>
@@ -802,7 +803,7 @@
     <string name="installer_detail_title">详情</string>
     <string name="installer_detail_size">大小</string>
     <string name="installer_detail_target_sdk">目标 SDK</string>
-    <string name="installer_detail_min_sdk">最低 Android 版本</string>
+    <string name="installer_detail_min_sdk">最低 SDK</string>
     <string name="installer_detail_arch">架构</string>
     <string name="installer_detail_source">来源</string>
     <string name="installer_detail_signature">签名</string>

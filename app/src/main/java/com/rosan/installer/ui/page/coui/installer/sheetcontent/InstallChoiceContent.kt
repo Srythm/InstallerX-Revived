@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
@@ -73,6 +74,7 @@ fun InstallChoiceContent(
     onSelectMixedModuleType: (Boolean) -> Unit,
     onBackToTypeChoice: () -> Unit,
     onCancel: () -> Unit,
+    contentTopPadding: Dp = 0.dp,
 ) {
     val isDarkMode = InstallerTheme.isDark
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -124,6 +126,7 @@ fun InstallChoiceContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(top = contentTopPadding)
             .navigationBarsPadding(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

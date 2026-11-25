@@ -230,6 +230,73 @@ fun BoxScope.CouiProgressiveTopBarGlow(
     )
 }
 
+/**
+ * A progressive band for a fixed region that page content scrolls behind.
+ *
+ * Same recipe as [CouiProgressiveTopBarGlow] — 30px radius, cubic falloff, theme sheet — but the
+ * caller owns placement and size, and the ramp can point either way. The sheet is mirrored with
+ * the ramp so its opaque end always sits against the fixed region and the clear end against the
+ * content. Unlike the top bar glow there is no scroll-driven alpha: the caller fades the band with
+ * the fixed region it belongs to.
+ *
+ * @param fromTop True when the fixed region is above the band's clear end (top chrome), false when
+ *   it is below (action row).
+ */
+@Composable
+fun CouiProgressiveEdgeBand(
+    backdrop: LayerBackdrop,
+    fromTop: Boolean,
+    modifier: Modifier = Modifier,
+    baseColor: Color = COUITheme.colorScheme.backgroundWithCard,
+    isDark: Boolean = COUITheme.isDark,
+) {
+    val blurRadiusDp = with(LocalDensity.current) { TopBarGlowBlurRadiusPx / density }
+
+    val sheet = if (fromTop) {
+        if (isDark) {
+            Brush.verticalGradient(
+                0f to baseColor.copy(alpha = 0.4f),
+                1f to baseColor.copy(alpha = 0f),
+            )
+        } else {
+            Brush.verticalGradient(
+                0f to baseColor.copy(alpha = 1f),
+                0.6f to baseColor.copy(alpha = 0.7f),
+                1f to baseColor.copy(alpha = 0f),
+            )
+        }
+    } else {
+        if (isDark) {
+            Brush.verticalGradient(
+                0f to baseColor.copy(alpha = 0f),
+                1f to baseColor.copy(alpha = 0.4f),
+            )
+        } else {
+            Brush.verticalGradient(
+                0f to baseColor.copy(alpha = 0f),
+                0.4f to baseColor.copy(alpha = 0.7f),
+                1f to baseColor.copy(alpha = 1f),
+            )
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .progressiveTextureBlur(
+                backdrop = backdrop,
+                shape = RectangleShape,
+                blurRadius = blurRadiusDp,
+                gradient = ProgressiveBlur(
+                    angle = if (fromTop) 90f else 270f,
+                    startFraction = 0f,
+                    endFraction = 1f,
+                    curve = 3f,
+                ),
+            )
+            .background(sheet),
+    )
+}
+
 /** `AppBarBlurOverlayView.computeExtraHeightPx`: the glow runs 24dp past the bar's bottom edge. */
 private val TopBarGlowExtraHeight = 24.dp
 

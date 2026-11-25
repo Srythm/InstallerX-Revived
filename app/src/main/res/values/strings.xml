@@ -568,6 +568,7 @@
     <string name="installer_splits_invalid_tip">Cannot add the selected split package to an uninstalled app</string>
     <string name="installer_splits_only_tip">Only split APKs are selected. They will be added to the existing application</string>
     <string name="installer_temp_settings_tip">These settings are temporary for this session. To keep them, go to Settings</string>
+    <string name="installer_temp_settings_toast">Only takes effect in this session</string>
     <string name="installer_label_unknown" translatable="false">Unknown</string>
     <string name="installer_install_app">Install App</string>
     <string name="installer_install_module">Install Module</string>
@@ -827,7 +828,7 @@
     <string name="installer_detail_title">Details</string>
     <string name="installer_detail_size">Size</string>
     <string name="installer_detail_target_sdk">Target SDK</string>
-    <string name="installer_detail_min_sdk">Minimum Android</string>
+    <string name="installer_detail_min_sdk">Minimum SDK</string>
     <string name="installer_detail_arch">Architecture</string>
     <string name="installer_detail_source">Source</string>
     <string name="installer_detail_signature">Signature</string>
