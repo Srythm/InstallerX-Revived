@@ -497,7 +497,11 @@ private fun AnimatedDetailRows(entries: List<DetailEntry>) {
         entries.forEachIndexed { index, entry ->
             if (rows.none { it.key == entry.label }) {
                 val row = DetailRowState(entry.label, entry, initiallyVisible = false)
-                rows.add(index.coerceIn(0, rows.size), row)
+                // Rows that left are still listed while they shrink away, so the visible index is
+                // not the list index. The newcomer goes after the row above it among the visible.
+                val previous = if (index == 0) null else rows.firstOrNull { it.key == entries[index - 1].label }
+                val insertAt = if (previous == null) 0 else rows.indexOf(previous) + 1
+                rows.add(insertAt.coerceIn(0, rows.size), row)
                 row.visibility.targetState = true
             }
         }
