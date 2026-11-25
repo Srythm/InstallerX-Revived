@@ -210,8 +210,14 @@ fun CouiPositionFullScreen(
                             .only(WindowInsetsSides.Top)
                             .asPaddingValues()
                             .calculateTopPadding() + FullScreenTopBarHeight
+                        // Only for pages that draw the action row. Pages without one lift themselves
+                        // above the navigation bar, so reserving it here too squeezed them twice.
                         val bottomBarReservedPadding =
-                            FullScreenBottomBarHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                            if (bottomBar == null) {
+                                0.dp
+                            } else {
+                                FullScreenBottomBarHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                            }
                         // The band runs to the screen edge, so the ramp's opaque end stays off-screen.
                         // Each page slot owns its top inset separately: an outgoing main page and an
                         // incoming sub-page must never change height while they slide horizontally.
