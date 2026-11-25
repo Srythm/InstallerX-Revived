@@ -1,10 +1,10 @@
 # COUI 全屏渐进式模糊：当前问题与待决事项
 
-- 日期：2026-11-23（2026-11-24 更新同页展开、COUI 可展开分组与设置下拉菜单；2026-11-25 记录审查修复）
-- 源码基线：`main` @ `e3e0ce4b`（tag `26.11.1`，versionCode 1721）
-- 工作分支：`feat/coui-fullscreen-progressive-blur`，未合 main；本轮动画修复提交 `8df262f3`（取代失效的 `c7271f0b`），后续文档更新不改变该基线。
+- 日期：2026-11-23（2026-11-24 更新同页展开、COUI 可展开分组与设置下拉菜单；2026-11-25 记录审查修复与分割线规范修正）
+- 源码基线：`main` @ `e3e0ce4b`（tag `26.11.1`，versionCode 1721），本篇所述内容均以该基线为参照。
+- 工作分支：`feat/coui-fullscreen-progressive-blur`；本轮动画修复提交 `8df262f3`（取代失效的 `c7271f0b`）。2026-11-25 按 §4.2 的决定以 `--no-ff` 合入 main，不 squash。
 - 文档性质：问题清单与待决事项；不是功能说明，也不替代 `COUI_FULLSCREEN_PROGRESSIVE_BLUR_REPORT_2026-11-23.md` 的适配方案。
-- 验证状态：`./gradlew spotlessApply` 通过；CI `manual-build.yml`（Preview/debug）多次通过，动画修复最终 run `45184368115`、同页展开 run `45361904550`、分组与下拉菜单 run `45366699121`、菜单定宽与条目过渡 run `45370120203`、菜单右对齐 run `45373399590`、菜单宽度由内容固定 run `45378598067`、行撑满面板 run `45380923974` 通过；2026-11-25 Branch CI run `45615000396`（attempt 2）的单元测试与 Unstable Release 构建通过，Preview/debug run `45616845562` 通过；**无真机自动化验收**。本机无 Android SDK，编译验证只能走 CI。
+- 验证状态：`./gradlew spotlessApply` 通过；CI `manual-build.yml`（Preview/debug）多次通过，动画修复最终 run `45184368115`、同页展开 run `45361904550`、分组与下拉菜单 run `45366699121`、菜单定宽与条目过渡 run `45370120203`、菜单右对齐 run `45373399590`、菜单宽度由内容固定 run `45378598067`、行撑满面板 run `45380923974` 通过；2026-11-25 Branch CI run `45615000396`（attempt 2）的单元测试与 Unstable Release 构建通过，Preview/debug run `45616845562` 通过，分割线修复后 Branch CI run `45625765879` 全绿；**无真机自动化验收**。本机无 Android SDK，编译验证只能走 CI。
 
 ## 1. 已落地且编译验证通过的部分
 
@@ -76,6 +76,13 @@
 - `9b2a30b3`：`AnimatedDetailRows` 用可见 `entries` 的下标插入仍含退场行的 `rows`，前面有隐藏行时新行位置错误（关「显示大小」「显示 SDK」后开「显示文件路径」，路径行排到「架构」之前）。新行改为插在其可见前驱之后。未补充顺序单元测试，列表状态仍封装在 composable 内。
 - 验证：三次修改前后 `./gradlew spotlessCheck --no-configuration-cache` 均为 `BUILD SUCCESSFUL`，`git diff --check` 无输出。推送后 CI（`ec5a6a10`）：Branch CI run `45615000396` 的格式检查、单元测试、Unstable Release 构建通过（attempt 1 的单元测试作业因 runner 解析不到 KSP 插件 `2.3.13` 在配置阶段失败，重跑后通过，非代码问题）；Preview/debug run `45616845562` 通过。**三项修复的真机表现均未复核。**
 
+### 2.8 2026-11-25 分割线规范的两处修正（已修复，CI 通过，待真机复核）
+
+- `da2e0f3e` 准备页分割线右侧缺留白：详情卡内三处 `HorizontalDivider` 只写了 `padding(start = 16.dp)`，右端直接贴到卡片边缘，与条目文字自身 16dp 的内边距不对称。改为 `fillMaxWidth().padding(horizontal = 16.dp)`，沿用 `InstallChoiceContent` 里同一卡片族的既有写法。三处分别是详情行之间（`CouiFullScreenPrepareContent.kt:529`）、权限与安装选项两个可展开分组之间（`:387`）、「选择分包」上方（`:402`）。
+- `da2e0f3e` 权限列表不该有行间分割线：`PermissionRows` 原本在每条权限后画一条 `HorizontalDivider`，与 COUI 权限列表的规范不符。删除行间分割线，仅保留 14dp 垂直间距，敏感与普通两组仍由分区标题区分。独立子页与准备页内联展开共用同一段 `PermissionRows`，两种模式一并生效。
+- 已知边界（未在本轮处理）：详情行的分割线挂在 `AnimatedVisibility` 内随行收缩，且按 `rows` 下标判断 `index > 0`；首行离场时第二行会临时变成首行而多画一条线。该行为改动前即存在。
+- 验证：`./gradlew spotlessCheck --no-configuration-cache` 通过（`BUILD SUCCESSFUL in 26s`）；Branch CI run `45625765879` 的 Code Style、Unit Tests、Unstable Release 构建通过；产出的 Unstable APK 经 `keytool` 验签为 `CN=InstallerX Revived`（RSA 4096，SHA384withRSA）。**两处改动的真机观感均未复核。**
+
 ## 3. 未验证项（验收缺口）
 
 - 真机矩阵：浅色/深色/AMOLED/动态色/临时主题色；手势/三键导航；横屏与平板；大字体与显示缩放；API 26–32 与关模糊降级；Compose 预览。
@@ -90,12 +97,15 @@
 
 上游已从 GitHub Packages 删除 `0.9.5-5ff41ba9-SNAPSHOT`（实测 `miuix-blur-android` 全部版本列表中不存在）。main 仍 pin 该版本，**任何分支含 main 都解析不到 miuix-blur/nav/material**。修复 `f82db3d4`（→ `0.9.5-d82b40fa-SNAPSHOT`）只在本分支。
 
-- 待决：是否将 `f82db3d4` 单独合回 main（与模糊功能解耦）。
+- 原待决（2026-11-25 随合并消解）：是否将 `f82db3d4` 单独合回 main（与模糊功能解耦）。
+  - 2026-11-25 更新：未单独拆出，随整条分支以 `--no-ff` 合入 main（§4.2）。main 因此恢复可解析 miuix，但这也意味着 pin 修复与全屏功能无法再分别回滚。
 - 已核对：`d82b40fa` 上 `miuix-blur` 仍导出 `LayerBackdrop` / `ProgressiveBlur` / `progressiveTextureBlur`（签名一致），`miuix-material` 仍有 `RuntimeShader`。
 
 ### 4.2 分支历史含被取代的方案
 
-12 个提交中，`2dc8a1a7` 的 glide 曾被 `5818183b` 取代、又在 `0b897e10` 恢复；`90782412`–`55c660cb` 的正文小带/每槽实验已整体撤销。是否 squash 成「功能 + 修复 + deps」三条左右待决；未擅自改写历史。
+12 个提交中，`2dc8a1a7` 的 glide 曾被 `5818183b` 取代、又在 `0b897e10` 恢复；`90782412`–`55c660cb` 的正文小带/每槽实验已整体撤销。
+
+- 2026-11-25 已决：不 squash。分支相对 `e3e0ce4b` 共 42 个提交，保留完整历史并以 `--no-ff` 合并，与 main 上 `c24e91ae`（merge code-optimization-p0 into main）的先例一致。代价是 main 的 `versionCode`（取 `git rev-list --count HEAD`）会因合并提交再 +1，属可接受偏差。
 
 ### 4.3 文档同步
 
@@ -104,7 +114,8 @@
 
 ## 5. 建议的下一步顺序
 
-1. 真机验收 run 45380923974 的 APK：准备页几何/渐进、子页进入与返回的纯横向推送、头部向左退出/左侧返回、权限与安装选项按 COUI 可展开分组展开/收起、分包子页、右上角设置下拉菜单的定宽、右缘与按钮对齐、呼出 Toast、切换开关时信息条目的展开/收起过渡、深色与关模糊降级。
+1. 真机验收（以 stable draft 的 APK 或 run `45625765879` 的 Unstable 包为准）：准备页几何/渐进、子页进入与返回的纯横向推送、头部向左退出/左侧返回、权限与安装选项按 COUI 可展开分组展开/收起、分包子页、右上角设置下拉菜单的定宽、右缘与按钮对齐、呼出 Toast、切换开关时信息条目的展开/收起过渡、深色与关模糊降级。
+   - 本轮新增两项：详情卡分割线两端各 16dp 是否与条目文字两端对齐，连续开关「显示大小」「显示 SDK」「显示文件路径」后行序与分割线数量是否正确；权限详情与准备页内联展开的条目之间应无分割线，敏感/普通两组仍可辨。
 2. 就 §2.4 的底部遮罩强度给出结论；如需改动，只动遮罩 stops，不动采样/带几何。
-3. 决定 §4.1 pin 合回 main 的时机（独立提交，不携带模糊功能）。
-4. 补跑 `testUnstableDebugUnitTest` 与性能测量，再决定 squash 与合并 main。§2.7 的三项修复已通过 CI 单元测试与 Preview/debug 组装，仍需真机复核；性能测量未做。
+3. 确认合并后 main 的 miuix 解析与 stable 变体构建（由 stable release 流水线本身验证，见 §4.1）。
+4. 性能测量仍未做；§2.7 与 §2.8 的改动均已通过 CI 单元测试与构建，真机表现待复核。
